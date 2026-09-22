@@ -1,0 +1,41 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.venv/
+venv/
+
+# Bootstrap logs
+.setup.log
+.setup.out
+.fetch.log
+*.part
+
+# Downloaded geodata (~91 MB). Public domain, but there is no reason to carry
+# it in git: `python scripts/fetch_data.py` reproduces it byte for byte and
+# records checksums in data/MANIFEST.json.
+data/naturalearth/
+
+# Vendored MapLibre GL JS (BSD-3-Clause), fetched by the same script.
+mapify/web/vendor/
+
+# Generated from the Natural Earth 110m layer by scripts/fetch_data.py.
+mapify/web/data/
+
+# Runtime state: lookup cache and any local config the user writes.
+data/cache/
+config.toml
+
+# Model weights are cached by huggingface_hub under the user profile, not here,
+# but guard against a stray local cache anyway.
+.cache/
+models_cache/
+
+# Sample images a user drops in for testing are theirs, not ours.
+samples/private/
+
+# OS noise
+Thumbs.db
+.DS_Store
+desktop.ini

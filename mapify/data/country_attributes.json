@@ -1,0 +1,4556 @@
+{
+ "_meta": {
+  "generated_by": "scripts/build_country_data.py",
+  "country_list_source": "Natural Earth 10m admin-0 countries (public domain); boundaries follow the Natural Earth default point of view",
+  "attribute_source": "Hand-maintained tables of public geographic/legal facts. See mapify/data/sources.md",
+  "count": 239
+ },
+ "countries": {
+  "AD": {
+   "name": "Andorra",
+   "name_long": "Andorra",
+   "iso_a3": "AND",
+   "continent": "Europe",
+   "subregion": "Southern Europe",
+   "region_un": "Europe",
+   "label_lat": 42.5476,
+   "label_lon": 1.5394,
+   "drive_side": "right",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [
+    "ca"
+   ],
+   "plate_class": "eu_blue_band",
+   "disputed_boundary_note": false
+  },
+  "AE": {
+   "name": "United Arab Emirates",
+   "name_long": "United Arab Emirates",
+   "iso_a3": "ARE",
+   "continent": "Asia",
+   "subregion": "Western Asia",
+   "region_un": "Asia",
+   "label_lat": 23.4663,
+   "label_lon": 54.5473,
+   "drive_side": "right",
+   "scripts": [
+    "Arab",
+    "Latn"
+   ],
+   "languages": [
+    "ar",
+    "en"
+   ],
+   "plate_class": "arabic_plate",
+   "disputed_boundary_note": false
+  },
+  "AF": {
+   "name": "Afghanistan",
+   "name_long": "Afghanistan",
+   "iso_a3": "AFG",
+   "continent": "Asia",
+   "subregion": "Southern Asia",
+   "region_un": "Asia",
+   "label_lat": 34.1643,
+   "label_lon": 66.4966,
+   "drive_side": "right",
+   "scripts": [
+    "Arab",
+    "Latn"
+   ],
+   "languages": [
+    "fa",
+    "ps"
+   ],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "AG": {
+   "name": "Antigua and Barbuda",
+   "name_long": "Antigua and Barbuda",
+   "iso_a3": "ATG",
+   "continent": "North America",
+   "subregion": "Caribbean",
+   "region_un": "Americas",
+   "label_lat": 17.3522,
+   "label_lon": -61.7906,
+   "drive_side": "left",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "AI": {
+   "name": "Anguilla",
+   "name_long": "Anguilla",
+   "iso_a3": "AIA",
+   "continent": "North America",
+   "subregion": "Caribbean",
+   "region_un": "Americas",
+   "label_lat": 18.243,
+   "label_lon": -63.0264,
+   "drive_side": "left",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "AL": {
+   "name": "Albania",
+   "name_long": "Albania",
+   "iso_a3": "ALB",
+   "continent": "Europe",
+   "subregion": "Southern Europe",
+   "region_un": "Europe",
+   "label_lat": 40.6549,
+   "label_lon": 20.1138,
+   "drive_side": "right",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [
+    "sq"
+   ],
+   "plate_class": "eu_blue_band",
+   "disputed_boundary_note": false
+  },
+  "AM": {
+   "name": "Armenia",
+   "name_long": "Armenia",
+   "iso_a3": "ARM",
+   "continent": "Asia",
+   "subregion": "Western Asia",
+   "region_un": "Asia",
+   "label_lat": 40.4591,
+   "label_lon": 44.8006,
+   "drive_side": "right",
+   "scripts": [
+    "Armn",
+    "Latn"
+   ],
+   "languages": [
+    "hy",
+    "en"
+   ],
+   "plate_class": "eu_blue_band",
+   "disputed_boundary_note": false
+  },
+  "AO": {
+   "name": "Angola",
+   "name_long": "Angola",
+   "iso_a3": "AGO",
+   "continent": "Africa",
+   "subregion": "Middle Africa",
+   "region_un": "Africa",
+   "label_lat": -12.1828,
+   "label_lon": 17.9842,
+   "drive_side": "right",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [
+    "pt"
+   ],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "AQ": {
+   "name": "Antarctica",
+   "name_long": "Antarctica",
+   "iso_a3": "ATA",
+   "continent": "Antarctica",
+   "subregion": "Antarctica",
+   "region_un": "Antarctica",
+   "label_lat": -79.8432,
+   "label_lon": 35.8855,
+   "drive_side": "right",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "AR": {
+   "name": "Argentina",
+   "name_long": "Argentina",
+   "iso_a3": "ARG",
+   "continent": "South America",
+   "subregion": "South America",
+   "region_un": "Americas",
+   "label_lat": -33.5012,
+   "label_lon": -64.1733,
+   "drive_side": "right",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [
+    "es"
+   ],
+   "plate_class": "mercosur",
+   "disputed_boundary_note": false
+  },
+  "AS": {
+   "name": "American Samoa",
+   "name_long": "American Samoa",
+   "iso_a3": "ASM",
+   "continent": "Oceania",
+   "subregion": "Polynesia",
+   "region_un": "Oceania",
+   "label_lat": -14.3267,
+   "label_lon": -170.7472,
+   "drive_side": "right",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "AT": {
+   "name": "Austria",
+   "name_long": "Austria",
+   "iso_a3": "AUT",
+   "continent": "Europe",
+   "subregion": "Western Europe",
+   "region_un": "Europe",
+   "label_lat": 47.5189,
+   "label_lon": 14.1305,
+   "drive_side": "right",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [
+    "de"
+   ],
+   "plate_class": "eu_blue_band",
+   "disputed_boundary_note": false
+  },
+  "AU": {
+   "name": "Australia",
+   "name_long": "Australia",
+   "iso_a3": "AUS",
+   "continent": "Oceania",
+   "subregion": "Australia and New Zealand",
+   "region_un": "Oceania",
+   "label_lat": -24.1295,
+   "label_lon": 134.0497,
+   "drive_side": "left",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [
+    "en"
+   ],
+   "plate_class": "oceania_state",
+   "disputed_boundary_note": false
+  },
+  "AW": {
+   "name": "Aruba",
+   "name_long": "Aruba",
+   "iso_a3": "ABW",
+   "continent": "North America",
+   "subregion": "Caribbean",
+   "region_un": "Americas",
+   "label_lat": 12.5174,
+   "label_lon": -69.9728,
+   "drive_side": "right",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "AX": {
+   "name": "Åland",
+   "name_long": "Åland Islands",
+   "iso_a3": "ALA",
+   "continent": "Europe",
+   "subregion": "Northern Europe",
+   "region_un": "Europe",
+   "label_lat": 60.1565,
+   "label_lon": 19.8697,
+   "drive_side": "right",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "AZ": {
+   "name": "Azerbaijan",
+   "name_long": "Azerbaijan",
+   "iso_a3": "AZE",
+   "continent": "Asia",
+   "subregion": "Western Asia",
+   "region_un": "Asia",
+   "label_lat": 40.4024,
+   "label_lon": 47.211,
+   "drive_side": "right",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [
+    "az",
+    "en"
+   ],
+   "plate_class": "eu_blue_band",
+   "disputed_boundary_note": false
+  },
+  "BA": {
+   "name": "Bosnia and Herzegovina",
+   "name_long": "Bosnia and Herzegovina",
+   "iso_a3": "BIH",
+   "continent": "Europe",
+   "subregion": "Southern Europe",
+   "region_un": "Europe",
+   "label_lat": 44.0911,
+   "label_lon": 18.0684,
+   "drive_side": "right",
+   "scripts": [
+    "Latn",
+    "Cyrl"
+   ],
+   "languages": [
+    "bs",
+    "hr",
+    "sr"
+   ],
+   "plate_class": "eu_blue_band",
+   "disputed_boundary_note": false
+  },
+  "BB": {
+   "name": "Barbados",
+   "name_long": "Barbados",
+   "iso_a3": "BRB",
+   "continent": "North America",
+   "subregion": "Caribbean",
+   "region_un": "Americas",
+   "label_lat": 13.1637,
+   "label_lon": -59.569,
+   "drive_side": "left",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "BD": {
+   "name": "Bangladesh",
+   "name_long": "Bangladesh",
+   "iso_a3": "BGD",
+   "continent": "Asia",
+   "subregion": "Southern Asia",
+   "region_un": "Asia",
+   "label_lat": 24.215,
+   "label_lon": 89.685,
+   "drive_side": "left",
+   "scripts": [
+    "Beng",
+    "Latn"
+   ],
+   "languages": [
+    "bn",
+    "en"
+   ],
+   "plate_class": "in_white_yellow",
+   "disputed_boundary_note": false
+  },
+  "BE": {
+   "name": "Belgium",
+   "name_long": "Belgium",
+   "iso_a3": "BEL",
+   "continent": "Europe",
+   "subregion": "Western Europe",
+   "region_un": "Europe",
+   "label_lat": 50.7854,
+   "label_lon": 4.8004,
+   "drive_side": "right",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [
+    "nl",
+    "fr",
+    "de"
+   ],
+   "plate_class": "eu_blue_band",
+   "disputed_boundary_note": false
+  },
+  "BF": {
+   "name": "Burkina Faso",
+   "name_long": "Burkina Faso",
+   "iso_a3": "BFA",
+   "continent": "Africa",
+   "subregion": "Western Africa",
+   "region_un": "Africa",
+   "label_lat": 12.673,
+   "label_lon": -1.3639,
+   "drive_side": "right",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [
+    "fr"
+   ],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "BG": {
+   "name": "Bulgaria",
+   "name_long": "Bulgaria",
+   "iso_a3": "BGR",
+   "continent": "Europe",
+   "subregion": "Eastern Europe",
+   "region_un": "Europe",
+   "label_lat": 42.5088,
+   "label_lon": 25.1571,
+   "drive_side": "right",
+   "scripts": [
+    "Cyrl",
+    "Latn"
+   ],
+   "languages": [
+    "bg"
+   ],
+   "plate_class": "eu_blue_band",
+   "disputed_boundary_note": false
+  },
+  "BH": {
+   "name": "Bahrain",
+   "name_long": "Bahrain",
+   "iso_a3": "BHR",
+   "continent": "Asia",
+   "subregion": "Western Asia",
+   "region_un": "Asia",
+   "label_lat": 26.056,
+   "label_lon": 50.5548,
+   "drive_side": "right",
+   "scripts": [
+    "Arab",
+    "Latn"
+   ],
+   "languages": [
+    "ar",
+    "en"
+   ],
+   "plate_class": "arabic_plate",
+   "disputed_boundary_note": false
+  },
+  "BI": {
+   "name": "Burundi",
+   "name_long": "Burundi",
+   "iso_a3": "BDI",
+   "continent": "Africa",
+   "subregion": "Eastern Africa",
+   "region_un": "Africa",
+   "label_lat": -3.3328,
+   "label_lon": 29.9171,
+   "drive_side": "right",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [
+    "fr",
+    "rn"
+   ],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "BJ": {
+   "name": "Benin",
+   "name_long": "Benin",
+   "iso_a3": "BEN",
+   "continent": "Africa",
+   "subregion": "Western Africa",
+   "region_un": "Africa",
+   "label_lat": 10.3248,
+   "label_lon": 2.352,
+   "drive_side": "right",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "BL": {
+   "name": "Saint Barthélemy",
+   "name_long": "Saint-Barthélemy",
+   "iso_a3": "BLM",
+   "continent": "North America",
+   "subregion": "Caribbean",
+   "region_un": "Americas",
+   "label_lat": 17.902,
+   "label_lon": -62.8332,
+   "drive_side": "right",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "BM": {
+   "name": "Bermuda",
+   "name_long": "Bermuda",
+   "iso_a3": "BMU",
+   "continent": "North America",
+   "subregion": "Northern America",
+   "region_un": "Americas",
+   "label_lat": 32.2966,
+   "label_lon": -64.7636,
+   "drive_side": "left",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "BN": {
+   "name": "Brunei",
+   "name_long": "Brunei Darussalam",
+   "iso_a3": "BRN",
+   "continent": "Asia",
+   "subregion": "South-Eastern Asia",
+   "region_un": "Asia",
+   "label_lat": 4.4483,
+   "label_lon": 114.5519,
+   "drive_side": "left",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [
+    "ms",
+    "en"
+   ],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "BO": {
+   "name": "Bolivia",
+   "name_long": "Bolivia",
+   "iso_a3": "BOL",
+   "continent": "South America",
+   "subregion": "South America",
+   "region_un": "Americas",
+   "label_lat": -16.666,
+   "label_lon": -64.5934,
+   "drive_side": "right",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [
+    "es"
+   ],
+   "plate_class": "mercosur",
+   "disputed_boundary_note": false
+  },
+  "BR": {
+   "name": "Brazil",
+   "name_long": "Brazil",
+   "iso_a3": "BRA",
+   "continent": "South America",
+   "subregion": "South America",
+   "region_un": "Americas",
+   "label_lat": -12.0987,
+   "label_lon": -49.5594,
+   "drive_side": "right",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [
+    "pt"
+   ],
+   "plate_class": "mercosur",
+   "disputed_boundary_note": false
+  },
+  "BS": {
+   "name": "The Bahamas",
+   "name_long": "Bahamas",
+   "iso_a3": "BHS",
+   "continent": "North America",
+   "subregion": "Caribbean",
+   "region_un": "Americas",
+   "label_lat": 26.4018,
+   "label_lon": -77.1467,
+   "drive_side": "left",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "BT": {
+   "name": "Bhutan",
+   "name_long": "Bhutan",
+   "iso_a3": "BTN",
+   "continent": "Asia",
+   "subregion": "Southern Asia",
+   "region_un": "Asia",
+   "label_lat": 27.5367,
+   "label_lon": 90.0403,
+   "drive_side": "left",
+   "scripts": [
+    "Tibt",
+    "Latn"
+   ],
+   "languages": [
+    "dz",
+    "en"
+   ],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "BW": {
+   "name": "Botswana",
+   "name_long": "Botswana",
+   "iso_a3": "BWA",
+   "continent": "Africa",
+   "subregion": "Southern Africa",
+   "region_un": "Africa",
+   "label_lat": -22.1026,
+   "label_lon": 24.1792,
+   "drive_side": "left",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [
+    "en"
+   ],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "BY": {
+   "name": "Belarus",
+   "name_long": "Belarus",
+   "iso_a3": "BLR",
+   "continent": "Europe",
+   "subregion": "Eastern Europe",
+   "region_un": "Europe",
+   "label_lat": 53.8219,
+   "label_lon": 28.4177,
+   "drive_side": "right",
+   "scripts": [
+    "Cyrl",
+    "Latn"
+   ],
+   "languages": [
+    "be",
+    "ru"
+   ],
+   "plate_class": "eu_blue_band",
+   "disputed_boundary_note": false
+  },
+  "BZ": {
+   "name": "Belize",
+   "name_long": "Belize",
+   "iso_a3": "BLZ",
+   "continent": "North America",
+   "subregion": "Central America",
+   "region_un": "Americas",
+   "label_lat": 17.2021,
+   "label_lon": -88.713,
+   "drive_side": "right",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "CA": {
+   "name": "Canada",
+   "name_long": "Canada",
+   "iso_a3": "CAN",
+   "continent": "North America",
+   "subregion": "Northern America",
+   "region_un": "Americas",
+   "label_lat": 60.3243,
+   "label_lon": -101.9107,
+   "drive_side": "right",
+   "scripts": [
+    "Latn",
+    "Cans"
+   ],
+   "languages": [
+    "en",
+    "fr"
+   ],
+   "plate_class": "north_america",
+   "disputed_boundary_note": false
+  },
+  "CD": {
+   "name": "Democratic Republic of the Congo",
+   "name_long": "Democratic Republic of the Congo",
+   "iso_a3": "COD",
+   "continent": "Africa",
+   "subregion": "Middle Africa",
+   "region_un": "Africa",
+   "label_lat": -1.8582,
+   "label_lon": 23.4588,
+   "drive_side": "right",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [
+    "fr"
+   ],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "CF": {
+   "name": "Central African Republic",
+   "name_long": "Central African Republic",
+   "iso_a3": "CAF",
+   "continent": "Africa",
+   "subregion": "Middle Africa",
+   "region_un": "Africa",
+   "label_lat": 6.9897,
+   "label_lon": 20.9069,
+   "drive_side": "right",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "CG": {
+   "name": "Republic of the Congo",
+   "name_long": "Republic of the Congo",
+   "iso_a3": "COG",
+   "continent": "Africa",
+   "subregion": "Middle Africa",
+   "region_un": "Africa",
+   "label_lat": 0.1423,
+   "label_lon": 15.9005,
+   "drive_side": "right",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [
+    "fr"
+   ],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "CH": {
+   "name": "Switzerland",
+   "name_long": "Switzerland",
+   "iso_a3": "CHE",
+   "continent": "Europe",
+   "subregion": "Western Europe",
+   "region_un": "Europe",
+   "label_lat": 46.7191,
+   "label_lon": 7.464,
+   "drive_side": "right",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [
+    "de",
+    "fr",
+    "it"
+   ],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "CI": {
+   "name": "Ivory Coast",
+   "name_long": "Côte d'Ivoire",
+   "iso_a3": "CIV",
+   "continent": "Africa",
+   "subregion": "Western Africa",
+   "region_un": "Africa",
+   "label_lat": 7.4914,
+   "label_lon": -5.5686,
+   "drive_side": "right",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [
+    "fr"
+   ],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "CK": {
+   "name": "Cook Islands",
+   "name_long": "Cook Islands",
+   "iso_a3": "COK",
+   "continent": "Oceania",
+   "subregion": "Polynesia",
+   "region_un": "Oceania",
+   "label_lat": -21.216,
+   "label_lon": -159.7857,
+   "drive_side": "left",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "CL": {
+   "name": "Chile",
+   "name_long": "Chile",
+   "iso_a3": "CHL",
+   "continent": "South America",
+   "subregion": "South America",
+   "region_un": "Americas",
+   "label_lat": -38.1518,
+   "label_lon": -72.3189,
+   "drive_side": "right",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [
+    "es"
+   ],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "CM": {
+   "name": "Cameroon",
+   "name_long": "Cameroon",
+   "iso_a3": "CMR",
+   "continent": "Africa",
+   "subregion": "Middle Africa",
+   "region_un": "Africa",
+   "label_lat": 4.585,
+   "label_lon": 12.4735,
+   "drive_side": "right",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [
+    "fr",
+    "en"
+   ],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "CN": {
+   "name": "People's Republic of China",
+   "name_long": "China",
+   "iso_a3": "CHN",
+   "continent": "Asia",
+   "subregion": "Eastern Asia",
+   "region_un": "Asia",
+   "label_lat": 32.4982,
+   "label_lon": 106.3373,
+   "drive_side": "right",
+   "scripts": [
+    "Hani",
+    "Latn"
+   ],
+   "languages": [
+    "zh"
+   ],
+   "plate_class": "cn_blue",
+   "disputed_boundary_note": false
+  },
+  "CO": {
+   "name": "Colombia",
+   "name_long": "Colombia",
+   "iso_a3": "COL",
+   "continent": "South America",
+   "subregion": "South America",
+   "region_un": "Americas",
+   "label_lat": 3.3731,
+   "label_lon": -73.1743,
+   "drive_side": "right",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [
+    "es"
+   ],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "CR": {
+   "name": "Costa Rica",
+   "name_long": "Costa Rica",
+   "iso_a3": "CRI",
+   "continent": "North America",
+   "subregion": "Central America",
+   "region_un": "Americas",
+   "label_lat": 10.0651,
+   "label_lon": -84.0779,
+   "drive_side": "right",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "CU": {
+   "name": "Cuba",
+   "name_long": "Cuba",
+   "iso_a3": "CUB",
+   "continent": "North America",
+   "subregion": "Caribbean",
+   "region_un": "Americas",
+   "label_lat": 21.334,
+   "label_lon": -77.9759,
+   "drive_side": "right",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "CV": {
+   "name": "Cape Verde",
+   "name_long": "Republic of Cabo Verde",
+   "iso_a3": "CPV",
+   "continent": "Africa",
+   "subregion": "Western Africa",
+   "region_un": "Africa",
+   "label_lat": 15.0748,
+   "label_lon": -23.6394,
+   "drive_side": "right",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [
+    "pt"
+   ],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "CW": {
+   "name": "Curaçao",
+   "name_long": "Curaçao",
+   "iso_a3": "CUW",
+   "continent": "North America",
+   "subregion": "Caribbean",
+   "region_un": "Americas",
+   "label_lat": 12.145,
+   "label_lon": -68.9206,
+   "drive_side": "right",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "CY": {
+   "name": "Cyprus",
+   "name_long": "Cyprus",
+   "iso_a3": "CYP",
+   "continent": "Asia",
+   "subregion": "Western Asia",
+   "region_un": "Asia",
+   "label_lat": 34.9133,
+   "label_lon": 33.0842,
+   "drive_side": "left",
+   "scripts": [
+    "Grek",
+    "Latn"
+   ],
+   "languages": [
+    "el",
+    "tr",
+    "en"
+   ],
+   "plate_class": "eu_blue_band",
+   "disputed_boundary_note": true
+  },
+  "CZ": {
+   "name": "Czech Republic",
+   "name_long": "Czech Republic",
+   "iso_a3": "CZE",
+   "continent": "Europe",
+   "subregion": "Eastern Europe",
+   "region_un": "Europe",
+   "label_lat": 49.8824,
+   "label_lon": 15.3776,
+   "drive_side": "right",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [
+    "cs"
+   ],
+   "plate_class": "eu_blue_band",
+   "disputed_boundary_note": false
+  },
+  "DE": {
+   "name": "Germany",
+   "name_long": "Germany",
+   "iso_a3": "DEU",
+   "continent": "Europe",
+   "subregion": "Western Europe",
+   "region_un": "Europe",
+   "label_lat": 50.9617,
+   "label_lon": 9.6783,
+   "drive_side": "right",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [
+    "de"
+   ],
+   "plate_class": "eu_blue_band",
+   "disputed_boundary_note": false
+  },
+  "DJ": {
+   "name": "Djibouti",
+   "name_long": "Djibouti",
+   "iso_a3": "DJI",
+   "continent": "Africa",
+   "subregion": "Eastern Africa",
+   "region_un": "Africa",
+   "label_lat": 11.9763,
+   "label_lon": 42.4988,
+   "drive_side": "right",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [
+    "fr",
+    "ar"
+   ],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "DK": {
+   "name": "Denmark",
+   "name_long": "Denmark",
+   "iso_a3": "DNK",
+   "continent": "Europe",
+   "subregion": "Northern Europe",
+   "region_un": "Europe",
+   "label_lat": 55.967,
+   "label_lon": 9.0182,
+   "drive_side": "right",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [
+    "da"
+   ],
+   "plate_class": "eu_blue_band",
+   "disputed_boundary_note": false
+  },
+  "DM": {
+   "name": "Dominica",
+   "name_long": "Dominica",
+   "iso_a3": "DMA",
+   "continent": "North America",
+   "subregion": "Caribbean",
+   "region_un": "Americas",
+   "label_lat": 15.4588,
+   "label_lon": -61.345,
+   "drive_side": "left",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "DO": {
+   "name": "Dominican Republic",
+   "name_long": "Dominican Republic",
+   "iso_a3": "DOM",
+   "continent": "North America",
+   "subregion": "Caribbean",
+   "region_un": "Americas",
+   "label_lat": 19.1041,
+   "label_lon": -70.654,
+   "drive_side": "right",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "DZ": {
+   "name": "Algeria",
+   "name_long": "Algeria",
+   "iso_a3": "DZA",
+   "continent": "Africa",
+   "subregion": "Northern Africa",
+   "region_un": "Africa",
+   "label_lat": 27.3974,
+   "label_lon": 2.8082,
+   "drive_side": "right",
+   "scripts": [
+    "Arab",
+    "Latn",
+    "Tfng"
+   ],
+   "languages": [
+    "ar",
+    "fr"
+   ],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "EC": {
+   "name": "Ecuador",
+   "name_long": "Ecuador",
+   "iso_a3": "ECU",
+   "continent": "South America",
+   "subregion": "South America",
+   "region_un": "Americas",
+   "label_lat": -1.2591,
+   "label_lon": -78.1884,
+   "drive_side": "right",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [
+    "es"
+   ],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "EE": {
+   "name": "Estonia",
+   "name_long": "Estonia",
+   "iso_a3": "EST",
+   "continent": "Europe",
+   "subregion": "Northern Europe",
+   "region_un": "Europe",
+   "label_lat": 58.7249,
+   "label_lon": 25.8671,
+   "drive_side": "right",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [
+    "et"
+   ],
+   "plate_class": "eu_blue_band",
+   "disputed_boundary_note": false
+  },
+  "EG": {
+   "name": "Egypt",
+   "name_long": "Egypt",
+   "iso_a3": "EGY",
+   "continent": "Africa",
+   "subregion": "Northern Africa",
+   "region_un": "Africa",
+   "label_lat": 26.1862,
+   "label_lon": 29.4458,
+   "drive_side": "right",
+   "scripts": [
+    "Arab",
+    "Latn"
+   ],
+   "languages": [
+    "ar",
+    "en"
+   ],
+   "plate_class": "arabic_plate",
+   "disputed_boundary_note": false
+  },
+  "EH": {
+   "name": "Western Sahara",
+   "name_long": "Western Sahara",
+   "iso_a3": "ESH",
+   "continent": "Africa",
+   "subregion": "Northern Africa",
+   "region_un": "Africa",
+   "label_lat": 23.9676,
+   "label_lon": -12.6303,
+   "drive_side": "right",
+   "scripts": [
+    "Arab",
+    "Latn"
+   ],
+   "languages": [],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": true
+  },
+  "ER": {
+   "name": "Eritrea",
+   "name_long": "Eritrea",
+   "iso_a3": "ERI",
+   "continent": "Africa",
+   "subregion": "Eastern Africa",
+   "region_un": "Africa",
+   "label_lat": 15.7874,
+   "label_lon": 38.2856,
+   "drive_side": "right",
+   "scripts": [
+    "Ethi",
+    "Arab",
+    "Latn"
+   ],
+   "languages": [
+    "ti",
+    "ar",
+    "en"
+   ],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "ES": {
+   "name": "Spain",
+   "name_long": "Spain",
+   "iso_a3": "ESP",
+   "continent": "Europe",
+   "subregion": "Southern Europe",
+   "region_un": "Europe",
+   "label_lat": 40.091,
+   "label_lon": -3.4647,
+   "drive_side": "right",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [
+    "es",
+    "ca",
+    "gl",
+    "eu"
+   ],
+   "plate_class": "eu_blue_band",
+   "disputed_boundary_note": false
+  },
+  "ET": {
+   "name": "Ethiopia",
+   "name_long": "Ethiopia",
+   "iso_a3": "ETH",
+   "continent": "Africa",
+   "subregion": "Eastern Africa",
+   "region_un": "Africa",
+   "label_lat": 8.0328,
+   "label_lon": 39.0886,
+   "drive_side": "right",
+   "scripts": [
+    "Ethi",
+    "Latn"
+   ],
+   "languages": [
+    "am",
+    "en"
+   ],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "FI": {
+   "name": "Finland",
+   "name_long": "Finland",
+   "iso_a3": "FIN",
+   "continent": "Europe",
+   "subregion": "Northern Europe",
+   "region_un": "Europe",
+   "label_lat": 63.2524,
+   "label_lon": 27.2764,
+   "drive_side": "right",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [
+    "fi",
+    "sv"
+   ],
+   "plate_class": "eu_blue_band",
+   "disputed_boundary_note": false
+  },
+  "FJ": {
+   "name": "Fiji",
+   "name_long": "Fiji",
+   "iso_a3": "FJI",
+   "continent": "Oceania",
+   "subregion": "Melanesia",
+   "region_un": "Oceania",
+   "label_lat": -17.8261,
+   "label_lon": 177.9754,
+   "drive_side": "left",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [
+    "en"
+   ],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "FK": {
+   "name": "Falkland Islands",
+   "name_long": "Falkland Islands / Malvinas",
+   "iso_a3": "FLK",
+   "continent": "South America",
+   "subregion": "South America",
+   "region_un": "Americas",
+   "label_lat": -51.6089,
+   "label_lon": -58.7386,
+   "drive_side": "left",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "FM": {
+   "name": "Federated States of Micronesia",
+   "name_long": "Federated States of Micronesia",
+   "iso_a3": "FSM",
+   "continent": "Oceania",
+   "subregion": "Micronesia",
+   "region_un": "Oceania",
+   "label_lat": 6.8876,
+   "label_lon": 158.234,
+   "drive_side": "right",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "FO": {
+   "name": "Faroe Islands",
+   "name_long": "Faeroe Islands",
+   "iso_a3": "FRO",
+   "continent": "Europe",
+   "subregion": "Northern Europe",
+   "region_un": "Europe",
+   "label_lat": 62.1856,
+   "label_lon": -7.0584,
+   "drive_side": "right",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "FR": {
+   "name": "France",
+   "name_long": "France",
+   "iso_a3": "FRA",
+   "continent": "Europe",
+   "subregion": "Western Europe",
+   "region_un": "Europe",
+   "label_lat": 46.6961,
+   "label_lon": 2.5523,
+   "drive_side": "right",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [
+    "fr"
+   ],
+   "plate_class": "eu_blue_band",
+   "disputed_boundary_note": false
+  },
+  "GA": {
+   "name": "Gabon",
+   "name_long": "Gabon",
+   "iso_a3": "GAB",
+   "continent": "Africa",
+   "subregion": "Middle Africa",
+   "region_un": "Africa",
+   "label_lat": -0.4377,
+   "label_lon": 11.8359,
+   "drive_side": "right",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [
+    "fr"
+   ],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "GB": {
+   "name": "United Kingdom",
+   "name_long": "United Kingdom",
+   "iso_a3": "GBR",
+   "continent": "Europe",
+   "subregion": "Northern Europe",
+   "region_un": "Europe",
+   "label_lat": 54.4027,
+   "label_lon": -2.1163,
+   "drive_side": "left",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [
+    "en"
+   ],
+   "plate_class": "uk_yellow_rear",
+   "disputed_boundary_note": false
+  },
+  "GD": {
+   "name": "Grenada",
+   "name_long": "Grenada",
+   "iso_a3": "GRD",
+   "continent": "North America",
+   "subregion": "Caribbean",
+   "region_un": "Americas",
+   "label_lat": 12.1132,
+   "label_lon": -61.6805,
+   "drive_side": "left",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "GE": {
+   "name": "Georgia",
+   "name_long": "Georgia",
+   "iso_a3": "GEO",
+   "continent": "Asia",
+   "subregion": "Western Asia",
+   "region_un": "Asia",
+   "label_lat": 41.8701,
+   "label_lon": 43.7357,
+   "drive_side": "right",
+   "scripts": [
+    "Geor",
+    "Latn"
+   ],
+   "languages": [
+    "ka",
+    "en"
+   ],
+   "plate_class": "eu_blue_band",
+   "disputed_boundary_note": false
+  },
+  "GG": {
+   "name": "Guernsey",
+   "name_long": "Guernsey",
+   "iso_a3": "GGY",
+   "continent": "Europe",
+   "subregion": "Northern Europe",
+   "region_un": "Europe",
+   "label_lat": 49.4635,
+   "label_lon": -2.5617,
+   "drive_side": "left",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "GH": {
+   "name": "Ghana",
+   "name_long": "Ghana",
+   "iso_a3": "GHA",
+   "continent": "Africa",
+   "subregion": "Western Africa",
+   "region_un": "Africa",
+   "label_lat": 7.7176,
+   "label_lon": -1.0369,
+   "drive_side": "right",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [
+    "en"
+   ],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "GI": {
+   "name": "Gibraltar",
+   "name_long": "Gibraltar",
+   "iso_a3": "GIB",
+   "continent": "Europe",
+   "subregion": "Southern Europe",
+   "region_un": "Europe",
+   "label_lat": 36.1294,
+   "label_lon": -5.3467,
+   "drive_side": "right",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "GL": {
+   "name": "Greenland",
+   "name_long": "Greenland",
+   "iso_a3": "GRL",
+   "continent": "North America",
+   "subregion": "Northern America",
+   "region_un": "Americas",
+   "label_lat": 74.3194,
+   "label_lon": -39.3353,
+   "drive_side": "right",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "GM": {
+   "name": "The Gambia",
+   "name_long": "The Gambia",
+   "iso_a3": "GMB",
+   "continent": "Africa",
+   "subregion": "Western Africa",
+   "region_un": "Africa",
+   "label_lat": 13.6417,
+   "label_lon": -14.9983,
+   "drive_side": "right",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "GN": {
+   "name": "Guinea",
+   "name_long": "Guinea",
+   "iso_a3": "GIN",
+   "continent": "Africa",
+   "subregion": "Western Africa",
+   "region_un": "Africa",
+   "label_lat": 10.6185,
+   "label_lon": -10.0164,
+   "drive_side": "right",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "GQ": {
+   "name": "Equatorial Guinea",
+   "name_long": "Equatorial Guinea",
+   "iso_a3": "GNQ",
+   "continent": "Africa",
+   "subregion": "Middle Africa",
+   "region_un": "Africa",
+   "label_lat": 2.333,
+   "label_lon": 8.9902,
+   "drive_side": "right",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "GR": {
+   "name": "Greece",
+   "name_long": "Greece",
+   "iso_a3": "GRC",
+   "continent": "Europe",
+   "subregion": "Southern Europe",
+   "region_un": "Europe",
+   "label_lat": 39.4928,
+   "label_lon": 21.7257,
+   "drive_side": "right",
+   "scripts": [
+    "Grek",
+    "Latn"
+   ],
+   "languages": [
+    "el"
+   ],
+   "plate_class": "eu_blue_band",
+   "disputed_boundary_note": false
+  },
+  "GS": {
+   "name": "South Georgia and the South Sandwich Islands",
+   "name_long": "South Georgia and the Islands",
+   "iso_a3": "SGS",
+   "continent": "Seven seas (open ocean)",
+   "subregion": "Seven seas (open ocean)",
+   "region_un": "Americas",
+   "label_lat": -55.6834,
+   "label_lon": -31.0632,
+   "drive_side": "right",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "GT": {
+   "name": "Guatemala",
+   "name_long": "Guatemala",
+   "iso_a3": "GTM",
+   "continent": "North America",
+   "subregion": "Central America",
+   "region_un": "Americas",
+   "label_lat": 14.9821,
+   "label_lon": -90.4971,
+   "drive_side": "right",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "GU": {
+   "name": "Guam",
+   "name_long": "Guam",
+   "iso_a3": "GUM",
+   "continent": "Oceania",
+   "subregion": "Micronesia",
+   "region_un": "Oceania",
+   "label_lat": 13.3542,
+   "label_lon": 144.7036,
+   "drive_side": "right",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "GW": {
+   "name": "Guinea-Bissau",
+   "name_long": "Guinea-Bissau",
+   "iso_a3": "GNB",
+   "continent": "Africa",
+   "subregion": "Western Africa",
+   "region_un": "Africa",
+   "label_lat": 12.1637,
+   "label_lon": -14.5241,
+   "drive_side": "right",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "GY": {
+   "name": "Guyana",
+   "name_long": "Guyana",
+   "iso_a3": "GUY",
+   "continent": "South America",
+   "subregion": "South America",
+   "region_un": "Americas",
+   "label_lat": 5.1243,
+   "label_lon": -58.9426,
+   "drive_side": "left",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [
+    "en"
+   ],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "HK": {
+   "name": "Hong Kong",
+   "name_long": "Hong Kong",
+   "iso_a3": "HKG",
+   "continent": "Asia",
+   "subregion": "Eastern Asia",
+   "region_un": "Asia",
+   "label_lat": 22.4488,
+   "label_lon": 114.0978,
+   "drive_side": "left",
+   "scripts": [
+    "Hani",
+    "Latn"
+   ],
+   "languages": [
+    "zh",
+    "en"
+   ],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "HM": {
+   "name": "Heard Island and McDonald Islands",
+   "name_long": "Heard I. and McDonald Islands",
+   "iso_a3": "HMD",
+   "continent": "Seven seas (open ocean)",
+   "subregion": "Seven seas (open ocean)",
+   "region_un": "Africa",
+   "label_lat": -53.1035,
+   "label_lon": 73.5052,
+   "drive_side": "right",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "HN": {
+   "name": "Honduras",
+   "name_long": "Honduras",
+   "iso_a3": "HND",
+   "continent": "North America",
+   "subregion": "Central America",
+   "region_un": "Americas",
+   "label_lat": 14.7948,
+   "label_lon": -86.8876,
+   "drive_side": "right",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "HR": {
+   "name": "Croatia",
+   "name_long": "Croatia",
+   "iso_a3": "HRV",
+   "continent": "Europe",
+   "subregion": "Southern Europe",
+   "region_un": "Europe",
+   "label_lat": 45.8058,
+   "label_lon": 16.3724,
+   "drive_side": "right",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [
+    "hr"
+   ],
+   "plate_class": "eu_blue_band",
+   "disputed_boundary_note": false
+  },
+  "HT": {
+   "name": "Haiti",
+   "name_long": "Haiti",
+   "iso_a3": "HTI",
+   "continent": "North America",
+   "subregion": "Caribbean",
+   "region_un": "Americas",
+   "label_lat": 19.2638,
+   "label_lon": -72.2241,
+   "drive_side": "right",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "HU": {
+   "name": "Hungary",
+   "name_long": "Hungary",
+   "iso_a3": "HUN",
+   "continent": "Europe",
+   "subregion": "Eastern Europe",
+   "region_un": "Europe",
+   "label_lat": 47.0868,
+   "label_lon": 19.4479,
+   "drive_side": "right",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [
+    "hu"
+   ],
+   "plate_class": "eu_blue_band",
+   "disputed_boundary_note": false
+  },
+  "ID": {
+   "name": "Indonesia",
+   "name_long": "Indonesia",
+   "iso_a3": "IDN",
+   "continent": "Asia",
+   "subregion": "South-Eastern Asia",
+   "region_un": "Asia",
+   "label_lat": -0.9544,
+   "label_lon": 101.8929,
+   "drive_side": "left",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [
+    "id"
+   ],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "IE": {
+   "name": "Ireland",
+   "name_long": "Ireland",
+   "iso_a3": "IRL",
+   "continent": "Europe",
+   "subregion": "Northern Europe",
+   "region_un": "Europe",
+   "label_lat": 53.0787,
+   "label_lon": -7.7986,
+   "drive_side": "left",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [
+    "en",
+    "ga"
+   ],
+   "plate_class": "eu_blue_band",
+   "disputed_boundary_note": false
+  },
+  "IL": {
+   "name": "Israel",
+   "name_long": "Israel",
+   "iso_a3": "ISR",
+   "continent": "Asia",
+   "subregion": "Western Asia",
+   "region_un": "Asia",
+   "label_lat": 30.9111,
+   "label_lon": 34.8479,
+   "drive_side": "right",
+   "scripts": [
+    "Hebr",
+    "Arab",
+    "Latn"
+   ],
+   "languages": [
+    "he",
+    "ar",
+    "en"
+   ],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "IM": {
+   "name": "Isle of Man",
+   "name_long": "Isle of Man",
+   "iso_a3": "IMN",
+   "continent": "Europe",
+   "subregion": "Northern Europe",
+   "region_un": "Europe",
+   "label_lat": 54.2208,
+   "label_lon": -4.5301,
+   "drive_side": "left",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "IN": {
+   "name": "India",
+   "name_long": "India",
+   "iso_a3": "IND",
+   "continent": "Asia",
+   "subregion": "Southern Asia",
+   "region_un": "Asia",
+   "label_lat": 22.6869,
+   "label_lon": 79.3581,
+   "drive_side": "left",
+   "scripts": [
+    "Deva",
+    "Latn",
+    "Beng",
+    "Taml",
+    "Telu",
+    "Knda",
+    "Mlym",
+    "Gujr",
+    "Guru",
+    "Orya"
+   ],
+   "languages": [
+    "hi",
+    "en",
+    "ta",
+    "te",
+    "kn",
+    "ml",
+    "bn",
+    "mr",
+    "gu",
+    "pa"
+   ],
+   "plate_class": "in_white_yellow",
+   "disputed_boundary_note": false
+  },
+  "IO": {
+   "name": "British Indian Ocean Territory",
+   "name_long": "British Indian Ocean Territory",
+   "iso_a3": "IOT",
+   "continent": "Seven seas (open ocean)",
+   "subregion": "Seven seas (open ocean)",
+   "region_un": "Africa",
+   "label_lat": -6.1908,
+   "label_lon": 71.3483,
+   "drive_side": "right",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "IQ": {
+   "name": "Iraq",
+   "name_long": "Iraq",
+   "iso_a3": "IRQ",
+   "continent": "Asia",
+   "subregion": "Western Asia",
+   "region_un": "Asia",
+   "label_lat": 33.094,
+   "label_lon": 43.2618,
+   "drive_side": "right",
+   "scripts": [
+    "Arab",
+    "Latn"
+   ],
+   "languages": [
+    "ar",
+    "ku"
+   ],
+   "plate_class": "arabic_plate",
+   "disputed_boundary_note": false
+  },
+  "IR": {
+   "name": "Iran",
+   "name_long": "Iran",
+   "iso_a3": "IRN",
+   "continent": "Asia",
+   "subregion": "Southern Asia",
+   "region_un": "Asia",
+   "label_lat": 32.1662,
+   "label_lon": 54.9315,
+   "drive_side": "right",
+   "scripts": [
+    "Arab",
+    "Latn"
+   ],
+   "languages": [
+    "fa",
+    "en"
+   ],
+   "plate_class": "arabic_plate",
+   "disputed_boundary_note": false
+  },
+  "IS": {
+   "name": "Iceland",
+   "name_long": "Iceland",
+   "iso_a3": "ISL",
+   "continent": "Europe",
+   "subregion": "Northern Europe",
+   "region_un": "Europe",
+   "label_lat": 64.7793,
+   "label_lon": -18.6737,
+   "drive_side": "right",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [
+    "is"
+   ],
+   "plate_class": "eu_blue_band",
+   "disputed_boundary_note": false
+  },
+  "IT": {
+   "name": "Italy",
+   "name_long": "Italy",
+   "iso_a3": "ITA",
+   "continent": "Europe",
+   "subregion": "Southern Europe",
+   "region_un": "Europe",
+   "label_lat": 44.7325,
+   "label_lon": 11.0769,
+   "drive_side": "right",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [
+    "it"
+   ],
+   "plate_class": "eu_blue_band",
+   "disputed_boundary_note": false
+  },
+  "JE": {
+   "name": "Jersey",
+   "name_long": "Jersey",
+   "iso_a3": "JEY",
+   "continent": "Europe",
+   "subregion": "Northern Europe",
+   "region_un": "Europe",
+   "label_lat": 49.2208,
+   "label_lon": -2.0901,
+   "drive_side": "left",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "JM": {
+   "name": "Jamaica",
+   "name_long": "Jamaica",
+   "iso_a3": "JAM",
+   "continent": "North America",
+   "subregion": "Caribbean",
+   "region_un": "Americas",
+   "label_lat": 18.1371,
+   "label_lon": -77.3188,
+   "drive_side": "left",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "JO": {
+   "name": "Jordan",
+   "name_long": "Jordan",
+   "iso_a3": "JOR",
+   "continent": "Asia",
+   "subregion": "Western Asia",
+   "region_un": "Asia",
+   "label_lat": 30.805,
+   "label_lon": 36.376,
+   "drive_side": "right",
+   "scripts": [
+    "Arab",
+    "Latn"
+   ],
+   "languages": [
+    "ar",
+    "en"
+   ],
+   "plate_class": "arabic_plate",
+   "disputed_boundary_note": false
+  },
+  "JP": {
+   "name": "Japan",
+   "name_long": "Japan",
+   "iso_a3": "JPN",
+   "continent": "Asia",
+   "subregion": "Eastern Asia",
+   "region_un": "Asia",
+   "label_lat": 36.1425,
+   "label_lon": 138.4422,
+   "drive_side": "left",
+   "scripts": [
+    "Jpan",
+    "Hani",
+    "Latn"
+   ],
+   "languages": [
+    "ja"
+   ],
+   "plate_class": "jp_compact",
+   "disputed_boundary_note": false
+  },
+  "KE": {
+   "name": "Kenya",
+   "name_long": "Kenya",
+   "iso_a3": "KEN",
+   "continent": "Africa",
+   "subregion": "Eastern Africa",
+   "region_un": "Africa",
+   "label_lat": 0.549,
+   "label_lon": 37.9076,
+   "drive_side": "left",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [
+    "sw",
+    "en"
+   ],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "KG": {
+   "name": "Kyrgyzstan",
+   "name_long": "Kyrgyzstan",
+   "iso_a3": "KGZ",
+   "continent": "Asia",
+   "subregion": "Central Asia",
+   "region_un": "Asia",
+   "label_lat": 41.6685,
+   "label_lon": 74.5326,
+   "drive_side": "right",
+   "scripts": [
+    "Cyrl",
+    "Latn"
+   ],
+   "languages": [
+    "ky",
+    "ru"
+   ],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "KH": {
+   "name": "Cambodia",
+   "name_long": "Cambodia",
+   "iso_a3": "KHM",
+   "continent": "Asia",
+   "subregion": "South-Eastern Asia",
+   "region_un": "Asia",
+   "label_lat": 12.6476,
+   "label_lon": 104.5049,
+   "drive_side": "right",
+   "scripts": [
+    "Khmr",
+    "Latn"
+   ],
+   "languages": [
+    "km"
+   ],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "KI": {
+   "name": "Kiribati",
+   "name_long": "Kiribati",
+   "iso_a3": "KIR",
+   "continent": "Oceania",
+   "subregion": "Micronesia",
+   "region_un": "Oceania",
+   "label_lat": 1.8204,
+   "label_lon": -157.3846,
+   "drive_side": "left",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "KM": {
+   "name": "Comoros",
+   "name_long": "Comoros",
+   "iso_a3": "COM",
+   "continent": "Africa",
+   "subregion": "Eastern Africa",
+   "region_un": "Africa",
+   "label_lat": -11.7277,
+   "label_lon": 43.3181,
+   "drive_side": "right",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "KN": {
+   "name": "Saint Kitts and Nevis",
+   "name_long": "Saint Kitts and Nevis",
+   "iso_a3": "KNA",
+   "continent": "North America",
+   "subregion": "Caribbean",
+   "region_un": "Americas",
+   "label_lat": 17.3366,
+   "label_lon": -62.758,
+   "drive_side": "left",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "KP": {
+   "name": "North Korea",
+   "name_long": "Dem. Rep. Korea",
+   "iso_a3": "PRK",
+   "continent": "Asia",
+   "subregion": "Eastern Asia",
+   "region_un": "Asia",
+   "label_lat": 39.8853,
+   "label_lon": 126.4445,
+   "drive_side": "right",
+   "scripts": [
+    "Hang"
+   ],
+   "languages": [
+    "ko"
+   ],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "KR": {
+   "name": "South Korea",
+   "name_long": "Republic of Korea",
+   "iso_a3": "KOR",
+   "continent": "Asia",
+   "subregion": "Eastern Asia",
+   "region_un": "Asia",
+   "label_lat": 36.3849,
+   "label_lon": 128.1295,
+   "drive_side": "right",
+   "scripts": [
+    "Hang",
+    "Latn"
+   ],
+   "languages": [
+    "ko"
+   ],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "KW": {
+   "name": "Kuwait",
+   "name_long": "Kuwait",
+   "iso_a3": "KWT",
+   "continent": "Asia",
+   "subregion": "Western Asia",
+   "region_un": "Asia",
+   "label_lat": 29.4136,
+   "label_lon": 47.314,
+   "drive_side": "right",
+   "scripts": [
+    "Arab",
+    "Latn"
+   ],
+   "languages": [
+    "ar",
+    "en"
+   ],
+   "plate_class": "arabic_plate",
+   "disputed_boundary_note": false
+  },
+  "KY": {
+   "name": "Cayman Islands",
+   "name_long": "Cayman Islands",
+   "iso_a3": "CYM",
+   "continent": "North America",
+   "subregion": "Caribbean",
+   "region_un": "Americas",
+   "label_lat": 19.3199,
+   "label_lon": -81.2405,
+   "drive_side": "left",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "KZ": {
+   "name": "Kazakhstan",
+   "name_long": "Kazakhstan",
+   "iso_a3": "KAZ",
+   "continent": "Asia",
+   "subregion": "Central Asia",
+   "region_un": "Asia",
+   "label_lat": 49.0541,
+   "label_lon": 68.6855,
+   "drive_side": "right",
+   "scripts": [
+    "Cyrl",
+    "Latn"
+   ],
+   "languages": [
+    "kk",
+    "ru"
+   ],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "LA": {
+   "name": "Laos",
+   "name_long": "Lao PDR",
+   "iso_a3": "LAO",
+   "continent": "Asia",
+   "subregion": "South-Eastern Asia",
+   "region_un": "Asia",
+   "label_lat": 19.4318,
+   "label_lon": 102.5339,
+   "drive_side": "right",
+   "scripts": [
+    "Laoo",
+    "Latn"
+   ],
+   "languages": [
+    "lo"
+   ],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "LB": {
+   "name": "Lebanon",
+   "name_long": "Lebanon",
+   "iso_a3": "LBN",
+   "continent": "Asia",
+   "subregion": "Western Asia",
+   "region_un": "Asia",
+   "label_lat": 34.1334,
+   "label_lon": 35.9929,
+   "drive_side": "right",
+   "scripts": [
+    "Arab",
+    "Latn"
+   ],
+   "languages": [
+    "ar",
+    "fr",
+    "en"
+   ],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "LC": {
+   "name": "Saint Lucia",
+   "name_long": "Saint Lucia",
+   "iso_a3": "LCA",
+   "continent": "North America",
+   "subregion": "Caribbean",
+   "region_un": "Americas",
+   "label_lat": 13.8924,
+   "label_lon": -60.9801,
+   "drive_side": "left",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "LI": {
+   "name": "Liechtenstein",
+   "name_long": "Liechtenstein",
+   "iso_a3": "LIE",
+   "continent": "Europe",
+   "subregion": "Western Europe",
+   "region_un": "Europe",
+   "label_lat": 47.1114,
+   "label_lon": 9.5594,
+   "drive_side": "right",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [
+    "de"
+   ],
+   "plate_class": "eu_blue_band",
+   "disputed_boundary_note": false
+  },
+  "LK": {
+   "name": "Sri Lanka",
+   "name_long": "Sri Lanka",
+   "iso_a3": "LKA",
+   "continent": "Asia",
+   "subregion": "Southern Asia",
+   "region_un": "Asia",
+   "label_lat": 7.5811,
+   "label_lon": 80.7048,
+   "drive_side": "left",
+   "scripts": [
+    "Sinh",
+    "Taml",
+    "Latn"
+   ],
+   "languages": [
+    "si",
+    "ta",
+    "en"
+   ],
+   "plate_class": "in_white_yellow",
+   "disputed_boundary_note": false
+  },
+  "LR": {
+   "name": "Liberia",
+   "name_long": "Liberia",
+   "iso_a3": "LBR",
+   "continent": "Africa",
+   "subregion": "Western Africa",
+   "region_un": "Africa",
+   "label_lat": 6.4472,
+   "label_lon": -9.4604,
+   "drive_side": "right",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "LS": {
+   "name": "Lesotho",
+   "name_long": "Lesotho",
+   "iso_a3": "LSO",
+   "continent": "Africa",
+   "subregion": "Southern Africa",
+   "region_un": "Africa",
+   "label_lat": -29.4802,
+   "label_lon": 28.2466,
+   "drive_side": "left",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "LT": {
+   "name": "Lithuania",
+   "name_long": "Lithuania",
+   "iso_a3": "LTU",
+   "continent": "Europe",
+   "subregion": "Northern Europe",
+   "region_un": "Europe",
+   "label_lat": 55.1037,
+   "label_lon": 24.0899,
+   "drive_side": "right",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [
+    "lt"
+   ],
+   "plate_class": "eu_blue_band",
+   "disputed_boundary_note": false
+  },
+  "LU": {
+   "name": "Luxembourg",
+   "name_long": "Luxembourg",
+   "iso_a3": "LUX",
+   "continent": "Europe",
+   "subregion": "Western Europe",
+   "region_un": "Europe",
+   "label_lat": 49.7337,
+   "label_lon": 6.0776,
+   "drive_side": "right",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [
+    "fr",
+    "de",
+    "lb"
+   ],
+   "plate_class": "all_yellow",
+   "disputed_boundary_note": false
+  },
+  "LV": {
+   "name": "Latvia",
+   "name_long": "Latvia",
+   "iso_a3": "LVA",
+   "continent": "Europe",
+   "subregion": "Northern Europe",
+   "region_un": "Europe",
+   "label_lat": 57.0669,
+   "label_lon": 25.4587,
+   "drive_side": "right",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [
+    "lv"
+   ],
+   "plate_class": "eu_blue_band",
+   "disputed_boundary_note": false
+  },
+  "LY": {
+   "name": "Libya",
+   "name_long": "Libya",
+   "iso_a3": "LBY",
+   "continent": "Africa",
+   "subregion": "Northern Africa",
+   "region_un": "Africa",
+   "label_lat": 26.6389,
+   "label_lon": 18.011,
+   "drive_side": "right",
+   "scripts": [
+    "Arab",
+    "Latn"
+   ],
+   "languages": [
+    "ar"
+   ],
+   "plate_class": "arabic_plate",
+   "disputed_boundary_note": false
+  },
+  "MA": {
+   "name": "Morocco",
+   "name_long": "Morocco",
+   "iso_a3": "MAR",
+   "continent": "Africa",
+   "subregion": "Northern Africa",
+   "region_un": "Africa",
+   "label_lat": 31.6507,
+   "label_lon": -7.1873,
+   "drive_side": "right",
+   "scripts": [
+    "Arab",
+    "Tfng",
+    "Latn"
+   ],
+   "languages": [
+    "ar",
+    "fr"
+   ],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "MC": {
+   "name": "Monaco",
+   "name_long": "Monaco",
+   "iso_a3": "MCO",
+   "continent": "Europe",
+   "subregion": "Western Europe",
+   "region_un": "Europe",
+   "label_lat": 43.7397,
+   "label_lon": 7.3983,
+   "drive_side": "right",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [
+    "fr"
+   ],
+   "plate_class": "eu_blue_band",
+   "disputed_boundary_note": false
+  },
+  "MD": {
+   "name": "Moldova",
+   "name_long": "Moldova",
+   "iso_a3": "MDA",
+   "continent": "Europe",
+   "subregion": "Eastern Europe",
+   "region_un": "Europe",
+   "label_lat": 47.435,
+   "label_lon": 28.4879,
+   "drive_side": "right",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [
+    "ro",
+    "ru"
+   ],
+   "plate_class": "eu_blue_band",
+   "disputed_boundary_note": false
+  },
+  "ME": {
+   "name": "Montenegro",
+   "name_long": "Montenegro",
+   "iso_a3": "MNE",
+   "continent": "Europe",
+   "subregion": "Southern Europe",
+   "region_un": "Europe",
+   "label_lat": 42.8031,
+   "label_lon": 19.1437,
+   "drive_side": "right",
+   "scripts": [
+    "Latn",
+    "Cyrl"
+   ],
+   "languages": [
+    "sr"
+   ],
+   "plate_class": "eu_blue_band",
+   "disputed_boundary_note": false
+  },
+  "MF": {
+   "name": "Saint Martin",
+   "name_long": "Saint-Martin",
+   "iso_a3": "MAF",
+   "continent": "North America",
+   "subregion": "Caribbean",
+   "region_un": "Americas",
+   "label_lat": 18.0813,
+   "label_lon": -63.0494,
+   "drive_side": "right",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "MG": {
+   "name": "Madagascar",
+   "name_long": "Madagascar",
+   "iso_a3": "MDG",
+   "continent": "Africa",
+   "subregion": "Eastern Africa",
+   "region_un": "Africa",
+   "label_lat": -18.6283,
+   "label_lon": 46.7042,
+   "drive_side": "right",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [
+    "mg",
+    "fr"
+   ],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "MH": {
+   "name": "Marshall Islands",
+   "name_long": "Marshall Islands",
+   "iso_a3": "MHL",
+   "continent": "Oceania",
+   "subregion": "Micronesia",
+   "region_un": "Oceania",
+   "label_lat": 7.0826,
+   "label_lon": 171.1936,
+   "drive_side": "right",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "MK": {
+   "name": "North Macedonia",
+   "name_long": "North Macedonia",
+   "iso_a3": "MKD",
+   "continent": "Europe",
+   "subregion": "Southern Europe",
+   "region_un": "Europe",
+   "label_lat": 41.5582,
+   "label_lon": 21.5558,
+   "drive_side": "right",
+   "scripts": [
+    "Cyrl",
+    "Latn"
+   ],
+   "languages": [
+    "mk"
+   ],
+   "plate_class": "eu_blue_band",
+   "disputed_boundary_note": false
+  },
+  "ML": {
+   "name": "Mali",
+   "name_long": "Mali",
+   "iso_a3": "MLI",
+   "continent": "Africa",
+   "subregion": "Western Africa",
+   "region_un": "Africa",
+   "label_lat": 18.6927,
+   "label_lon": -2.0385,
+   "drive_side": "right",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [
+    "fr"
+   ],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "MM": {
+   "name": "Myanmar",
+   "name_long": "Myanmar",
+   "iso_a3": "MMR",
+   "continent": "Asia",
+   "subregion": "South-Eastern Asia",
+   "region_un": "Asia",
+   "label_lat": 21.5739,
+   "label_lon": 95.8045,
+   "drive_side": "right",
+   "scripts": [
+    "Mymr",
+    "Latn"
+   ],
+   "languages": [
+    "my",
+    "en"
+   ],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "MN": {
+   "name": "Mongolia",
+   "name_long": "Mongolia",
+   "iso_a3": "MNG",
+   "continent": "Asia",
+   "subregion": "Eastern Asia",
+   "region_un": "Asia",
+   "label_lat": 45.9975,
+   "label_lon": 104.1504,
+   "drive_side": "right",
+   "scripts": [
+    "Cyrl",
+    "Latn"
+   ],
+   "languages": [
+    "mn"
+   ],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "MO": {
+   "name": "Macau",
+   "name_long": "Macao",
+   "iso_a3": "MAC",
+   "continent": "Asia",
+   "subregion": "Eastern Asia",
+   "region_un": "Asia",
+   "label_lat": 22.1297,
+   "label_lon": 113.556,
+   "drive_side": "left",
+   "scripts": [
+    "Hani",
+    "Latn"
+   ],
+   "languages": [
+    "zh",
+    "pt"
+   ],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "MP": {
+   "name": "Northern Mariana Islands",
+   "name_long": "Northern Mariana Islands",
+   "iso_a3": "MNP",
+   "continent": "Oceania",
+   "subregion": "Micronesia",
+   "region_un": "Oceania",
+   "label_lat": 15.1882,
+   "label_lon": 145.7344,
+   "drive_side": "right",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "MR": {
+   "name": "Mauritania",
+   "name_long": "Mauritania",
+   "iso_a3": "MRT",
+   "continent": "Africa",
+   "subregion": "Western Africa",
+   "region_un": "Africa",
+   "label_lat": 19.5871,
+   "label_lon": -9.7403,
+   "drive_side": "right",
+   "scripts": [
+    "Arab",
+    "Latn"
+   ],
+   "languages": [
+    "ar",
+    "fr"
+   ],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "MS": {
+   "name": "Montserrat",
+   "name_long": "Montserrat",
+   "iso_a3": "MSR",
+   "continent": "North America",
+   "subregion": "Caribbean",
+   "region_un": "Americas",
+   "label_lat": 16.7372,
+   "label_lon": -62.1883,
+   "drive_side": "left",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "MT": {
+   "name": "Malta",
+   "name_long": "Malta",
+   "iso_a3": "MLT",
+   "continent": "Europe",
+   "subregion": "Southern Europe",
+   "region_un": "Europe",
+   "label_lat": 35.8929,
+   "label_lon": 14.433,
+   "drive_side": "left",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [
+    "mt",
+    "en"
+   ],
+   "plate_class": "eu_blue_band",
+   "disputed_boundary_note": false
+  },
+  "MU": {
+   "name": "Mauritius",
+   "name_long": "Mauritius",
+   "iso_a3": "MUS",
+   "continent": "Seven seas (open ocean)",
+   "subregion": "Eastern Africa",
+   "region_un": "Africa",
+   "label_lat": -20.2995,
+   "label_lon": 57.5658,
+   "drive_side": "left",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [
+    "en",
+    "fr"
+   ],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "MV": {
+   "name": "Maldives",
+   "name_long": "Maldives",
+   "iso_a3": "MDV",
+   "continent": "Seven seas (open ocean)",
+   "subregion": "Southern Asia",
+   "region_un": "Asia",
+   "label_lat": 4.1744,
+   "label_lon": 73.5076,
+   "drive_side": "left",
+   "scripts": [
+    "Thaa",
+    "Latn"
+   ],
+   "languages": [
+    "dv",
+    "en"
+   ],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "MW": {
+   "name": "Malawi",
+   "name_long": "Malawi",
+   "iso_a3": "MWI",
+   "continent": "Africa",
+   "subregion": "Eastern Africa",
+   "region_un": "Africa",
+   "label_lat": -13.3867,
+   "label_lon": 33.6081,
+   "drive_side": "left",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [
+    "en"
+   ],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "MX": {
+   "name": "Mexico",
+   "name_long": "Mexico",
+   "iso_a3": "MEX",
+   "continent": "North America",
+   "subregion": "Central America",
+   "region_un": "Americas",
+   "label_lat": 23.92,
+   "label_lon": -102.2894,
+   "drive_side": "right",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [
+    "es"
+   ],
+   "plate_class": "north_america",
+   "disputed_boundary_note": false
+  },
+  "MY": {
+   "name": "Malaysia",
+   "name_long": "Malaysia",
+   "iso_a3": "MYS",
+   "continent": "Asia",
+   "subregion": "South-Eastern Asia",
+   "region_un": "Asia",
+   "label_lat": 2.5287,
+   "label_lon": 113.8371,
+   "drive_side": "left",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [
+    "ms",
+    "en"
+   ],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "MZ": {
+   "name": "Mozambique",
+   "name_long": "Mozambique",
+   "iso_a3": "MOZ",
+   "continent": "Africa",
+   "subregion": "Eastern Africa",
+   "region_un": "Africa",
+   "label_lat": -13.9432,
+   "label_lon": 37.8379,
+   "drive_side": "left",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [
+    "pt"
+   ],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "NA": {
+   "name": "Namibia",
+   "name_long": "Namibia",
+   "iso_a3": "NAM",
+   "continent": "Africa",
+   "subregion": "Southern Africa",
+   "region_un": "Africa",
+   "label_lat": -20.5753,
+   "label_lon": 17.1082,
+   "drive_side": "left",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [
+    "en",
+    "af"
+   ],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "NC": {
+   "name": "New Caledonia",
+   "name_long": "New Caledonia",
+   "iso_a3": "NCL",
+   "continent": "Oceania",
+   "subregion": "Melanesia",
+   "region_un": "Oceania",
+   "label_lat": -21.0647,
+   "label_lon": 165.084,
+   "drive_side": "right",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "NE": {
+   "name": "Niger",
+   "name_long": "Niger",
+   "iso_a3": "NER",
+   "continent": "Africa",
+   "subregion": "Western Africa",
+   "region_un": "Africa",
+   "label_lat": 17.4462,
+   "label_lon": 9.5044,
+   "drive_side": "right",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [
+    "fr"
+   ],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "NF": {
+   "name": "Norfolk Island",
+   "name_long": "Norfolk Island",
+   "iso_a3": "NFK",
+   "continent": "Oceania",
+   "subregion": "Australia and New Zealand",
+   "region_un": "Oceania",
+   "label_lat": -29.033,
+   "label_lon": 167.9545,
+   "drive_side": "left",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "NG": {
+   "name": "Nigeria",
+   "name_long": "Nigeria",
+   "iso_a3": "NGA",
+   "continent": "Africa",
+   "subregion": "Western Africa",
+   "region_un": "Africa",
+   "label_lat": 9.4398,
+   "label_lon": 7.5032,
+   "drive_side": "right",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [
+    "en"
+   ],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "NI": {
+   "name": "Nicaragua",
+   "name_long": "Nicaragua",
+   "iso_a3": "NIC",
+   "continent": "North America",
+   "subregion": "Central America",
+   "region_un": "Americas",
+   "label_lat": 12.6707,
+   "label_lon": -85.0693,
+   "drive_side": "right",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "NL": {
+   "name": "Netherlands",
+   "name_long": "Netherlands",
+   "iso_a3": "NLD",
+   "continent": "Europe",
+   "subregion": "Western Europe",
+   "region_un": "Europe",
+   "label_lat": 52.4222,
+   "label_lon": 5.6114,
+   "drive_side": "right",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [
+    "nl"
+   ],
+   "plate_class": "all_yellow",
+   "disputed_boundary_note": false
+  },
+  "NO": {
+   "name": "Norway",
+   "name_long": "Norway",
+   "iso_a3": "NOR",
+   "continent": "Europe",
+   "subregion": "Northern Europe",
+   "region_un": "Europe",
+   "label_lat": 61.3571,
+   "label_lon": 9.68,
+   "drive_side": "right",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [
+    "no"
+   ],
+   "plate_class": "eu_blue_band",
+   "disputed_boundary_note": false
+  },
+  "NP": {
+   "name": "Nepal",
+   "name_long": "Nepal",
+   "iso_a3": "NPL",
+   "continent": "Asia",
+   "subregion": "Southern Asia",
+   "region_un": "Asia",
+   "label_lat": 28.2979,
+   "label_lon": 83.6399,
+   "drive_side": "left",
+   "scripts": [
+    "Deva",
+    "Latn"
+   ],
+   "languages": [
+    "ne",
+    "en"
+   ],
+   "plate_class": "in_white_yellow",
+   "disputed_boundary_note": false
+  },
+  "NR": {
+   "name": "Nauru",
+   "name_long": "Nauru",
+   "iso_a3": "NRU",
+   "continent": "Oceania",
+   "subregion": "Micronesia",
+   "region_un": "Oceania",
+   "label_lat": -0.5203,
+   "label_lon": 166.9326,
+   "drive_side": "left",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "NU": {
+   "name": "Niue",
+   "name_long": "Niue",
+   "iso_a3": "NIU",
+   "continent": "Oceania",
+   "subregion": "Polynesia",
+   "region_un": "Oceania",
+   "label_lat": -19.046,
+   "label_lon": -169.8626,
+   "drive_side": "left",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "NZ": {
+   "name": "New Zealand",
+   "name_long": "New Zealand",
+   "iso_a3": "NZL",
+   "continent": "Oceania",
+   "subregion": "Australia and New Zealand",
+   "region_un": "Oceania",
+   "label_lat": -39.759,
+   "label_lon": 172.787,
+   "drive_side": "left",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [
+    "en",
+    "mi"
+   ],
+   "plate_class": "oceania_state",
+   "disputed_boundary_note": false
+  },
+  "OM": {
+   "name": "Oman",
+   "name_long": "Oman",
+   "iso_a3": "OMN",
+   "continent": "Asia",
+   "subregion": "Western Asia",
+   "region_un": "Asia",
+   "label_lat": 22.1204,
+   "label_lon": 57.3366,
+   "drive_side": "right",
+   "scripts": [
+    "Arab",
+    "Latn"
+   ],
+   "languages": [
+    "ar",
+    "en"
+   ],
+   "plate_class": "arabic_plate",
+   "disputed_boundary_note": false
+  },
+  "PA": {
+   "name": "Panama",
+   "name_long": "Panama",
+   "iso_a3": "PAN",
+   "continent": "North America",
+   "subregion": "Central America",
+   "region_un": "Americas",
+   "label_lat": 8.722,
+   "label_lon": -80.3521,
+   "drive_side": "right",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "PE": {
+   "name": "Peru",
+   "name_long": "Peru",
+   "iso_a3": "PER",
+   "continent": "South America",
+   "subregion": "South America",
+   "region_un": "Americas",
+   "label_lat": -12.9767,
+   "label_lon": -72.9002,
+   "drive_side": "right",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [
+    "es"
+   ],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "PF": {
+   "name": "French Polynesia",
+   "name_long": "French Polynesia",
+   "iso_a3": "PYF",
+   "continent": "Oceania",
+   "subregion": "Polynesia",
+   "region_un": "Oceania",
+   "label_lat": -17.6281,
+   "label_lon": -149.4616,
+   "drive_side": "right",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "PG": {
+   "name": "Papua New Guinea",
+   "name_long": "Papua New Guinea",
+   "iso_a3": "PNG",
+   "continent": "Oceania",
+   "subregion": "Melanesia",
+   "region_un": "Oceania",
+   "label_lat": -5.6953,
+   "label_lon": 143.9102,
+   "drive_side": "left",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [
+    "en"
+   ],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "PH": {
+   "name": "Philippines",
+   "name_long": "Philippines",
+   "iso_a3": "PHL",
+   "continent": "Asia",
+   "subregion": "South-Eastern Asia",
+   "region_un": "Asia",
+   "label_lat": 11.198,
+   "label_lon": 122.465,
+   "drive_side": "right",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [
+    "en",
+    "tl"
+   ],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "PK": {
+   "name": "Pakistan",
+   "name_long": "Pakistan",
+   "iso_a3": "PAK",
+   "continent": "Asia",
+   "subregion": "Southern Asia",
+   "region_un": "Asia",
+   "label_lat": 29.3284,
+   "label_lon": 68.5456,
+   "drive_side": "left",
+   "scripts": [
+    "Arab",
+    "Latn"
+   ],
+   "languages": [
+    "ur",
+    "en"
+   ],
+   "plate_class": "in_white_yellow",
+   "disputed_boundary_note": false
+  },
+  "PL": {
+   "name": "Poland",
+   "name_long": "Poland",
+   "iso_a3": "POL",
+   "continent": "Europe",
+   "subregion": "Eastern Europe",
+   "region_un": "Europe",
+   "label_lat": 51.9903,
+   "label_lon": 19.4905,
+   "drive_side": "right",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [
+    "pl"
+   ],
+   "plate_class": "eu_blue_band",
+   "disputed_boundary_note": false
+  },
+  "PM": {
+   "name": "Saint Pierre and Miquelon",
+   "name_long": "Saint Pierre and Miquelon",
+   "iso_a3": "SPM",
+   "continent": "North America",
+   "subregion": "Northern America",
+   "region_un": "Americas",
+   "label_lat": 47.0403,
+   "label_lon": -56.3324,
+   "drive_side": "right",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "PN": {
+   "name": "Pitcairn Islands",
+   "name_long": "Pitcairn Islands",
+   "iso_a3": "PCN",
+   "continent": "Oceania",
+   "subregion": "Polynesia",
+   "region_un": "Oceania",
+   "label_lat": -24.3646,
+   "label_lon": -128.3175,
+   "drive_side": "left",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "PR": {
+   "name": "Puerto Rico",
+   "name_long": "Puerto Rico",
+   "iso_a3": "PRI",
+   "continent": "North America",
+   "subregion": "Caribbean",
+   "region_un": "Americas",
+   "label_lat": 18.2347,
+   "label_lon": -66.4811,
+   "drive_side": "right",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "PS": {
+   "name": "Palestine",
+   "name_long": "Palestine",
+   "iso_a3": "PSE",
+   "continent": "Asia",
+   "subregion": "Western Asia",
+   "region_un": "Asia",
+   "label_lat": 32.0474,
+   "label_lon": 35.2913,
+   "drive_side": "right",
+   "scripts": [
+    "Arab",
+    "Latn"
+   ],
+   "languages": [
+    "ar",
+    "en"
+   ],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": true
+  },
+  "PT": {
+   "name": "Portugal",
+   "name_long": "Portugal",
+   "iso_a3": "PRT",
+   "continent": "Europe",
+   "subregion": "Southern Europe",
+   "region_un": "Europe",
+   "label_lat": 39.6067,
+   "label_lon": -8.2718,
+   "drive_side": "right",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [
+    "pt"
+   ],
+   "plate_class": "eu_blue_band",
+   "disputed_boundary_note": false
+  },
+  "PW": {
+   "name": "Palau",
+   "name_long": "Palau",
+   "iso_a3": "PLW",
+   "continent": "Oceania",
+   "subregion": "Micronesia",
+   "region_un": "Oceania",
+   "label_lat": 7.5183,
+   "label_lon": 134.5802,
+   "drive_side": "right",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "PY": {
+   "name": "Paraguay",
+   "name_long": "Paraguay",
+   "iso_a3": "PRY",
+   "continent": "South America",
+   "subregion": "South America",
+   "region_un": "Americas",
+   "label_lat": -21.6745,
+   "label_lon": -60.1464,
+   "drive_side": "right",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [
+    "es"
+   ],
+   "plate_class": "mercosur",
+   "disputed_boundary_note": false
+  },
+  "QA": {
+   "name": "Qatar",
+   "name_long": "Qatar",
+   "iso_a3": "QAT",
+   "continent": "Asia",
+   "subregion": "Western Asia",
+   "region_un": "Asia",
+   "label_lat": 25.2374,
+   "label_lon": 51.1435,
+   "drive_side": "right",
+   "scripts": [
+    "Arab",
+    "Latn"
+   ],
+   "languages": [
+    "ar",
+    "en"
+   ],
+   "plate_class": "arabic_plate",
+   "disputed_boundary_note": false
+  },
+  "RO": {
+   "name": "Romania",
+   "name_long": "Romania",
+   "iso_a3": "ROU",
+   "continent": "Europe",
+   "subregion": "Eastern Europe",
+   "region_un": "Europe",
+   "label_lat": 45.7332,
+   "label_lon": 24.9726,
+   "drive_side": "right",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [
+    "ro"
+   ],
+   "plate_class": "eu_blue_band",
+   "disputed_boundary_note": false
+  },
+  "RS": {
+   "name": "Serbia",
+   "name_long": "Serbia",
+   "iso_a3": "SRB",
+   "continent": "Europe",
+   "subregion": "Southern Europe",
+   "region_un": "Europe",
+   "label_lat": 44.1899,
+   "label_lon": 20.788,
+   "drive_side": "right",
+   "scripts": [
+    "Cyrl",
+    "Latn"
+   ],
+   "languages": [
+    "sr"
+   ],
+   "plate_class": "eu_blue_band",
+   "disputed_boundary_note": false
+  },
+  "RU": {
+   "name": "Russia",
+   "name_long": "Russian Federation",
+   "iso_a3": "RUS",
+   "continent": "Europe",
+   "subregion": "Eastern Europe",
+   "region_un": "Europe",
+   "label_lat": 58.2494,
+   "label_lon": 44.6865,
+   "drive_side": "right",
+   "scripts": [
+    "Cyrl",
+    "Latn"
+   ],
+   "languages": [
+    "ru"
+   ],
+   "plate_class": "ru_flag_band",
+   "disputed_boundary_note": false
+  },
+  "RW": {
+   "name": "Rwanda",
+   "name_long": "Rwanda",
+   "iso_a3": "RWA",
+   "continent": "Africa",
+   "subregion": "Eastern Africa",
+   "region_un": "Africa",
+   "label_lat": -1.8972,
+   "label_lon": 30.1039,
+   "drive_side": "right",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [
+    "rw",
+    "en",
+    "fr"
+   ],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "SA": {
+   "name": "Saudi Arabia",
+   "name_long": "Saudi Arabia",
+   "iso_a3": "SAU",
+   "continent": "Asia",
+   "subregion": "Western Asia",
+   "region_un": "Asia",
+   "label_lat": 23.8069,
+   "label_lon": 44.6996,
+   "drive_side": "right",
+   "scripts": [
+    "Arab",
+    "Latn"
+   ],
+   "languages": [
+    "ar",
+    "en"
+   ],
+   "plate_class": "arabic_plate",
+   "disputed_boundary_note": false
+  },
+  "SB": {
+   "name": "Solomon Islands",
+   "name_long": "Solomon Islands",
+   "iso_a3": "SLB",
+   "continent": "Oceania",
+   "subregion": "Melanesia",
+   "region_un": "Oceania",
+   "label_lat": -8.0295,
+   "label_lon": 159.1705,
+   "drive_side": "left",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "SC": {
+   "name": "Seychelles",
+   "name_long": "Seychelles",
+   "iso_a3": "SYC",
+   "continent": "Seven seas (open ocean)",
+   "subregion": "Eastern Africa",
+   "region_un": "Africa",
+   "label_lat": -4.6767,
+   "label_lon": 55.4802,
+   "drive_side": "left",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [
+    "en",
+    "fr"
+   ],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "SD": {
+   "name": "Sudan",
+   "name_long": "Sudan",
+   "iso_a3": "SDN",
+   "continent": "Africa",
+   "subregion": "Northern Africa",
+   "region_un": "Africa",
+   "label_lat": 16.3307,
+   "label_lon": 29.2607,
+   "drive_side": "right",
+   "scripts": [
+    "Arab",
+    "Latn"
+   ],
+   "languages": [
+    "ar",
+    "en"
+   ],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "SE": {
+   "name": "Sweden",
+   "name_long": "Sweden",
+   "iso_a3": "SWE",
+   "continent": "Europe",
+   "subregion": "Northern Europe",
+   "region_un": "Europe",
+   "label_lat": 65.8592,
+   "label_lon": 19.0171,
+   "drive_side": "right",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [
+    "sv"
+   ],
+   "plate_class": "eu_blue_band",
+   "disputed_boundary_note": false
+  },
+  "SG": {
+   "name": "Singapore",
+   "name_long": "Singapore",
+   "iso_a3": "SGP",
+   "continent": "Asia",
+   "subregion": "South-Eastern Asia",
+   "region_un": "Asia",
+   "label_lat": 1.3666,
+   "label_lon": 103.8169,
+   "drive_side": "left",
+   "scripts": [
+    "Latn",
+    "Hani",
+    "Taml"
+   ],
+   "languages": [
+    "en",
+    "zh",
+    "ms",
+    "ta"
+   ],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "SH": {
+   "name": "Saint Helena, Ascension and Tristan da Cunha",
+   "name_long": "Saint Helena",
+   "iso_a3": "SHN",
+   "continent": "Seven seas (open ocean)",
+   "subregion": "Western Africa",
+   "region_un": "Africa",
+   "label_lat": -15.9505,
+   "label_lon": -5.7126,
+   "drive_side": "left",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "SI": {
+   "name": "Slovenia",
+   "name_long": "Slovenia",
+   "iso_a3": "SVN",
+   "continent": "Europe",
+   "subregion": "Southern Europe",
+   "region_un": "Europe",
+   "label_lat": 46.0608,
+   "label_lon": 14.9153,
+   "drive_side": "right",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [
+    "sl"
+   ],
+   "plate_class": "eu_blue_band",
+   "disputed_boundary_note": false
+  },
+  "SK": {
+   "name": "Slovakia",
+   "name_long": "Slovakia",
+   "iso_a3": "SVK",
+   "continent": "Europe",
+   "subregion": "Eastern Europe",
+   "region_un": "Europe",
+   "label_lat": 48.734,
+   "label_lon": 19.0499,
+   "drive_side": "right",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [
+    "sk"
+   ],
+   "plate_class": "eu_blue_band",
+   "disputed_boundary_note": false
+  },
+  "SL": {
+   "name": "Sierra Leone",
+   "name_long": "Sierra Leone",
+   "iso_a3": "SLE",
+   "continent": "Africa",
+   "subregion": "Western Africa",
+   "region_un": "Africa",
+   "label_lat": 8.6174,
+   "label_lon": -11.7637,
+   "drive_side": "right",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "SM": {
+   "name": "San Marino",
+   "name_long": "San Marino",
+   "iso_a3": "SMR",
+   "continent": "Europe",
+   "subregion": "Southern Europe",
+   "region_un": "Europe",
+   "label_lat": 43.9339,
+   "label_lon": 12.4412,
+   "drive_side": "right",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [
+    "it"
+   ],
+   "plate_class": "eu_blue_band",
+   "disputed_boundary_note": false
+  },
+  "SN": {
+   "name": "Senegal",
+   "name_long": "Senegal",
+   "iso_a3": "SEN",
+   "continent": "Africa",
+   "subregion": "Western Africa",
+   "region_un": "Africa",
+   "label_lat": 15.1381,
+   "label_lon": -14.7786,
+   "drive_side": "right",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [
+    "fr"
+   ],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "SO": {
+   "name": "Somalia",
+   "name_long": "Somalia",
+   "iso_a3": "SOM",
+   "continent": "Africa",
+   "subregion": "Eastern Africa",
+   "region_un": "Africa",
+   "label_lat": 3.5689,
+   "label_lon": 45.1924,
+   "drive_side": "right",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [
+    "so",
+    "ar"
+   ],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "SR": {
+   "name": "Suriname",
+   "name_long": "Suriname",
+   "iso_a3": "SUR",
+   "continent": "South America",
+   "subregion": "South America",
+   "region_un": "Americas",
+   "label_lat": 4.144,
+   "label_lon": -55.9109,
+   "drive_side": "left",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [
+    "nl"
+   ],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "SS": {
+   "name": "South Sudan",
+   "name_long": "South Sudan",
+   "iso_a3": "SSD",
+   "continent": "Africa",
+   "subregion": "Eastern Africa",
+   "region_un": "Africa",
+   "label_lat": 7.2305,
+   "label_lon": 30.3902,
+   "drive_side": "right",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": true
+  },
+  "ST": {
+   "name": "São Tomé and Príncipe",
+   "name_long": "São Tomé and Principe",
+   "iso_a3": "STP",
+   "continent": "Africa",
+   "subregion": "Middle Africa",
+   "region_un": "Africa",
+   "label_lat": 0.9709,
+   "label_lon": 7.021,
+   "drive_side": "right",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "SV": {
+   "name": "El Salvador",
+   "name_long": "El Salvador",
+   "iso_a3": "SLV",
+   "continent": "North America",
+   "subregion": "Central America",
+   "region_un": "Americas",
+   "label_lat": 13.6854,
+   "label_lon": -88.8901,
+   "drive_side": "right",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "SX": {
+   "name": "Sint Maarten",
+   "name_long": "Sint Maarten",
+   "iso_a3": "SXM",
+   "continent": "North America",
+   "subregion": "Caribbean",
+   "region_un": "Americas",
+   "label_lat": 18.0409,
+   "label_lon": -63.0701,
+   "drive_side": "right",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "SY": {
+   "name": "Syria",
+   "name_long": "Syria",
+   "iso_a3": "SYR",
+   "continent": "Asia",
+   "subregion": "Western Asia",
+   "region_un": "Asia",
+   "label_lat": 35.0066,
+   "label_lon": 38.2778,
+   "drive_side": "right",
+   "scripts": [
+    "Arab",
+    "Latn"
+   ],
+   "languages": [
+    "ar"
+   ],
+   "plate_class": "arabic_plate",
+   "disputed_boundary_note": false
+  },
+  "SZ": {
+   "name": "Eswatini",
+   "name_long": "Kingdom of eSwatini",
+   "iso_a3": "SWZ",
+   "continent": "Africa",
+   "subregion": "Southern Africa",
+   "region_un": "Africa",
+   "label_lat": -26.5337,
+   "label_lon": 31.4673,
+   "drive_side": "left",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "TC": {
+   "name": "Turks and Caicos Islands",
+   "name_long": "Turks and Caicos Islands",
+   "iso_a3": "TCA",
+   "continent": "North America",
+   "subregion": "Caribbean",
+   "region_un": "Americas",
+   "label_lat": 21.8166,
+   "label_lon": -71.7527,
+   "drive_side": "left",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "TD": {
+   "name": "Chad",
+   "name_long": "Chad",
+   "iso_a3": "TCD",
+   "continent": "Africa",
+   "subregion": "Middle Africa",
+   "region_un": "Africa",
+   "label_lat": 15.143,
+   "label_lon": 18.645,
+   "drive_side": "right",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [
+    "fr",
+    "ar"
+   ],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "TF": {
+   "name": "French Southern and Antarctic Lands",
+   "name_long": "French Southern and Antarctic Lands",
+   "iso_a3": "ATF",
+   "continent": "Seven seas (open ocean)",
+   "subregion": "Seven seas (open ocean)",
+   "region_un": "Africa",
+   "label_lat": -49.3037,
+   "label_lon": 69.1221,
+   "drive_side": "right",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "TG": {
+   "name": "Togo",
+   "name_long": "Togo",
+   "iso_a3": "TGO",
+   "continent": "Africa",
+   "subregion": "Western Africa",
+   "region_un": "Africa",
+   "label_lat": 8.8072,
+   "label_lon": 1.0581,
+   "drive_side": "right",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "TH": {
+   "name": "Thailand",
+   "name_long": "Thailand",
+   "iso_a3": "THA",
+   "continent": "Asia",
+   "subregion": "South-Eastern Asia",
+   "region_un": "Asia",
+   "label_lat": 15.4597,
+   "label_lon": 101.0732,
+   "drive_side": "left",
+   "scripts": [
+    "Thai",
+    "Latn"
+   ],
+   "languages": [
+    "th",
+    "en"
+   ],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "TJ": {
+   "name": "Tajikistan",
+   "name_long": "Tajikistan",
+   "iso_a3": "TJK",
+   "continent": "Asia",
+   "subregion": "Central Asia",
+   "region_un": "Asia",
+   "label_lat": 38.1998,
+   "label_lon": 72.5873,
+   "drive_side": "right",
+   "scripts": [
+    "Cyrl",
+    "Latn"
+   ],
+   "languages": [
+    "tg",
+    "ru"
+   ],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "TL": {
+   "name": "East Timor",
+   "name_long": "Timor-Leste",
+   "iso_a3": "TLS",
+   "continent": "Asia",
+   "subregion": "South-Eastern Asia",
+   "region_un": "Asia",
+   "label_lat": -8.8037,
+   "label_lon": 125.8547,
+   "drive_side": "left",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [
+    "pt",
+    "id"
+   ],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "TM": {
+   "name": "Turkmenistan",
+   "name_long": "Turkmenistan",
+   "iso_a3": "TKM",
+   "continent": "Asia",
+   "subregion": "Central Asia",
+   "region_un": "Asia",
+   "label_lat": 39.8552,
+   "label_lon": 58.6766,
+   "drive_side": "right",
+   "scripts": [
+    "Latn",
+    "Cyrl"
+   ],
+   "languages": [
+    "tk",
+    "ru"
+   ],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "TN": {
+   "name": "Tunisia",
+   "name_long": "Tunisia",
+   "iso_a3": "TUN",
+   "continent": "Africa",
+   "subregion": "Northern Africa",
+   "region_un": "Africa",
+   "label_lat": 33.6873,
+   "label_lon": 9.0079,
+   "drive_side": "right",
+   "scripts": [
+    "Arab",
+    "Latn"
+   ],
+   "languages": [
+    "ar",
+    "fr"
+   ],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "TO": {
+   "name": "Tonga",
+   "name_long": "Tonga",
+   "iso_a3": "TON",
+   "continent": "Oceania",
+   "subregion": "Polynesia",
+   "region_un": "Oceania",
+   "label_lat": -21.21,
+   "label_lon": -175.163,
+   "drive_side": "left",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "TR": {
+   "name": "Turkey",
+   "name_long": "Turkey",
+   "iso_a3": "TUR",
+   "continent": "Asia",
+   "subregion": "Western Asia",
+   "region_un": "Asia",
+   "label_lat": 39.3454,
+   "label_lon": 34.5083,
+   "drive_side": "right",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [
+    "tr"
+   ],
+   "plate_class": "eu_blue_band",
+   "disputed_boundary_note": false
+  },
+  "TT": {
+   "name": "Trinidad and Tobago",
+   "name_long": "Trinidad and Tobago",
+   "iso_a3": "TTO",
+   "continent": "North America",
+   "subregion": "Caribbean",
+   "region_un": "Americas",
+   "label_lat": 10.9989,
+   "label_lon": -60.9184,
+   "drive_side": "left",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "TV": {
+   "name": "Tuvalu",
+   "name_long": "Tuvalu",
+   "iso_a3": "TUV",
+   "continent": "Oceania",
+   "subregion": "Polynesia",
+   "region_un": "Oceania",
+   "label_lat": -8.5137,
+   "label_lon": 179.2096,
+   "drive_side": "left",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "TW": {
+   "name": "Taiwan",
+   "name_long": "Taiwan",
+   "iso_a3": "TWN",
+   "continent": "Asia",
+   "subregion": "Eastern Asia",
+   "region_un": "Asia",
+   "label_lat": 23.6524,
+   "label_lon": 120.8682,
+   "drive_side": "right",
+   "scripts": [
+    "Hani",
+    "Latn"
+   ],
+   "languages": [
+    "zh"
+   ],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": true
+  },
+  "TZ": {
+   "name": "Tanzania",
+   "name_long": "Tanzania",
+   "iso_a3": "TZA",
+   "continent": "Africa",
+   "subregion": "Eastern Africa",
+   "region_un": "Africa",
+   "label_lat": -6.0519,
+   "label_lon": 34.9592,
+   "drive_side": "left",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [
+    "sw",
+    "en"
+   ],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "UA": {
+   "name": "Ukraine",
+   "name_long": "Ukraine",
+   "iso_a3": "UKR",
+   "continent": "Europe",
+   "subregion": "Eastern Europe",
+   "region_un": "Europe",
+   "label_lat": 49.7247,
+   "label_lon": 32.1409,
+   "drive_side": "right",
+   "scripts": [
+    "Cyrl",
+    "Latn"
+   ],
+   "languages": [
+    "uk",
+    "ru"
+   ],
+   "plate_class": "eu_blue_band",
+   "disputed_boundary_note": false
+  },
+  "UG": {
+   "name": "Uganda",
+   "name_long": "Uganda",
+   "iso_a3": "UGA",
+   "continent": "Africa",
+   "subregion": "Eastern Africa",
+   "region_un": "Africa",
+   "label_lat": 1.9726,
+   "label_lon": 32.9486,
+   "drive_side": "left",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [
+    "en",
+    "sw"
+   ],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "UM": {
+   "name": "United States Minor Outlying Islands",
+   "name_long": "United States Minor Outlying Islands",
+   "iso_a3": "UMI",
+   "continent": "North America",
+   "subregion": "Seven seas (open ocean)",
+   "region_un": "Oceania",
+   "label_lat": 19.2857,
+   "label_lon": 166.6445,
+   "drive_side": "right",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "US": {
+   "name": "United States of America",
+   "name_long": "United States",
+   "iso_a3": "USA",
+   "continent": "North America",
+   "subregion": "Northern America",
+   "region_un": "Americas",
+   "label_lat": 39.5385,
+   "label_lon": -97.4826,
+   "drive_side": "right",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [
+    "en",
+    "es"
+   ],
+   "plate_class": "north_america",
+   "disputed_boundary_note": false
+  },
+  "UY": {
+   "name": "Uruguay",
+   "name_long": "Uruguay",
+   "iso_a3": "URY",
+   "continent": "South America",
+   "subregion": "South America",
+   "region_un": "Americas",
+   "label_lat": -32.9611,
+   "label_lon": -55.9669,
+   "drive_side": "right",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [
+    "es"
+   ],
+   "plate_class": "mercosur",
+   "disputed_boundary_note": false
+  },
+  "UZ": {
+   "name": "Uzbekistan",
+   "name_long": "Uzbekistan",
+   "iso_a3": "UZB",
+   "continent": "Asia",
+   "subregion": "Central Asia",
+   "region_un": "Asia",
+   "label_lat": 41.6936,
+   "label_lon": 64.0054,
+   "drive_side": "right",
+   "scripts": [
+    "Latn",
+    "Cyrl"
+   ],
+   "languages": [
+    "uz",
+    "ru"
+   ],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "VA": {
+   "name": "Vatican City",
+   "name_long": "Vatican",
+   "iso_a3": "VAT",
+   "continent": "Europe",
+   "subregion": "Southern Europe",
+   "region_un": "Europe",
+   "label_lat": 41.9033,
+   "label_lon": 12.4534,
+   "drive_side": "right",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [
+    "it"
+   ],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "VC": {
+   "name": "Saint Vincent and the Grenadines",
+   "name_long": "Saint Vincent and the Grenadines",
+   "iso_a3": "VCT",
+   "continent": "North America",
+   "subregion": "Caribbean",
+   "region_un": "Americas",
+   "label_lat": 13.0879,
+   "label_lon": -61.3359,
+   "drive_side": "left",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "VE": {
+   "name": "Venezuela",
+   "name_long": "Venezuela",
+   "iso_a3": "VEN",
+   "continent": "South America",
+   "subregion": "South America",
+   "region_un": "Americas",
+   "label_lat": 7.1825,
+   "label_lon": -64.5994,
+   "drive_side": "right",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [
+    "es"
+   ],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "VG": {
+   "name": "British Virgin Islands",
+   "name_long": "British Virgin Islands",
+   "iso_a3": "VGB",
+   "continent": "North America",
+   "subregion": "Caribbean",
+   "region_un": "Americas",
+   "label_lat": 18.4266,
+   "label_lon": -64.6366,
+   "drive_side": "left",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "VI": {
+   "name": "United States Virgin Islands",
+   "name_long": "United States Virgin Islands",
+   "iso_a3": "VIR",
+   "continent": "North America",
+   "subregion": "Caribbean",
+   "region_un": "Americas",
+   "label_lat": 17.7467,
+   "label_lon": -64.7792,
+   "drive_side": "left",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "VN": {
+   "name": "Vietnam",
+   "name_long": "Vietnam",
+   "iso_a3": "VNM",
+   "continent": "Asia",
+   "subregion": "South-Eastern Asia",
+   "region_un": "Asia",
+   "label_lat": 21.7154,
+   "label_lon": 105.3873,
+   "drive_side": "right",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [
+    "vi"
+   ],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "VU": {
+   "name": "Vanuatu",
+   "name_long": "Vanuatu",
+   "iso_a3": "VUT",
+   "continent": "Oceania",
+   "subregion": "Melanesia",
+   "region_un": "Oceania",
+   "label_lat": -15.3715,
+   "label_lon": 166.9088,
+   "drive_side": "right",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "WF": {
+   "name": "Wallis and Futuna",
+   "name_long": "Wallis and Futuna Islands",
+   "iso_a3": "WLF",
+   "continent": "Oceania",
+   "subregion": "Polynesia",
+   "region_un": "Oceania",
+   "label_lat": -14.2864,
+   "label_lon": -178.1374,
+   "drive_side": "right",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "WS": {
+   "name": "Samoa",
+   "name_long": "Samoa",
+   "iso_a3": "WSM",
+   "continent": "Oceania",
+   "subregion": "Polynesia",
+   "region_un": "Oceania",
+   "label_lat": -13.6391,
+   "label_lon": -172.4382,
+   "drive_side": "left",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "XK": {
+   "name": "Kosovo",
+   "name_long": "Kosovo",
+   "iso_a3": "KOS",
+   "continent": "Europe",
+   "subregion": "Southern Europe",
+   "region_un": "Europe",
+   "label_lat": 42.5936,
+   "label_lon": 20.8607,
+   "drive_side": "right",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [
+    "sq",
+    "sr"
+   ],
+   "plate_class": "eu_blue_band",
+   "disputed_boundary_note": true
+  },
+  "YE": {
+   "name": "Yemen",
+   "name_long": "Yemen",
+   "iso_a3": "YEM",
+   "continent": "Asia",
+   "subregion": "Western Asia",
+   "region_un": "Asia",
+   "label_lat": 15.3282,
+   "label_lon": 45.8744,
+   "drive_side": "right",
+   "scripts": [
+    "Arab"
+   ],
+   "languages": [
+    "ar"
+   ],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "ZA": {
+   "name": "South Africa",
+   "name_long": "South Africa",
+   "iso_a3": "ZAF",
+   "continent": "Africa",
+   "subregion": "Southern Africa",
+   "region_un": "Africa",
+   "label_lat": -29.7088,
+   "label_lon": 23.6657,
+   "drive_side": "left",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [
+    "en",
+    "af"
+   ],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "ZM": {
+   "name": "Zambia",
+   "name_long": "Zambia",
+   "iso_a3": "ZMB",
+   "continent": "Africa",
+   "subregion": "Eastern Africa",
+   "region_un": "Africa",
+   "label_lat": -14.6608,
+   "label_lon": 26.3953,
+   "drive_side": "left",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [
+    "en"
+   ],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  },
+  "ZW": {
+   "name": "Zimbabwe",
+   "name_long": "Zimbabwe",
+   "iso_a3": "ZWE",
+   "continent": "Africa",
+   "subregion": "Eastern Africa",
+   "region_un": "Africa",
+   "label_lat": -18.9116,
+   "label_lon": 29.9254,
+   "drive_side": "left",
+   "scripts": [
+    "Latn"
+   ],
+   "languages": [
+    "en"
+   ],
+   "plate_class": "plain_white",
+   "disputed_boundary_note": false
+  }
+ }
+}

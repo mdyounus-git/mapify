@@ -1,0 +1,20 @@
+{
+  "maplibre-gl.LICENSE.txt": {
+    "bytes": 5984,
+    "license": "BSD-3-Clause (MapLibre GL JS)",
+    "sha256": "ee5fc05a0677eaf69601d2c7db0d9ecd6cc27c3abc1d0733bc9ed34707cf8ef2",
+    "source": "https://unpkg.com/maplibre-gl@6.10.0/LICENSE.txt"
+  },
+  "maplibre-gl.css": {
+    "bytes": 83195,
+    "license": "BSD-3-Clause (MapLibre GL JS)",
+    "sha256": "8e2dbbab312dc57656fbb76e9fa5308c75c9d7c7ba5808a7d55bcdb64cc813fa",
+    "source": "https://unpkg.com/maplibre-gl@6.10.0/dist/maplibre-gl.css"
+  },
+  "maplibre-gl.mjs": {
+    "bytes": 584394,
+    "license": "BSD-3-Clause (MapLibre GL JS)",
+    "sha256": "454e0bbb16c721cfbf952a92ff3e4362130346ed59a5bff56ae5d6fbebb651f7",
+    "source": "https://unpkg.com/maplibre-gl@6.10.0/dist/maplibre-gl.mjs"
+  }
+}
