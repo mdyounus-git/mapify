@@ -1,0 +1,313 @@
+{
+  "rows": [
+    {
+      "site": "paris",
+      "expected": "Paris, France",
+      "true": [
+        48.858387,
+        2.2945185
+      ],
+      "predicted": [
+        48.858377,
+        2.294569
+      ],
+      "error_km": 0.0,
+      "band": "street",
+      "confidence": "high",
+      "confidence_reason": "The candidates sit within 0 km of each other and 100% of the retained probability is in the leading one.",
+      "diagnostics": {
+        "locator_mass": 0.13077,
+        "concentration": 1.0,
+        "dispersion_km": 0.0,
+        "evidence_support": 0.834
+      },
+      "place": "Paris, Paris, France",
+      "elapsed_s": 15.4,
+      "called_evidence": [
+        "World region=Western Europe (69%)"
+      ]
+    },
+    {
+      "site": "tokyo",
+      "expected": "Shibuya, Tokyo, Japan",
+      "true": [
+        35.6595,
+        139.7005
+      ],
+      "predicted": [
+        35.691876,
+        139.566265
+      ],
+      "error_km": 12.65,
+      "band": "city",
+      "confidence": "high",
+      "confidence_reason": "The candidates sit within 18 km of each other and 100% of the retained probability is in the leading one.",
+      "diagnostics": {
+        "locator_mass": 0.06911,
+        "concentration": 1.0,
+        "dispersion_km": 0.0,
+        "evidence_support": 0.881
+      },
+      "place": "Tokyo, Tokyo, Japan",
+      "elapsed_s": 13.3,
+      "called_evidence": [
+        "World region=East Asia (53%)",
+        "Architecture=East Asian (70%)",
+        "Vehicle mix=Dense motorbike traffic (44%)"
+      ]
+    },
+    {
+      "site": "bengaluru",
+      "expected": "Vidhana Soudha, Bengaluru, India",
+      "true": [
+        12.97998889,
+        77.59094722
+      ],
+      "predicted": [
+        12.973763,
+        77.590963
+      ],
+      "error_km": 0.69,
+      "band": "street",
+      "confidence": "high",
+      "confidence_reason": "The candidates sit within 2 km of each other and 100% of the retained probability is in the leading one.",
+      "diagnostics": {
+        "locator_mass": 0.40109,
+        "concentration": 1.0,
+        "dispersion_km": 0.0,
+        "evidence_support": 0.992
+      },
+      "place": "Bengaluru, Karnataka, India",
+      "elapsed_s": 13.0,
+      "called_evidence": [
+        "World region=South Asia (51%)",
+        "Vehicle mix=Auto-rickshaws (47%)"
+      ]
+    },
+    {
+      "site": "moscow",
+      "expected": "Red Square, Moscow, Russia",
+      "true": [
+        55.7525,
+        37.623056
+      ],
+      "predicted": [
+        56.422708,
+        40.443359
+      ],
+      "error_km": 190.16,
+      "band": "region",
+      "confidence": "medium",
+      "confidence_reason": "Candidates span 585 km, with 70% of the retained probability leading.",
+      "diagnostics": {
+        "locator_mass": 0.1214,
+        "concentration": 0.6973,
+        "dispersion_km": 584.9,
+        "evidence_support": 0.58
+      },
+      "place": "Vladimir, Vladimir, Russia",
+      "elapsed_s": 13.3,
+      "called_evidence": [
+        "Signage script=Cyrillic script (45%)",
+        "World region=Eastern Europe / Central Asia (49%)",
+        "Architecture=Mediterranean (97%)",
+        "Vehicle mix=Small European hatchbacks (41%)"
+      ]
+    },
+    {
+      "site": "cairo",
+      "expected": "Giza, Egypt",
+      "true": [
+        29.9792,
+        31.1342
+      ],
+      "predicted": [
+        -32.532665,
+        -59.368
+      ],
+      "error_km": 11783.26,
+      "band": "off-target",
+      "confidence": "insufficient",
+      "confidence_reason": "Candidates are scattered over 6040 km, which is most of a hemisphere. The image cannot be placed.",
+      "diagnostics": {
+        "locator_mass": 0.01938,
+        "concentration": 0.1851,
+        "dispersion_km": 6002.9,
+        "evidence_support": -0.139
+      },
+      "place": "Gualeguay, Entre R\u00edos, Argentina",
+      "elapsed_s": 13.0,
+      "called_evidence": []
+    },
+    {
+      "site": "nyc",
+      "expected": "Times Square, New York, USA",
+      "true": [
+        40.75804611,
+        -73.985514
+      ],
+      "predicted": [
+        40.756602,
+        -73.986699
+      ],
+      "error_km": 0.19,
+      "band": "street",
+      "confidence": "high",
+      "confidence_reason": "The candidates sit within 0 km of each other and 100% of the retained probability is in the leading one.",
+      "diagnostics": {
+        "locator_mass": 0.08842,
+        "concentration": 1.0,
+        "dispersion_km": 0.0,
+        "evidence_support": 0.625
+      },
+      "place": "New York, New York, United States of America",
+      "elapsed_s": 12.8,
+      "called_evidence": [
+        "World region=North America (27%)"
+      ]
+    },
+    {
+      "site": "sydney",
+      "expected": "Sydney Opera House, Australia",
+      "true": [
+        -33.856771,
+        151.215246
+      ],
+      "predicted": [
+        -33.857322,
+        151.214789
+      ],
+      "error_km": 0.07,
+      "band": "street",
+      "confidence": "high",
+      "confidence_reason": "The candidates sit within 0 km of each other and 100% of the retained probability is in the leading one.",
+      "diagnostics": {
+        "locator_mass": 0.16482,
+        "concentration": 1.0,
+        "dispersion_km": 0.0,
+        "evidence_support": 0.479
+      },
+      "place": "Sydney, New South Wales, Australia",
+      "elapsed_s": 12.6,
+      "called_evidence": []
+    },
+    {
+      "site": "rio",
+      "expected": "Corcovado, Rio de Janeiro, Brazil",
+      "true": [
+        -22.95191,
+        -43.21056
+      ],
+      "predicted": [
+        -22.938598,
+        -43.201027
+      ],
+      "error_km": 1.77,
+      "band": "city",
+      "confidence": "low",
+      "confidence_reason": "Candidates are spread over 1174 km. That is a region, not a location.",
+      "diagnostics": {
+        "locator_mass": 0.08937,
+        "concentration": 0.5128,
+        "dispersion_km": 1173.6,
+        "evidence_support": 0.865
+      },
+      "place": "Rio de Janeiro, Rio de Janeiro, Brazil",
+      "elapsed_s": 12.6,
+      "called_evidence": [
+        "World region=Latin America (73%)"
+      ]
+    },
+    {
+      "site": "reykjavik",
+      "expected": "Reykjavik, Iceland",
+      "true": [
+        64.1466,
+        -21.9426
+      ],
+      "predicted": [
+        64.135748,
+        -22.030711
+      ],
+      "error_km": 4.44,
+      "band": "city",
+      "confidence": "high",
+      "confidence_reason": "The candidates sit within 101 km of each other and 100% of the retained probability is in the leading one.",
+      "diagnostics": {
+        "locator_mass": 0.20526,
+        "concentration": 1.0,
+        "dispersion_km": 0.0,
+        "evidence_support": 0.318
+      },
+      "place": "Reykjav\u00edk, Iceland",
+      "elapsed_s": 13.1,
+      "called_evidence": [
+        "World region=Oceania (31%)",
+        "Architecture=Latin American (39%)",
+        "Vegetation / biome=Tundra / polar (58%)"
+      ]
+    },
+    {
+      "site": "nairobi",
+      "expected": "Nairobi, Kenya",
+      "true": [
+        -1.2920659,
+        36.8219462
+      ],
+      "predicted": [
+        4.807186,
+        -75.690392
+      ],
+      "error_km": 12513.89,
+      "band": "off-target",
+      "confidence": "low",
+      "confidence_reason": "Candidates span 756 km, with 51% of the retained probability leading.",
+      "diagnostics": {
+        "locator_mass": 0.03049,
+        "concentration": 0.5116,
+        "dispersion_km": 755.6,
+        "evidence_support": 0.014
+      },
+      "place": "Pereira, Risaralda, Colombia",
+      "elapsed_s": 13.4,
+      "called_evidence": []
+    },
+    {
+      "site": "istanbul",
+      "expected": "Istanbul, Turkiye",
+      "true": [
+        41.00820833,
+        28.97843056
+      ],
+      "predicted": [
+        41.009004,
+        28.972113
+      ],
+      "error_km": 0.54,
+      "band": "street",
+      "confidence": "high",
+      "confidence_reason": "The candidates sit within 0 km of each other and 100% of the retained probability is in the leading one.",
+      "diagnostics": {
+        "locator_mass": 0.09547,
+        "concentration": 1.0,
+        "dispersion_km": 0.0,
+        "evidence_support": 0.009
+      },
+      "place": "Istanbul, Istanbul, Turkey",
+      "elapsed_s": 14.4,
+      "called_evidence": [
+        "World region=Eastern Europe / Central Asia (38%)",
+        "Architecture=Mediterranean (60%)"
+      ]
+    }
+  ],
+  "bands": {
+    "street": 5,
+    "city": 8,
+    "region": 9,
+    "country": 9,
+    "continent": 9
+  },
+  "n": 11,
+  "median_error_km": 1.77
+}

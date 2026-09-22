@@ -88,13 +88,21 @@ class FusionConfig:
     w_plate: float = 0.45
     w_region_hint: float = 0.50
     max_total_adjustment: float = 2.5
-    # Confidence banding.
-    high_prob: float = 0.45
+    # Confidence banding.  "concentration" is the share of retained
+    # probability held by the leading candidate; "spread" is the radius that
+    # contains 68% of the candidate mass; "locator_mass" is how much of the
+    # locator's full distribution its whole shortlist captured.
+    high_concentration: float = 0.45
     high_spread_km: float = 160.0
-    medium_prob: float = 0.20
+    medium_concentration: float = 0.20
     medium_spread_km: float = 900.0
-    insufficient_prob: float = 0.10
     insufficient_spread_km: float = 2500.0
+    # Below this, the locator recognised nothing in particular and we say so.
+    min_locator_mass: float = 0.015
+    # Below this, a tidy-looking shortlist is downgraded one band.
+    weak_locator_mass: float = 0.045
+    # Net log-odds below which the evidence is treated as contradicting.
+    contradiction_threshold: float = -0.35
     candidates_returned: int = 5
     cluster_radius_km: float = 120.0
 
@@ -102,7 +110,7 @@ class FusionConfig:
 @dataclass
 class ServerConfig:
     host: str = "127.0.0.1"
-    port: int = 877
+    port: int = 8771
     max_upload_bytes: int = 32 * 1024 * 1024
     # Uploads are processed in memory and never written to disk unless this is
     # switched on (kept for debugging only).
