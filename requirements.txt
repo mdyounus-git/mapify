@@ -1,0 +1,36 @@
+# Mapify runtime dependencies.
+#
+# Licence is given for each; all are OSI-approved and free for any use.
+# PyTorch is installed separately from the CPU wheel index -- see
+# scripts/setup_env.ps1 -- because the default PyPI wheels pull CUDA.
+
+# --- desktop shell -------------------------------------------------------
+pywebview>=5.3              # BSD-3-Clause; native window over Edge WebView2
+pythonnet>=3.0.3 ; sys_platform == "win32"   # MIT; WebView2 backend bridge
+
+# --- local service layer -------------------------------------------------
+fastapi>=0.115              # MIT
+uvicorn[standard]>=0.30     # BSD-3-Clause
+python-multipart>=0.0.9     # Apache-2.0
+
+# --- imaging and geometry ------------------------------------------------
+pillow>=10.3                # MIT-CMU (HPND)
+numpy>=1.26,<3              # BSD-3-Clause
+pyshp>=2.3                  # MIT; reads the Natural Earth shapefiles
+timezonefinder>=6.5         # MIT code; ODbL boundary data, attributed in-app
+
+# --- models --------------------------------------------------------------
+transformers>=4.40          # Apache-2.0
+geoclip>=1.2                # MIT; GeoCLIP weights are MIT
+# torch, torchvision        # BSD-3-Clause -- installed from the CPU index
+
+# --- network enrichment (optional at runtime, can be switched off) --------
+httpx>=0.27                 # BSD-3-Clause
+
+# --- optional OCR --------------------------------------------------------
+# EasyOCR is Apache-2.0 and pulls opencv + scipy (~300 MB). Install it if you
+# want signage text read:  pip install easyocr
+# easyocr>=1.7
+
+# --- development ---------------------------------------------------------
+pytest>=8                   # MIT

@@ -7,7 +7,7 @@
 <title>Mapify — Image Geolocation Reconnaissance</title>
 <link rel="stylesheet" href="styles.css" />
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><circle cx='16' cy='16' r='13' fill='none' stroke='%2338bdf8' stroke-width='2'/><ellipse cx='16' cy='16' rx='6' ry='13' fill='none' stroke='%2338bdf8' stroke-width='1.4'/><path d='M3.5 12h25M3.5 20h25' stroke='%2338bdf8' stroke-width='1.4'/></svg>" />
-<script type="importmap">
+<script type="importmap" nonce="__CSP_NONCE__">
 {
   "imports": {
     "three": "./vendor/three.module.js",
@@ -57,7 +57,15 @@
         <svg viewBox="0 0 20 20" aria-hidden="true" class="btn-icon">
           <path d="M10 14V4m0 0L6 8m4-4 4 4M3 15v2h14v-2" />
         </svg>
-        Analyse image
+        Open image
+      </button>
+
+      <button id="save-btn" class="ghost" type="button" disabled
+              title="Save the full report as JSON">
+        <svg viewBox="0 0 20 20" aria-hidden="true" class="btn-icon">
+          <path d="M10 4v10m0 0 4-4m-4 4-4-4M3 15v2h14v-2" />
+        </svg>
+        Save report
       </button>
       <input id="file-input" type="file"
              accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp"
@@ -83,7 +91,8 @@
       <div class="panel-foot">
         <div id="source-thumb-wrap" hidden>
           <span class="foot-label">Source image</span>
-          <img id="source-thumb" alt="Uploaded image preview" />
+          <img id="source-thumb" alt="Preview of the image being analysed" />
+          <span id="source-name" class="source-name"></span>
         </div>
       </div>
     </aside>
@@ -110,7 +119,7 @@
             <path d="M24 34V12m0 0-8 8m8-8 8 8M8 36v4h32v-4" />
           </svg>
           <p class="drop-title">Drop a photograph here</p>
-          <p class="drop-sub">JPG · JPEG · PNG · WEBP — processed locally on this machine</p>
+          <p class="drop-sub">JPG · JPEG · PNG · WEBP — analysed on this machine, never uploaded</p>
         </div>
       </div>
 

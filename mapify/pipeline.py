@@ -357,7 +357,7 @@ class AnalysisEngine:
             report.candidates = [c.as_dict() for c in fused.candidates]
             report.prediction = self._build_prediction(fused, exif_report)
             report.engine = self.engine_status()
-            report.attribution = self._attribution()
+            report.attribution = self.attribution_lines()
             report.ok = True
 
         except ImageRejected as exc:
@@ -523,7 +523,7 @@ class AnalysisEngine:
             )
         return out
 
-    def _attribution(self) -> list[str]:
+    def attribution_lines(self) -> list[str]:
         items = [
             "Country, region and gazetteer data: Natural Earth (public domain)",
             "Geolocation model: GeoCLIP (MIT) on OpenAI CLIP ViT-L/14 (MIT)",

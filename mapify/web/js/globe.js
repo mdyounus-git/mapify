@@ -15,8 +15,10 @@
 
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/OrbitControls.js";
+import { DetailPatch, zoomForAltitude } from "./detail.js";
 
 const R = 1.0;                    // globe radius in scene units
+const ATMO_R = 1.16;              // atmosphere shell radius, in units of R
 const EARTH_RADIUS_KM = 6371.0088;
 const DEG = Math.PI / 180;
 
@@ -73,6 +75,7 @@ const EARTH_FRAG = /* glsl */ `
   uniform float nightGain;
   uniform float reliefGain;
   uniform float ambient;
+  uniform float specular;
   uniform vec2  texel;
 
   varying vec2 vUv;
@@ -116,8 +119,8 @@ const EARTH_FRAG = /* glsl */ `
     // Specular sheen where the surface is dark and smooth (i.e. water).
     float water = 1.0 - smoothstep(0.10, 0.34, dot(day, vec3(0.333)));
     vec3 H = normalize(L + normalize(vViewDir));
-    float spec = pow(max(dot(N, H), 0.0), 48.0) * water * max(lambert, 0.0);
-    color += vec3(0.32, 0.45, 0.62) * spec * 0.7;
+    float spec = pow(max(dot(N, H), 0.0), 110.0) * water * max(lambert, 0.0);
+    color += vec3(0.32, 0.45, 0.62) * spec * specular;
 
     // Rim light, strongest on the sunlit limb.
     float rim = pow(1.0 - max(dot(N, normalize(vViewDir)), 0.0), 3.0);
@@ -130,29 +133,47 @@ const EARTH_FRAG = /* glsl */ `
 
 const ATMO_VERT = /* glsl */ `
   varying vec3 vNormalW;
-  varying vec3 vViewDir;
+  varying vec3 vWorldPos;
   void main() {
     vNormalW = normalize(mat3(modelMatrix) * normal);
     vec4 world = modelMatrix * vec4(position, 1.0);
-    vViewDir = normalize(cameraPosition - world.xyz);
+    vWorldPos = world.xyz;
     gl_Position = projectionMatrix * viewMatrix * world;
   }
 `;
 
+/* The glow has to be brightest at the planet's limb and reach zero exactly at
+ * the shell's own silhouette, or the shell edge shows up as a hard ring.
+ * A Fresnel term on a back-side sphere peaks at the shell edge, which is the
+ * wrong place, so instead we work out how far the fragment is from the
+ * view axis and fade across the gap between the surface and the shell. */
 const ATMO_FRAG = /* glsl */ `
   uniform vec3  glowColor;
   uniform vec3  sunDir;
   uniform float power;
   uniform float strength;
+  uniform float innerRadius;
+  uniform float outerRadius;
   varying vec3 vNormalW;
-  varying vec3 vViewDir;
+  varying vec3 vWorldPos;
+
   void main() {
-    vec3 N = normalize(vNormalW);
-    // Back-side sphere, so the normal points away from the camera.
-    float fres = pow(clamp(1.0 + dot(N, normalize(vViewDir)), 0.0, 1.0), power);
-    float sun  = smoothstep(-0.60, 0.45, dot(-N, normalize(sunDir)));
-    float a = fres * strength * (0.22 + 0.78 * sun);
-    gl_FragColor = vec4(glowColor, a);
+    // The globe is centred on the origin, so the view axis is just the
+    // direction to the camera.
+    vec3 axis = normalize(cameraPosition);
+    float perp = length(vWorldPos - axis * dot(vWorldPos, axis));
+
+    // 0 at the planet's limb, 1 at the shell's silhouette.
+    float t = (perp - innerRadius) / max(outerRadius - innerRadius, 1e-4);
+    float halo = pow(clamp(1.0 - t, 0.0, 1.0), power);
+
+    // Fragments in front of the planet still get a thin haze, so the disc is
+    // not ringed by glow it does not have across its face.
+    float face = smoothstep(0.0, 0.35, t);
+    halo *= mix(0.22, 1.0, face);
+
+    float sun = smoothstep(-0.55, 0.45, dot(normalize(vNormalW) * -1.0, normalize(sunDir)));
+    gl_FragColor = vec4(glowColor, halo * strength * (0.18 + 0.82 * sun));
   }
 `;
 
@@ -212,7 +233,7 @@ export class Globe {
     this.scene = new THREE.Scene();
 
     this.camera = new THREE.PerspectiveCamera(38, 1, 0.001, 200);
-    this.camera.position.set(0, 0.55, 3.0);
+    this.camera.position.set(0, 0.62, 3.45);
 
     this.root = new THREE.Group();
     this.scene.add(this.root);
@@ -231,6 +252,7 @@ export class Globe {
       nightGain: { value: 1.35 },
       reliefGain: { value: 0.0 },
       ambient: { value: 0.07 },
+      specular: { value: 0.32 },
       texel: { value: new THREE.Vector2(1 / 4096, 1 / 2048) },
     };
     this.earthMat = new THREE.ShaderMaterial({
@@ -269,11 +291,13 @@ export class Globe {
     this.atmoUniforms = {
       glowColor: { value: new THREE.Color(0x4ea8ff) },
       sunDir: { value: this.sunDir.clone() },
-      power: { value: 2.6 },
+      power: { value: 2.2 },
       strength: { value: 1.0 },
+      innerRadius: { value: R },
+      outerRadius: { value: R * ATMO_R },
     };
     this.atmosphere = new THREE.Mesh(
-      new THREE.SphereGeometry(R * 1.16, 96, 64),
+      new THREE.SphereGeometry(R * ATMO_R, 96, 64),
       new THREE.ShaderMaterial({
         vertexShader: ATMO_VERT,
         fragmentShader: ATMO_FRAG,
@@ -297,7 +321,33 @@ export class Globe {
     this.stars = this._buildStarfield();
     this.scene.add(this.stars);
 
+    // Optional high-resolution ground detail for the end of an approach.
+    // Null unless the operator enabled basemap tiles.
+    this.detail = this.opts.tileUrl
+      ? new DetailPatch(this.root, {
+          tileUrl: this.opts.tileUrl,
+          attribution: this.opts.tileAttribution,
+          radius: R,
+        })
+      : null;
+    this._detailAt = 0;
+
     this.setMode(this.opts.mode);
+  }
+
+  /** Atmosphere strength for the current camera distance.
+   *
+   * The glow is a back-side shell, so once the camera passes inside it the
+   * whole screen fills with additive haze and the planet washes out. Fade it
+   * out across the boundary instead of letting that happen.
+   */
+  _atmosphereStrength() {
+    const base = this.opts.mode === "recon" ? 1.25 : 1.0;
+    const d = this.camera.position.length();
+    const dive = THREE.MathUtils.clamp((2.6 - d) / 1.2, 0, 1);
+    const shell = R * ATMO_R;
+    const outside = THREE.MathUtils.smoothstep(d, shell * 0.94, shell * 1.10);
+    return base * (1 + dive * 0.85) * outside;
   }
 
   _initControls() {
@@ -402,6 +452,7 @@ export class Globe {
       this.earthUniforms.reliefGain.value = 1.15;
     }
     this.earthUniforms.ambient.value = 0.075;
+    this.earthUniforms.specular.value = 0.32;
     this.earthUniforms.rimColor.value.setHex(0x2f6fb5);
     this.earthMat.needsUpdate = true;
 
@@ -417,7 +468,7 @@ export class Globe {
 
     this.atmoUniforms.glowColor.value.setHex(0x4ea8ff);
     this.atmoUniforms.strength.value = 1.0;
-    this.atmoUniforms.power.value = 2.6;
+    this.atmoUniforms.power.value = 2.2;
 
     this._setOverlay(false);
     this.starMaterial.opacity = 0.85;
@@ -433,13 +484,14 @@ export class Globe {
     // Recon mode is a display, not a photograph: light it almost flatly so
     // the whole planet stays readable.
     this.earthUniforms.ambient.value = 0.82;
+    this.earthUniforms.specular.value = 0.0;
     this.earthUniforms.rimColor.value.setHex(0x1d5f96);
     this.earthMat.needsUpdate = true;
 
     this.clouds.visible = false;
     this.atmoUniforms.glowColor.value.setHex(0x2a9df4);
     this.atmoUniforms.strength.value = 1.25;
-    this.atmoUniforms.power.value = 3.1;
+    this.atmoUniforms.power.value = 2.7;
 
     this._setOverlay(true);
     this.starMaterial.opacity = 1.0;
@@ -888,10 +940,7 @@ export class Globe {
     this.camera.position.copy(dir).multiplyScalar(radius);
     this.camera.lookAt(0, 0, 0);
 
-    // Thicken the atmosphere as we drop into it.
-    const dive = THREE.MathUtils.clamp((2.2 - radius) / 1.1, 0, 1);
-    this.atmoUniforms.strength.value =
-      (this.opts.mode === "recon" ? 1.25 : 1.0) * (1 + dive * 0.85);
+    this.atmoUniforms.strength.value = this._atmosphereStrength();
 
     if (raw >= 1) {
       this._flight.resolve?.();
@@ -932,12 +981,10 @@ export class Globe {
         this.camera.lookAt(0, 0, 0);
       }
       this.controls.update();
-      const dive = THREE.MathUtils.clamp(
-        (2.2 - this.camera.position.length()) / 1.1, 0, 1
-      );
-      this.atmoUniforms.strength.value =
-        (this.opts.mode === "recon" ? 1.25 : 1.0) * (1 + dive * 0.85);
+      this.atmoUniforms.strength.value = this._atmosphereStrength();
     }
+
+    this._updateDetail(now);
 
     // Clouds drift a little faster than the planet turns.
     if (this.clouds.visible) this.clouds.rotation.y += dt * 0.0075;
@@ -974,7 +1021,41 @@ export class Globe {
     }
   }
 
+  /** Swap in tile detail near the target once we are low enough to need it. */
+  _updateDetail(now) {
+    if (!this.detail || now - this._detailAt < 400) return;
+    this._detailAt = now;
+    const altKm = (this.camera.position.length() - R) * EARTH_RADIUS_KM;
+    const target = this.activeMarker || this.markers[0];
+    if (!target || altKm > 2000) {
+      this.detail.clear();
+      return;
+    }
+    const zoom = zoomForAltitude(altKm);
+    if (zoom <= 0) {
+      this.detail.clear();
+      return;
+    }
+    this.detail.show(target.lat, target.lon, zoom);
+  }
+
   setFlightMode(mode) { this.opts.flight = mode; }
+
+  /** Enable or disable the tile detail patch at runtime. */
+  setTileSource(url, attribution) {
+    if (url && !this.detail) {
+      this.detail = new DetailPatch(this.root, {
+        tileUrl: url, attribution, radius: R,
+      });
+    } else if (!url && this.detail) {
+      this.detail.clear();
+      this.detail = null;
+    } else if (this.detail) {
+      this.detail.tileUrl = url;
+      this.detail.attribution = attribution;
+      this.detail.clear();
+    }
+  }
 
   dispose() {
     this._disposed = true;

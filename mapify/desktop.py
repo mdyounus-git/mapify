@@ -1,0 +1,302 @@
+"""Mapify as a native Windows application.
+
+This is a desktop program, not a web page. It opens a real window with a real
+title bar and a taskbar entry, uses Windows' own file dialogs, and never shows
+a URL or asks anyone to open a browser.
+
+The window is drawn by Edge WebView2, which ships with Windows 10 and 11, so
+the globe gets a modern GPU-accelerated renderer without bundling a second
+browser. pywebview (BSD-3-Clause) provides the window and the Python/JS
+bridge.
+
+Everything runs in one process. The analysis service listens only on the
+loopback interface, on an ephemeral port, behind a random per-session token,
+so no other program on the machine -- including a browser -- can reach it.
+"""
+
+from __future__ import annotations
+
+import logging
+import os
+import secrets
+import socket
+import sys
+import threading
+import time
+from pathlib import Path
+from typing import Any
+
+from . import __version__
+from .config import Config, load_config
+
+log = logging.getLogger("mapify.desktop")
+
+ROOT = Path(__file__).resolve().parent.parent
+WEB_DIR = Path(__file__).resolve().parent / "web"
+
+IMAGE_TYPES = ("Images (*.jpg;*.jpeg;*.png;*.webp)", "All files (*.*)")
+
+
+def _free_port() -> int:
+    """Ask the OS for an unused loopback port."""
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.bind(("127.0.0.1", 0))
+        return int(s.getsockname()[1])
+
+
+# The pywebview Window is kept here rather than on the bridge object.
+# pywebview serialises the js_api object's attributes to expose them to
+# JavaScript, and Window.native is a .NET WinForms control: walking it
+# recurses forever and touches COM interfaces from the wrong thread. Keeping
+# the reference out of the bridge's attribute graph avoids all of that.
+_WINDOW: dict[str, Any] = {"ref": None}
+
+
+class NativeBridge:
+    """The object JavaScript can call, exposed as ``window.pywebview.api``.
+
+    Deliberately small. It does the things a browser cannot do -- native file
+    dialogs, saving a report where the user chooses, closing the window -- and
+    nothing else.
+    """
+
+    def __init__(self, cfg: Config, token: str):
+        self.cfg = cfg
+        self.token = token
+        # Paths the user picked in a native dialog. The HTTP layer will read a
+        # file from disk only if it is in here, so a stray request cannot walk
+        # the filesystem even if it somehow got the token.
+        self.approved_paths: set[str] = set()
+        self._lock = threading.Lock()
+
+    # -------------------------------------------------------------- dialogs
+
+    def open_image(self) -> dict[str, Any]:
+        """Native 'open file' dialog. Returns the chosen path, or nothing."""
+        import webview
+
+        window = _WINDOW["ref"]
+        if window is None:
+            return {"error": "The application window is not ready yet."}
+        result = window.create_file_dialog(
+            webview.OPEN_DIALOG,
+            allow_multiple=False,
+            file_types=IMAGE_TYPES,
+        )
+        if not result:
+            return {"cancelled": True}
+        path = Path(result[0]).resolve()
+        if not path.is_file():
+            return {"error": "That file could not be opened."}
+        if path.suffix.lower() not in {".jpg", ".jpeg", ".png", ".webp"}:
+            return {"error": f"{path.suffix or 'That file type'} is not a supported image."}
+        size = path.stat().st_size
+        if size > self.cfg.server.max_upload_bytes:
+            return {
+                "error": (
+                    f"{path.name} is {size / 1e6:.1f} MB; the limit is "
+                    f"{self.cfg.server.max_upload_bytes / 1e6:.0f} MB."
+                )
+            }
+        with self._lock:
+            self.approved_paths.add(str(path))
+        return {"path": str(path), "name": path.name, "bytes": size}
+
+    def save_report(self, content: str, suggested: str = "mapify-report.json"
+                    ) -> dict[str, Any]:
+        """Native 'save as' dialog for the JSON report."""
+        import webview
+
+        window = _WINDOW["ref"]
+        if window is None:
+            return {"error": "The application window is not ready yet."}
+        target = window.create_file_dialog(
+            webview.SAVE_DIALOG,
+            save_filename=suggested,
+            file_types=("JSON (*.json)", "All files (*.*)"),
+        )
+        if not target:
+            return {"cancelled": True}
+        path = Path(target if isinstance(target, str) else target[0])
+        try:
+            path.write_text(content, encoding="utf-8")
+        except OSError as exc:
+            return {"error": str(exc)}
+        return {"path": str(path)}
+
+    def reveal(self, path: str) -> dict[str, Any]:
+        """Show a saved file in Explorer."""
+        p = Path(path)
+        if not p.exists():
+            return {"error": "File not found."}
+        try:
+            os.startfile(p.parent)  # noqa: S606 - Windows shell, user-initiated
+        except Exception as exc:
+            return {"error": str(exc)}
+        return {"ok": True}
+
+    # ----------------------------------------------------------- app facts
+
+    def app_info(self) -> dict[str, Any]:
+        return {
+            "version": __version__,
+            "token": self.token,
+            "platform": sys.platform,
+            "native": True,
+            "root": str(ROOT),
+        }
+
+    def quit(self) -> None:
+        window = _WINDOW["ref"]
+        if window is not None:
+            window.destroy()
+
+
+def _wait_for_server(port: int, token: str, timeout: float = 30.0) -> bool:
+    import urllib.error
+    import urllib.request
+
+    deadline = time.time() + timeout
+    url = f"http://127.0.0.1:{port}/api/status"
+    while time.time() < deadline:
+        try:
+            req = urllib.request.Request(url, headers={"X-Mapify-Token": token})
+            with urllib.request.urlopen(req, timeout=2):
+                return True
+        except (urllib.error.URLError, OSError):
+            time.sleep(0.15)
+    return False
+
+
+def run(argv: list[str] | None = None) -> int:
+    import argparse
+
+    ap = argparse.ArgumentParser(
+        prog="Mapify",
+        description="Image geolocation reconnaissance (desktop application).",
+    )
+    ap.add_argument("--config", default=None)
+    ap.add_argument("--offline", action="store_true",
+                    help="refuse every outbound request for this run")
+    ap.add_argument("--debug", action="store_true",
+                    help="open developer tools in the window")
+    ap.add_argument("--log-level", default="warning")
+    args = ap.parse_args(argv)
+
+    logging.basicConfig(
+        level=getattr(logging, args.log_level.upper(), logging.WARNING),
+        format="%(asctime)s  %(levelname)-7s %(name)s  %(message)s",
+        datefmt="%H:%M:%S",
+    )
+
+    # pywebview introspects the native window when its logger is verbose,
+    # which on the WebView2 backend means touching COM from the wrong thread.
+    logging.getLogger("pywebview").setLevel(logging.WARNING)
+
+    cfg = load_config(args.config)
+    if args.offline:
+        cfg.network.offline_only = True
+
+    token = secrets.token_urlsafe(24)
+    port = _free_port()
+    cfg.server.host = "127.0.0.1"
+    cfg.server.port = port
+
+    bridge = NativeBridge(cfg, token)
+
+    # --- start the local service -----------------------------------------
+    from .server import create_app
+
+    app = create_app(cfg, token=token, bridge=bridge)
+
+    import uvicorn
+
+    server = uvicorn.Server(
+        uvicorn.Config(
+            app,
+            host="127.0.0.1",
+            port=port,
+            log_level=args.log_level,
+            access_log=False,
+            # The window closes the process; no graceful-shutdown dance.
+            timeout_graceful_shutdown=1,
+        )
+    )
+    thread = threading.Thread(target=server.run, name="mapify-service", daemon=True)
+    thread.start()
+
+    if not _wait_for_server(port, token):
+        _fatal("Mapify could not start its local analysis service.")
+        return 1
+
+    # --- open the window --------------------------------------------------
+    try:
+        import webview
+    except ImportError:
+        _fatal(
+            "pywebview is not installed.\n\n"
+            "Run scripts\\setup_env.ps1, or:\n"
+            "    pip install pywebview pythonnet"
+        )
+        return 1
+
+    window = webview.create_window(
+        f"Mapify {__version__}  —  Image Geolocation Reconnaissance",
+        f"http://127.0.0.1:{port}/?t={token}",
+        js_api=bridge,
+        width=1580,
+        height=940,
+        min_size=(1040, 660),
+        background_color="#05070D",
+        text_select=True,
+        confirm_close=False,
+    )
+    _WINDOW["ref"] = window
+
+    def on_closing() -> None:
+        try:
+            server.should_exit = True
+        except Exception:
+            pass
+
+    window.events.closing += on_closing
+
+    icon = ROOT / "assets" / "mapify.ico"
+    kwargs: dict[str, Any] = {"debug": args.debug, "private_mode": True}
+    if icon.exists():
+        kwargs["icon"] = str(icon)
+
+    # EdgeChromium is the WebView2 runtime built into Windows 10/11. It is the
+    # only backend with the WebGL2 support the globe needs.
+    try:
+        webview.start(gui="edgechromium", **kwargs)
+    except Exception as exc:
+        log.warning("EdgeChromium backend unavailable (%s); using the default", exc)
+        try:
+            webview.start(**kwargs)
+        except Exception as exc2:
+            _fatal(
+                "Mapify could not create its window.\n\n"
+                f"{type(exc2).__name__}: {exc2}\n\n"
+                "The Microsoft Edge WebView2 Runtime is required. It ships "
+                "with Windows 11; on older systems install it from "
+                "https://developer.microsoft.com/microsoft-edge/webview2/"
+            )
+            return 1
+
+    server.should_exit = True
+    return 0
+
+
+def _fatal(message: str) -> None:
+    """Report a startup failure without a console."""
+    try:
+        import ctypes
+
+        ctypes.windll.user32.MessageBoxW(None, message, "Mapify", 0x10)
+    except Exception:
+        print(message, file=sys.stderr)
+
+
+if __name__ == "__main__":
+    raise SystemExit(run())

@@ -43,3 +43,11 @@ desktop.ini
 # NASA Earth textures (~3 MB), fetched by scripts/fetch_textures.py.
 mapify/web/textures/
 samples/
+
+# Scratch logs from local runs.
+.app.log
+.svc.log
+.eval.log
+.tex.log
+.warm.log
+.server.log

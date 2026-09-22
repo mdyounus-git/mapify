@@ -12,6 +12,7 @@ const $ = (id) => document.getElementById(id);
 
 const el = {
   uploadBtn: $("upload-btn"),
+  saveBtn: $("save-btn"),
   fileInput: $("file-input"),
   globeCanvas: $("globe-canvas"),
   globeMode: $("globe-mode"),
@@ -33,6 +34,7 @@ const el = {
   attribution: $("attribution"),
   sourceThumb: $("source-thumb"),
   sourceThumbWrap: $("source-thumb-wrap"),
+  sourceName: $("source-name"),
 };
 
 const STAGES = [
@@ -52,7 +54,26 @@ const state = {
   busy: false,
   countries: null,
   status: null,
+  // Set once the pywebview bridge is up. In the desktop application we use
+  // Windows' own file dialogs and hand the service a path, rather than
+  // pushing the bytes through a browser file input.
+  native: null,
 };
+
+/** Resolve when the native bridge is ready, or immediately if there is none. */
+function whenNative(timeoutMs = 4000) {
+  if (window.pywebview?.api) return Promise.resolve(window.pywebview.api);
+  return new Promise((resolve) => {
+    let settled = false;
+    const done = () => {
+      if (settled) return;
+      settled = true;
+      resolve(window.pywebview?.api || null);
+    };
+    window.addEventListener("pywebviewready", done, { once: true });
+    setTimeout(done, timeoutMs);
+  });
+}
 
 /* ─────────────────────────── formatting ─────────────────────────── */
 
@@ -106,12 +127,16 @@ async function boot() {
     if (state.report) renderCandidates(state.report);
   });
 
-  el.uploadBtn.addEventListener("click", () => el.fileInput.click());
+  state.native = await whenNative();
+  document.body.classList.toggle("is-native", Boolean(state.native));
+
+  el.uploadBtn.addEventListener("click", () => openImage());
   el.fileInput.addEventListener("change", () => {
     const file = el.fileInput.files?.[0];
-    if (file) analyse(file);
+    if (file) analyse({ file });
     el.fileInput.value = "";
   });
+  el.saveBtn?.addEventListener("click", () => saveReport());
 
   el.globeMode.addEventListener("change", async () => {
     el.hudStatus.textContent = "Switching globe…";
@@ -125,6 +150,10 @@ async function boot() {
 
   installDropzone();
   await refreshStatus();
+  const tiles = state.status?.client;
+  if (tiles?.basemap_tiles_enabled && tiles.basemap_tile_url) {
+    state.globe.setTileSource(tiles.basemap_tile_url, tiles.basemap_attribution);
+  }
   updateCredit();
 
   // Kick model loading off now so the first upload is not the slow one.
@@ -132,6 +161,48 @@ async function boot() {
     .then((r) => r.json())
     .then(() => refreshStatus())
     .catch(() => {});
+}
+
+/** Pick an image: native dialog in the app, file input as a fallback. */
+async function openImage() {
+  if (state.busy) return;
+  if (!state.native) {
+    el.fileInput.click();
+    return;
+  }
+  let picked;
+  try {
+    picked = await state.native.open_image();
+  } catch (err) {
+    showError("Could not open the file dialog", esc(String(err)));
+    return;
+  }
+  if (!picked || picked.cancelled) return;
+  if (picked.error) {
+    showError("Cannot analyse that file", esc(picked.error));
+    return;
+  }
+  analyse({ path: picked.path, name: picked.name, bytes: picked.bytes });
+}
+
+/** Write the current report out through a native save dialog. */
+async function saveReport() {
+  if (!state.report) return;
+  const json = JSON.stringify(state.report, null, 2);
+  const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-");
+  const suggested = `mapify-${stamp}.json`;
+  if (!state.native) {
+    const blob = new Blob([json], { type: "application/json" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = suggested;
+    a.click();
+    URL.revokeObjectURL(a.href);
+    return;
+  }
+  const res = await state.native.save_report(json, suggested);
+  if (res?.error) showError("Could not save", esc(res.error));
+  else if (res?.path) el.hudStatus.textContent = `Saved to ${res.path}`;
 }
 
 function installDropzone() {
@@ -154,13 +225,13 @@ function installDropzone() {
     depth = 0;
     show(false);
     const file = e.dataTransfer?.files?.[0];
-    if (file) analyse(file);
+    if (file) analyse({ file });
   });
   window.addEventListener("paste", (e) => {
     for (const item of e.clipboardData?.items || []) {
       if (item.type.startsWith("image/")) {
         const file = item.getAsFile();
-        if (file) analyse(file);
+        if (file) analyse({ file });
         return;
       }
     }
@@ -197,27 +268,39 @@ async function refreshStatus() {
 
 function updateCredit() {
   const satellite = el.globeMode.value === "satellite";
-  el.hudCredit.textContent = satellite
-    ? "Earth imagery: NASA Earth Observatory (Blue Marble, Black Marble, GEBCO). Public domain."
-    : "Coastlines: Natural Earth. Public domain.";
+  const parts = [
+    satellite
+      ? "Earth imagery: NASA Earth Observatory (Blue Marble, Black Marble, GEBCO). Public domain."
+      : "Coastlines: Natural Earth. Public domain.",
+  ];
+  const tiles = state.status?.client;
+  if (tiles?.basemap_tiles_enabled && tiles.basemap_attribution) {
+    parts.push("Ground detail: " + tiles.basemap_attribution);
+  }
+  el.hudCredit.textContent = parts.join("  ");
 }
 
 /* ─────────────────────────── analysis ─────────────────────────── */
 
-async function analyse(file) {
+/**
+ * Run an analysis.
+ * @param {{file?:File, path?:string, name?:string, bytes?:number}} source
+ *   In the desktop app the user picks a file in a Windows dialog and we send
+ *   the path, so a 30 MB photograph is read once off disk instead of being
+ *   copied through the WebView. A dropped or pasted file arrives as bytes.
+ */
+async function analyse(source) {
   if (state.busy) return;
-  const okType = /\.(jpe?g|png|webp)$/i.test(file.name) ||
-    /^image\/(jpeg|png|webp)$/.test(file.type);
-  if (!okType) {
-    showError(
-      "Unsupported file",
-      `${esc(file.name)} is not a JPG, PNG or WEBP image.`
-    );
+  const name = source.name || source.file?.name || "image";
+  if (!/\.(jpe?g|png|webp)$/i.test(name) &&
+      !/^image\/(jpeg|png|webp)$/.test(source.file?.type || "")) {
+    showError("Unsupported file", `${esc(name)} is not a JPG, PNG or WEBP image.`);
     return;
   }
 
   state.busy = true;
   el.uploadBtn.disabled = true;
+  if (el.saveBtn) el.saveBtn.disabled = true;
   el.report.innerHTML = "";
   el.candidateList.innerHTML = "";
   el.candidateCount.textContent = "—";
@@ -225,20 +308,21 @@ async function analyse(file) {
   el.verdictPill.className = "pill";
   state.globe.clearMarkers();
   showProgress(true);
-
-  // Local preview; the bytes never leave this machine either way.
-  const url = URL.createObjectURL(file);
-  el.sourceThumb.src = url;
-  el.sourceThumbWrap.hidden = false;
-
-  const form = new FormData();
-  form.append("image", file, file.name);
+  showSourcePreview(source);
 
   try {
-    const resp = await fetch("/api/analyse/stream", {
-      method: "POST",
-      body: form,
-    });
+    const resp = source.path
+      ? await fetch("/api/analyse/local/stream", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ path: source.path }),
+        })
+      : await (() => {
+          const form = new FormData();
+          form.append("image", source.file, name);
+          return fetch("/api/analyse/stream", { method: "POST", body: form });
+        })();
+
     if (!resp.ok && resp.status !== 422) {
       let detail = `HTTP ${resp.status}`;
       try {
@@ -248,33 +332,15 @@ async function analyse(file) {
       throw new Error(detail);
     }
 
-    const reader = resp.body.getReader();
-    const decoder = new TextDecoder();
-    let buffer = "";
-    let report = null;
-
-    while (true) {
-      const { value, done } = await reader.read();
-      if (done) break;
-      buffer += decoder.decode(value, { stream: true });
-      let nl;
-      while ((nl = buffer.indexOf("\n")) >= 0) {
-        const line = buffer.slice(0, nl).trim();
-        buffer = buffer.slice(nl + 1);
-        if (!line) continue;
-        const msg = JSON.parse(line);
-        if (msg.type === "progress") markStage(msg.stage, msg.message);
-        else if (msg.type === "result") report = msg.report;
-      }
-    }
-
-    if (!report) throw new Error("The server closed without returning a result.");
+    const report = await readStream(resp);
+    if (!report) throw new Error("The analysis ended without returning a result.");
     if (!report.ok) {
       showError("Analysis failed", esc(report.error || "Unknown error."));
       return;
     }
     state.report = report;
     render(report);
+    if (el.saveBtn) el.saveBtn.disabled = false;
   } catch (err) {
     showError("Analysis failed", esc(err.message || String(err)));
   } finally {
@@ -282,6 +348,54 @@ async function analyse(file) {
     state.busy = false;
     el.uploadBtn.disabled = false;
     refreshStatus();
+  }
+}
+
+/** Read the NDJSON progress stream, returning the final report. */
+async function readStream(resp) {
+  const reader = resp.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  let report = null;
+  while (true) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    let nl;
+    while ((nl = buffer.indexOf("\n")) >= 0) {
+      const line = buffer.slice(0, nl).trim();
+      buffer = buffer.slice(nl + 1);
+      if (!line) continue;
+      let msg;
+      try {
+        msg = JSON.parse(line);
+      } catch {
+        continue;
+      }
+      if (msg.type === "progress") markStage(msg.stage, msg.message);
+      else if (msg.type === "result") report = msg.report;
+    }
+  }
+  return report;
+}
+
+/** Show the image being analysed, without ever sending it anywhere. */
+function showSourcePreview(source) {
+  if (state.previewUrl) {
+    URL.revokeObjectURL(state.previewUrl);
+    state.previewUrl = null;
+  }
+  if (source.file) {
+    state.previewUrl = URL.createObjectURL(source.file);
+    el.sourceThumb.src = state.previewUrl;
+    el.sourceThumbWrap.hidden = false;
+    el.sourceName.textContent = source.file.name;
+  } else if (source.path) {
+    // The WebView cannot read file:// under this CSP, so show the name and
+    // let the report carry the detail.
+    el.sourceThumb.removeAttribute("src");
+    el.sourceThumbWrap.hidden = false;
+    el.sourceName.textContent = source.name || source.path;
   }
 }
 

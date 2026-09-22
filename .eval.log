@@ -1,37 +1,0 @@
-Loading models...
-D:\NTG HERE\mapify\.venv\Lib\site-packages\torch\jit\_script.py:1491: FutureWarning: `torch.jit.script` is deprecated. Please switch to `torch.compile` or `torch.export`.
-  warnings.warn(
-Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
-WARNING:huggingface_hub.utils._http:Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
-Loading weights:   0%|          | 0/590 [00:00<?, ?it/s]Loading weights:   4%|▎         | 22/590 [00:00<00:03, 179.76it/s]Loading weights:   7%|▋         | 40/590 [00:00<00:04, 113.91it/s]Loading weights:  15%|█▍        | 86/590 [00:00<00:02, 218.18it/s]Loading weights:  19%|█▉        | 112/590 [00:00<00:02, 219.89it/s]Loading weights:  28%|██▊       | 165/590 [00:00<00:01, 292.43it/s]Loading weights:  33%|███▎      | 197/590 [00:00<00:01, 276.74it/s]Loading weights:  38%|███▊      | 226/590 [00:01<00:01, 200.87it/s]Loading weights: 100%|██████████| 590/590 [00:01<00:00, 553.56it/s]
-ready in 17s
-
-sample       error km  band       confidence      mass  conc  spread  predicted
--------------------------------------------------------------------------------
-paris             0.0  street     high           0.131  1.00       0  Paris, Paris, France
-tokyo            12.6  city       high           0.069  1.00       0  Tokyo, Tokyo, Japan
-bengaluru         0.7  street     high           0.401  1.00       0  Bengaluru, Karnataka, India
-moscow          190.2  region     medium         0.121  0.70     585  Vladimir, Vladimir, Russia
-cairo         11783.3  off-target insufficient   0.019  0.19    6003  Gualeguay, Entre Ríos, Argentina
-nyc               0.2  street     high           0.088  1.00       0  New York, New York, United States of America
-sydney            0.1  street     high           0.165  1.00       0  Sydney, New South Wales, Australia
-rio               1.8  city       low            0.089  0.51    1174  Rio de Janeiro, Rio de Janeiro, Brazil
-reykjavik         4.4  city       high           0.205  1.00       0  Reykjavík, Iceland
-nairobi       12513.9  off-target low            0.030  0.51     756  Pereira, Risaralda, Colombia
-istanbul          0.5  street     high           0.095  1.00       0  Istanbul, Istanbul, Turkey
-
-Accuracy over 11 samples (cumulative):
-  street     <=      1 km   5/11    45% #############
-  city       <=     25 km   8/11    73% ####################
-  region     <=    200 km   9/11    82% #######################
-  country    <=    750 km   9/11    82% #######################
-  continent  <=   2500 km   9/11    82% #######################
-  median error 1.8 km
-
-Calibration -- median error by stated confidence:
-  high          n= 7  median      0.5 km  worst     12.7 km
-  medium        n= 1  median    190.2 km  worst    190.2 km
-  low           n= 2  median  12513.9 km  worst  12513.9 km
-  insufficient  n= 1  median  11783.3 km  worst  11783.3 km
-
-wrote data/eval_offline.json

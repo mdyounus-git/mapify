@@ -1,13 +1,0 @@
-D:\NTG HERE\mapify\.venv\Lib\site-packages\torch\jit\_script.py:1491: FutureWarning: `torch.jit.script` is deprecated. Please switch to `torch.compile` or `torch.export`.
-  warnings.warn(
-import ok 11.5 s
-Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
-Loading weights:   0%|          | 0/590 [00:00<?, ?it/s]Loading weights:   1%|1         | 8/590 [00:00<00:07, 76.87it/s]Loading weights:   3%|2         | 17/590 [00:00<00:07, 81.59it/s]Loading weights:   4%|4         | 26/590 [00:00<00:07, 77.86it/s]Loading weights:   7%|6         | 41/590 [00:00<00:05, 95.66it/s]Loading weights:  10%|#         | 61/590 [00:00<00:04, 110.22it/s]Loading weights:  13%|#3        | 79/590 [00:00<00:04, 126.71it/s]Loading weights:  16%|#5        | 92/590 [00:00<00:04, 115.77it/s]Loading weights:  18%|#7        | 104/590 [00:01<00:05, 93.17it/s]Loading weights:  19%|#9        | 114/590 [00:01<00:05, 88.05it/s]Loading weights:  21%|##1       | 124/590 [00:01<00:05, 86.69it/s]Loading weights:  23%|##2       | 133/590 [00:01<00:05, 79.79it/s]Loading weights: 100%|##########| 590/590 [00:01<00:00, 403.81it/s]
-GeoCLIP loaded in 99.1 s
-gallery: (100000, 2)
-inference 12.3 s
-    44.2858    15.4452  p=0.0003
-    44.2892    15.4423  p=0.0003
-    44.2956    15.4370  p=0.0003
-    34.4347  -103.7984  p=0.0003
-    34.4342  -103.7989  p=0.0003
