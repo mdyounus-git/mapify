@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Download the bundled open geodata and the vendored front-end library.
 
-Everything fetched here is public domain (Natural Earth) or BSD-3-Clause
-(MapLibre GL JS).  Nothing requires an account, a key, or a payment.  Run once
+Everything fetched here is public domain (Natural Earth) or MIT
+(three.js).  Nothing requires an account, a key, or a payment.  Run once
 after install; re-running is idempotent and skips files already present.
 
     python scripts/fetch_data.py [--force] [--skip-vendor]
@@ -33,21 +33,26 @@ NE_LAYERS = [
 ]
 NE_EXTS = (".shp", ".dbf", ".shx")
 
-MAPLIBRE_VERSION = "6.10.0"
-# MapLibre 6 ships ES modules only (no UMD bundle), so the front end imports
-# the .mjs directly: no bundler, no build step.
+THREE_VERSION = "0.186.0"
+# Three.js ships ES modules, so the front end imports them through an import
+# map: no bundler, no build step, nothing to trust but these files.
 VENDOR_FILES = [
     (
-        f"https://unpkg.com/maplibre-gl@{MAPLIBRE_VERSION}/dist/maplibre-gl.mjs",
-        "maplibre-gl.mjs",
+        f"https://unpkg.com/three@{THREE_VERSION}/build/three.module.js",
+        "three.module.js",
     ),
     (
-        f"https://unpkg.com/maplibre-gl@{MAPLIBRE_VERSION}/dist/maplibre-gl.css",
-        "maplibre-gl.css",
+        f"https://unpkg.com/three@{THREE_VERSION}/build/three.core.js",
+        "three.core.js",
     ),
     (
-        f"https://unpkg.com/maplibre-gl@{MAPLIBRE_VERSION}/LICENSE.txt",
-        "maplibre-gl.LICENSE.txt",
+        f"https://unpkg.com/three@{THREE_VERSION}/examples/jsm/controls/"
+        "OrbitControls.js",
+        "OrbitControls.js",
+    ),
+    (
+        f"https://unpkg.com/three@{THREE_VERSION}/LICENSE",
+        "three.LICENSE.txt",
     ),
 ]
 
@@ -121,7 +126,7 @@ def build_globe_geojson() -> None:
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--force", action="store_true", help="re-download everything")
-    ap.add_argument("--skip-vendor", action="store_true", help="skip MapLibre")
+    ap.add_argument("--skip-vendor", action="store_true", help="skip three.js")
     ap.add_argument("--skip-geo", action="store_true", help="skip Natural Earth")
     args = ap.parse_args()
 
@@ -146,7 +151,7 @@ def main() -> int:
         build_globe_geojson()
 
     if not args.skip_vendor:
-        print(f"MapLibre GL JS {MAPLIBRE_VERSION} (BSD-3-Clause) ->", VENDOR_DIR)
+        print(f"Three.js {THREE_VERSION} (MIT) ->", VENDOR_DIR)
         for url, name in VENDOR_FILES:
             fetch(url, VENDOR_DIR / name, args.force)
             p = VENDOR_DIR / name
@@ -154,7 +159,7 @@ def main() -> int:
                 "bytes": p.stat().st_size,
                 "sha256": sha256(p),
                 "source": url,
-                "license": "BSD-3-Clause (MapLibre GL JS)",
+                "license": "MIT (three.js)",
             }
 
     mpath = ROOT / "data" / "MANIFEST.json"
@@ -165,7 +170,7 @@ def main() -> int:
     mpath.parent.mkdir(parents=True, exist_ok=True)
     mpath.write_text(json.dumps(existing, indent=2, sort_keys=True), encoding="utf-8")
     print(f"\nManifest written: {mpath}")
-    print("All assets are public domain or BSD-3-Clause. See ATTRIBUTION.md.")
+    print("All assets are public domain or MIT. See ATTRIBUTION.md.")
     return 0
 
 

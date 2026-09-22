@@ -39,3 +39,6 @@ samples/private/
 Thumbs.db
 .DS_Store
 desktop.ini
+
+# NASA Earth textures (~3 MB), fetched by scripts/fetch_textures.py.
+mapify/web/textures/

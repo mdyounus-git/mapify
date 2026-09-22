@@ -1,4 +1,38 @@
 {
+  "OrbitControls.js": {
+    "bytes": 40755,
+    "license": "MIT (three.js)",
+    "sha256": "3d79d07ecb686b4e5d93232eedab255331c1beef711e13164eaa1f68655a5f2b",
+    "source": "https://unpkg.com/three@0.186.0/examples/jsm/controls/OrbitControls.js"
+  },
+  "earth_clouds.jpg": {
+    "bytes": 829367,
+    "credit": "NASA Blue Marble cloud composite, NASA Earth Observatory",
+    "license": "NASA imagery -- generally not copyrighted; credit requested",
+    "sha256": "daddaad84d7a33bbbc86cdda3f591099f57cee8607b7bcf3b67eb7e4f7a1c793",
+    "source": "https://eoimages.gsfc.nasa.gov/images/imagerecords/57000/57747/cloud_combined_2048.jpg"
+  },
+  "earth_day.jpg": {
+    "bytes": 1343599,
+    "credit": "NASA Blue Marble Next Generation (December 2004), topography and bathymetry, by Reto Stockli, NASA Earth Observatory",
+    "license": "NASA imagery -- generally not copyrighted; credit requested",
+    "sha256": "6840daaa83e4b2341362576d4896b457899c002a6d6ed6cc59949c76f54c4530",
+    "source": "https://eoimages.gsfc.nasa.gov/images/imagerecords/73000/73909/world.topo.bathy.200412.3x5400x2700.jpg"
+  },
+  "earth_elevation.jpg": {
+    "bytes": 335999,
+    "credit": "GEBCO_08 elevation and bathymetry, rendered by NASA Earth Observatory; GEBCO grid (c) GEBCO / BODC",
+    "license": "NASA imagery -- generally not copyrighted; credit requested",
+    "sha256": "be6865917bb43e5bb16052fbf692cb205799c78aa65b843559f4c7a3d452cc25",
+    "source": "https://eoimages.gsfc.nasa.gov/images/imagerecords/73000/73934/gebco_08_rev_elev_21600x10800.png"
+  },
+  "earth_night.jpg": {
+    "bytes": 794479,
+    "credit": "NASA Earth at Night 2012 (Black Marble), NASA Earth Observatory / NOAA NGDC",
+    "license": "NASA imagery -- generally not copyrighted; credit requested",
+    "sha256": "373e5a08c9f378a2ce6320214a613148e4b1e3946b3f39a516c9093b76cb7124",
+    "source": "https://eoimages.gsfc.nasa.gov/images/imagerecords/79000/79765/dnb_land_ocean_ice.2012.3600x1800.jpg"
+  },
   "maplibre-gl.LICENSE.txt": {
     "bytes": 5984,
     "license": "BSD-3-Clause (MapLibre GL JS)",
@@ -16,5 +50,23 @@
     "license": "BSD-3-Clause (MapLibre GL JS)",
     "sha256": "454e0bbb16c721cfbf952a92ff3e4362130346ed59a5bff56ae5d6fbebb651f7",
     "source": "https://unpkg.com/maplibre-gl@6.10.0/dist/maplibre-gl.mjs"
+  },
+  "three.LICENSE.txt": {
+    "bytes": 1081,
+    "license": "MIT (three.js)",
+    "sha256": "8b378ebe60e2fe500158cb0ac71cb5e8b7d92953c2abcc63a0eb90499653b5bc",
+    "source": "https://unpkg.com/three@0.186.0/LICENSE"
+  },
+  "three.core.js": {
+    "bytes": 1458113,
+    "license": "MIT (three.js)",
+    "sha256": "9edde002b066a9a05676a6127f67735b62baf399bdea529f2f7e31657da769e6",
+    "source": "https://unpkg.com/three@0.186.0/build/three.core.js"
+  },
+  "three.module.js": {
+    "bytes": 662772,
+    "license": "MIT (three.js)",
+    "sha256": "9052042d676cb0fdc1ddfefe193053f34b7ac0513a616fdac4535d49987812ea",
+    "source": "https://unpkg.com/three@0.186.0/build/three.module.js"
   }
 }
