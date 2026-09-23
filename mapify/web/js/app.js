@@ -1,9 +1,10 @@
-/* Mapify console.
+/* Mapify — application controller.
  *
- * Wires the upload, the streaming analysis, the candidate list, the report and
- * the globe together. No framework, no build step -- the whole front end is
- * three modules and a stylesheet, which matters for a tool whose main claim is
- * that you can read it and see what it does. */
+ * Owns the toolbar, the two rails, the progress card and the globe's
+ * relationship to the analysis. No framework: the whole front end is four
+ * modules and a stylesheet, which matters for a tool whose central claim is
+ * that you can read it and see exactly what it does.
+ */
 
 import { Globe } from "./globe.js";
 import { drawLocator, loadCountries } from "./locator.js";
@@ -11,30 +12,36 @@ import { drawLocator, loadCountries } from "./locator.js";
 const $ = (id) => document.getElementById(id);
 
 const el = {
-  uploadBtn: $("upload-btn"),
+  openBtn: $("open-btn"),
   saveBtn: $("save-btn"),
   fileInput: $("file-input"),
-  globeCanvas: $("globe-canvas"),
   globeMode: $("globe-mode"),
+  lightMode: $("light-mode"),
   flightMode: $("flight-mode"),
+  canvas: $("globe-canvas"),
   dropzone: $("dropzone"),
   progress: $("progress"),
   progressStage: $("progress-stage"),
-  progressSteps: $("progress-steps"),
+  progressCount: $("progress-count"),
+  progressBar: $("progress-bar"),
+  steps: $("steps"),
   candidateList: $("candidate-list"),
   candidateCount: $("candidate-count"),
   report: $("report"),
-  verdictPill: $("verdict-pill"),
+  verdict: $("verdict"),
   hudCoords: $("hud-coords"),
-  hudAltitude: $("hud-altitude"),
-  hudStatus: $("hud-status"),
-  hudCredit: $("hud-credit"),
+  hudAlt: $("hud-alt"),
+  hudSun: $("hud-sun"),
+  hudImagery: $("hud-imagery"),
+  hudState: $("hud-state"),
+  credit: $("credit"),
   engineStatus: $("engine-status"),
   privacyStatus: $("privacy-status"),
   attribution: $("attribution"),
+  sourceFoot: $("source-foot"),
   sourceThumb: $("source-thumb"),
-  sourceThumbWrap: $("source-thumb-wrap"),
   sourceName: $("source-name"),
+  sourceDims: $("source-dims"),
 };
 
 const STAGES = [
@@ -47,6 +54,13 @@ const STAGES = [
   ["enrich", "Name the location"],
 ];
 
+const CONFIDENCE = {
+  high: "High confidence",
+  medium: "Medium confidence",
+  low: "Low confidence",
+  insufficient: "Insufficient evidence",
+};
+
 const state = {
   globe: null,
   report: null,
@@ -54,13 +68,39 @@ const state = {
   busy: false,
   countries: null,
   status: null,
-  // Set once the pywebview bridge is up. In the desktop application we use
-  // Windows' own file dialogs and hand the service a path, rather than
-  // pushing the bytes through a browser file input.
   native: null,
+  previewUrl: null,
 };
 
-/** Resolve when the native bridge is ready, or immediately if there is none. */
+/* ─────────────────────────── formatting ─────────────────────────── */
+
+function esc(text) {
+  const d = document.createElement("div");
+  d.textContent = text == null ? "" : String(text);
+  return d.innerHTML;
+}
+
+function dms(value, pos, neg) {
+  const hemi = value >= 0 ? pos : neg;
+  const a = Math.abs(value);
+  const d = Math.floor(a);
+  const m = Math.floor((a - d) * 60);
+  const s = ((a - d) * 60 - m) * 60;
+  return `${d}°${String(m).padStart(2, "0")}′${s.toFixed(1).padStart(4, "0")}″${hemi}`;
+}
+
+const fmtLatLon = (lat, lon) => `${lat.toFixed(5)}, ${lon.toFixed(5)}`;
+
+function fmtKm(km) {
+  if (km == null || !isFinite(km)) return "—";
+  if (km < 1) return `${Math.round(km * 1000)} m`;
+  if (km < 10) return `${km.toFixed(1)} km`;
+  if (km < 10000) return `${Math.round(km)} km`;
+  return `${(km / 1000).toFixed(1)}k km`;
+}
+
+/* ───────────────────────────── boot ───────────────────────────── */
+
 function whenNative(timeoutMs = 4000) {
   if (window.pywebview?.api) return Promise.resolve(window.pywebview.api);
   return new Promise((resolve) => {
@@ -75,52 +115,13 @@ function whenNative(timeoutMs = 4000) {
   });
 }
 
-/* ─────────────────────────── formatting ─────────────────────────── */
-
-function dms(value, positive, negative) {
-  const hemi = value >= 0 ? positive : negative;
-  const a = Math.abs(value);
-  const d = Math.floor(a);
-  const m = Math.floor((a - d) * 60);
-  const s = ((a - d) * 60 - m) * 60;
-  return `${d}°${String(m).padStart(2, "0")}'${s.toFixed(1).padStart(4, "0")}"${hemi}`;
-}
-
-const fmtCoord = (lat, lon) => `${lat.toFixed(6)}, ${lon.toFixed(6)}`;
-const fmtDms = (lat, lon) => `${dms(lat, "N", "S")}  ${dms(lon, "E", "W")}`;
-
-function fmtKm(km) {
-  if (km == null || !isFinite(km)) return "—";
-  if (km < 1) return `${Math.round(km * 1000)} m`;
-  if (km < 10) return `${km.toFixed(1)} km`;
-  return `${Math.round(km).toLocaleString()} km`;
-}
-
-function esc(text) {
-  const d = document.createElement("div");
-  d.textContent = text == null ? "" : String(text);
-  return d.innerHTML;
-}
-
-const CONFIDENCE_WORDS = {
-  high: "High confidence",
-  medium: "Medium confidence",
-  low: "Low confidence — lead only",
-  insufficient: "Insufficient evidence",
-};
-
-/* ───────────────────────────── boot ───────────────────────────── */
-
 async function boot() {
-  state.globe = new Globe(el.globeCanvas, {
+  state.globe = new Globe(el.canvas, {
     mode: el.globeMode.value,
     flight: el.flightMode.value,
+    lighting: el.lightMode.value,
   });
-  state.globe.onHudUpdate = (lat, lon, altKm, flying) => {
-    el.hudCoords.textContent = fmtCoord(lat, lon);
-    el.hudAltitude.textContent = `alt ${fmtKm(altKm)}`;
-    if (flying) el.hudStatus.textContent = "Approach in progress";
-  };
+  state.globe.onHudUpdate = onHud;
 
   loadCountries().then((geo) => {
     state.countries = geo;
@@ -130,85 +131,83 @@ async function boot() {
   state.native = await whenNative();
   document.body.classList.toggle("is-native", Boolean(state.native));
 
-  el.uploadBtn.addEventListener("click", () => openImage());
+  el.openBtn.addEventListener("click", openImage);
+  el.saveBtn.addEventListener("click", saveReport);
   el.fileInput.addEventListener("change", () => {
     const file = el.fileInput.files?.[0];
     if (file) analyse({ file });
     el.fileInput.value = "";
   });
-  el.saveBtn?.addEventListener("click", () => saveReport());
 
   el.globeMode.addEventListener("change", async () => {
-    el.hudStatus.textContent = "Switching globe…";
+    setHudState("Switching globe…");
     await state.globe.setMode(el.globeMode.value);
     updateCredit();
-    el.hudStatus.textContent = state.report ? "Result displayed" : "Idle";
+    setHudState(state.report ? "Result displayed" : "Idle");
   });
+  el.lightMode.addEventListener("change", () =>
+    state.globe.setLighting(el.lightMode.value)
+  );
   el.flightMode.addEventListener("change", () =>
     state.globe.setFlightMode(el.flightMode.value)
   );
 
+  document.addEventListener("keydown", (e) => {
+    if (e.ctrlKey && e.key.toLowerCase() === "o") { e.preventDefault(); openImage(); }
+    if (e.ctrlKey && e.key.toLowerCase() === "s") { e.preventDefault(); saveReport(); }
+    if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+      const n = state.report?.candidates?.length || 0;
+      if (!n) return;
+      e.preventDefault();
+      const next = (state.selected + (e.key === "ArrowDown" ? 1 : -1) + n) % n;
+      selectCandidate(next, { fly: true });
+    }
+  });
+
   installDropzone();
   await refreshStatus();
+
   const tiles = state.status?.client;
   if (tiles?.basemap_tiles_enabled && tiles.basemap_tile_url) {
     state.globe.setTileSource(tiles.basemap_tile_url, tiles.basemap_attribution);
   }
   updateCredit();
 
-  // Kick model loading off now so the first upload is not the slow one.
+  // Load the models now so the first analysis is not the slow one.
   fetch("/api/warmup", { method: "POST" })
     .then((r) => r.json())
     .then(() => refreshStatus())
     .catch(() => {});
 }
 
-/** Pick an image: native dialog in the app, file input as a fallback. */
-async function openImage() {
-  if (state.busy) return;
-  if (!state.native) {
-    el.fileInput.click();
-    return;
+function onHud(lat, lon, altKm, flying, sun, imagery) {
+  el.hudCoords.textContent = fmtLatLon(lat, lon);
+  el.hudAlt.textContent = fmtKm(altKm);
+  if (sun && sun.lat != null) {
+    el.hudSun.textContent =
+      `${sun.lat >= 0 ? "N" : "S"}${Math.abs(sun.lat).toFixed(1)} ` +
+      `${sun.lon >= 0 ? "E" : "W"}${Math.abs(sun.lon).toFixed(1)}`;
+  } else {
+    el.hudSun.textContent = "camera";
   }
-  let picked;
-  try {
-    picked = await state.native.open_image();
-  } catch (err) {
-    showError("Could not open the file dialog", esc(String(err)));
-    return;
+  if (imagery) {
+    const scale = imagery.kmPerTexel
+      ? `${imagery.kmPerTexel.toFixed(1)} km/px` : "";
+    el.hudImagery.textContent = `${imagery.label || "—"}  ${scale}`;
+    el.hudImagery.classList.toggle("over", Boolean(imagery.beyond));
+    el.hudImagery.title = imagery.beyond
+      ? "Closer than the imagery resolves. Enable ground tiles in config.toml "
+        + "for real detail at this altitude."
+      : "Resolution of the surface imagery currently loaded.";
   }
-  if (!picked || picked.cancelled) return;
-  if (picked.error) {
-    showError("Cannot analyse that file", esc(picked.error));
-    return;
-  }
-  analyse({ path: picked.path, name: picked.name, bytes: picked.bytes });
+  if (flying) setHudState("Approach in progress");
 }
 
-/** Write the current report out through a native save dialog. */
-async function saveReport() {
-  if (!state.report) return;
-  const json = JSON.stringify(state.report, null, 2);
-  const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-");
-  const suggested = `mapify-${stamp}.json`;
-  if (!state.native) {
-    const blob = new Blob([json], { type: "application/json" });
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = suggested;
-    a.click();
-    URL.revokeObjectURL(a.href);
-    return;
-  }
-  const res = await state.native.save_report(json, suggested);
-  if (res?.error) showError("Could not save", esc(res.error));
-  else if (res?.path) el.hudStatus.textContent = `Saved to ${res.path}`;
-}
+function setHudState(text) { el.hudState.textContent = text; }
 
 function installDropzone() {
   let depth = 0;
   const show = (on) => el.dropzone.classList.toggle("visible", on);
-
   window.addEventListener("dragenter", (e) => {
     e.preventDefault();
     depth++;
@@ -240,75 +239,106 @@ function installDropzone() {
 
 async function refreshStatus() {
   try {
-    const resp = await fetch("/api/status");
-    const data = await resp.json();
+    const data = await (await fetch("/api/status")).json();
     state.status = data;
     const e = data.engine || {};
-    const bits = [];
-    bits.push(e.geoclip_loaded ? "GeoCLIP ready" : "GeoCLIP loading…");
-    if (e.ocr_engine && e.ocr_engine !== "none") bits.push(`OCR ${e.ocr_engine}`);
-    else bits.push("no OCR");
-    bits.push(e.device);
+    const ready = e.geoclip_loaded && e.clip_loaded;
+    const bits = [
+      ready ? "models ready" : "loading models…",
+      e.ocr_engine && e.ocr_engine !== "none" ? `OCR ${e.ocr_engine}` : "no OCR",
+      String(e.device || "").toUpperCase(),
+    ];
     el.engineStatus.innerHTML =
-      `<span class="dot ${e.geoclip_loaded ? "ok" : "warn"}"></span>` +
-      esc(bits.join(" · "));
+      `<span class="dot ${ready ? "ok" : "warn"}"></span>` +
+      esc(bits.join("  ·  "));
 
     const offline = e.offline_only;
     el.privacyStatus.innerHTML =
       `<span class="dot ${offline ? "ok" : "warn"}"></span>` +
-      esc(
-        offline
-          ? "offline — no outbound requests"
-          : "local analysis; OSM enrichment allowed"
-      );
+      esc(offline
+        ? "offline — nothing leaves this machine"
+        : "image analysed locally; place names via OpenStreetMap");
   } catch {
-    el.engineStatus.innerHTML = '<span class="dot bad"></span>engine unreachable';
+    el.engineStatus.innerHTML =
+      '<span class="dot bad"></span>analysis service unreachable';
   }
 }
 
 function updateCredit() {
-  const satellite = el.globeMode.value === "satellite";
   const parts = [
-    satellite
-      ? "Earth imagery: NASA Earth Observatory (Blue Marble, Black Marble, GEBCO). Public domain."
+    el.globeMode.value === "satellite"
+      ? "Earth imagery: NASA Earth Observatory — Blue Marble, Black Marble, GEBCO. Public domain."
       : "Coastlines: Natural Earth. Public domain.",
   ];
-  const tiles = state.status?.client;
-  if (tiles?.basemap_tiles_enabled && tiles.basemap_attribution) {
-    parts.push("Ground detail: " + tiles.basemap_attribution);
+  const t = state.status?.client;
+  if (t?.basemap_tiles_enabled && t.basemap_attribution) {
+    parts.push("Ground detail: " + t.basemap_attribution);
   }
-  el.hudCredit.textContent = parts.join("  ");
+  el.credit.textContent = parts.join("   ");
+}
+
+/* ─────────────────────────── file in/out ─────────────────────────── */
+
+async function openImage() {
+  if (state.busy) return;
+  if (!state.native) { el.fileInput.click(); return; }
+  let picked;
+  try {
+    picked = await state.native.open_image();
+  } catch (err) {
+    fail("Could not open the file dialog", String(err));
+    return;
+  }
+  if (!picked || picked.cancelled) return;
+  if (picked.error) { fail("Cannot analyse that file", picked.error); return; }
+  analyse({ path: picked.path, name: picked.name, bytes: picked.bytes });
+}
+
+async function saveReport() {
+  if (!state.report) return;
+  const json = JSON.stringify(state.report, null, 2);
+  const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-");
+  const suggested = `mapify-${stamp}.json`;
+  if (!state.native) {
+    const blob = new Blob([json], { type: "application/json" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = suggested;
+    a.click();
+    URL.revokeObjectURL(a.href);
+    return;
+  }
+  const res = await state.native.save_report(json, suggested);
+  if (res?.error) fail("Could not save", res.error);
+  else if (res?.path) setHudState(`Saved — ${res.path}`);
 }
 
 /* ─────────────────────────── analysis ─────────────────────────── */
 
-/**
- * Run an analysis.
- * @param {{file?:File, path?:string, name?:string, bytes?:number}} source
- *   In the desktop app the user picks a file in a Windows dialog and we send
- *   the path, so a 30 MB photograph is read once off disk instead of being
- *   copied through the WebView. A dropped or pasted file arrives as bytes.
- */
 async function analyse(source) {
   if (state.busy) return;
   const name = source.name || source.file?.name || "image";
-  if (!/\.(jpe?g|png|webp)$/i.test(name) &&
-      !/^image\/(jpeg|png|webp)$/.test(source.file?.type || "")) {
-    showError("Unsupported file", `${esc(name)} is not a JPG, PNG or WEBP image.`);
+  const typeOk =
+    /\.(jpe?g|png|webp)$/i.test(name) ||
+    /^image\/(jpeg|png|webp)$/.test(source.file?.type || "");
+  if (!typeOk) {
+    fail("Unsupported file", `${name} is not a JPG, PNG or WEBP image.`);
     return;
   }
 
   state.busy = true;
-  el.uploadBtn.disabled = true;
-  if (el.saveBtn) el.saveBtn.disabled = true;
+  el.openBtn.disabled = true;
+  el.saveBtn.disabled = true;
   el.report.innerHTML = "";
   el.candidateList.innerHTML = "";
   el.candidateCount.textContent = "—";
-  el.verdictPill.textContent = "working";
-  el.verdictPill.className = "pill";
+  el.candidateCount.className = "chip bare";
+  el.verdict.textContent = "analysing";
+  el.verdict.className = "chip working";
   state.globe.clearMarkers();
+  state.selected = -1;
   showProgress(true);
-  showSourcePreview(source);
+  showSource(source);
 
   try {
     const resp = source.path
@@ -325,39 +355,33 @@ async function analyse(source) {
 
     if (!resp.ok && resp.status !== 422) {
       let detail = `HTTP ${resp.status}`;
-      try {
-        const j = await resp.json();
-        detail = j.detail || detail;
-      } catch {}
+      try { detail = (await resp.json()).detail || detail; } catch {}
       throw new Error(detail);
     }
 
     const report = await readStream(resp);
-    if (!report) throw new Error("The analysis ended without returning a result.");
-    if (!report.ok) {
-      showError("Analysis failed", esc(report.error || "Unknown error."));
-      return;
-    }
+    if (!report) throw new Error("The analysis ended without a result.");
+    if (!report.ok) { fail("Analysis failed", report.error || "Unknown error."); return; }
+
     state.report = report;
     render(report);
-    if (el.saveBtn) el.saveBtn.disabled = false;
+    el.saveBtn.disabled = false;
   } catch (err) {
-    showError("Analysis failed", esc(err.message || String(err)));
+    fail("Analysis failed", err.message || String(err));
   } finally {
     showProgress(false);
     state.busy = false;
-    el.uploadBtn.disabled = false;
+    el.openBtn.disabled = false;
     refreshStatus();
   }
 }
 
-/** Read the NDJSON progress stream, returning the final report. */
 async function readStream(resp) {
   const reader = resp.body.getReader();
   const decoder = new TextDecoder();
   let buffer = "";
   let report = null;
-  while (true) {
+  for (;;) {
     const { value, done } = await reader.read();
     if (done) break;
     buffer += decoder.decode(value, { stream: true });
@@ -367,11 +391,7 @@ async function readStream(resp) {
       buffer = buffer.slice(nl + 1);
       if (!line) continue;
       let msg;
-      try {
-        msg = JSON.parse(line);
-      } catch {
-        continue;
-      }
+      try { msg = JSON.parse(line); } catch { continue; }
       if (msg.type === "progress") markStage(msg.stage, msg.message);
       else if (msg.type === "result") report = msg.report;
     }
@@ -379,71 +399,69 @@ async function readStream(resp) {
   return report;
 }
 
-/** Show the image being analysed, without ever sending it anywhere. */
-function showSourcePreview(source) {
+function showSource(source) {
   if (state.previewUrl) {
     URL.revokeObjectURL(state.previewUrl);
     state.previewUrl = null;
   }
+  el.sourceFoot.hidden = false;
+  el.sourceDims.textContent = source.bytes
+    ? `${(source.bytes / 1024).toFixed(0)} KB` : "";
   if (source.file) {
     state.previewUrl = URL.createObjectURL(source.file);
     el.sourceThumb.src = state.previewUrl;
-    el.sourceThumbWrap.hidden = false;
     el.sourceName.textContent = source.file.name;
-  } else if (source.path) {
-    // The WebView cannot read file:// under this CSP, so show the name and
-    // let the report carry the detail.
+    el.sourceDims.textContent = `${(source.file.size / 1024).toFixed(0)} KB`;
+  } else {
+    // The WebView cannot read file:// under this policy, so name it instead
+    // of showing a broken thumbnail.
     el.sourceThumb.removeAttribute("src");
-    el.sourceThumbWrap.hidden = false;
     el.sourceName.textContent = source.name || source.path;
   }
 }
 
 function showProgress(on) {
   el.progress.hidden = !on;
-  if (on) {
-    el.progressStage.textContent = "Starting…";
-    el.progressSteps.innerHTML = STAGES.map(
-      ([key, label]) => `<li data-stage="${key}">${esc(label)}</li>`
-    ).join("");
-  }
+  if (!on) return;
+  el.progressStage.textContent = "Starting";
+  el.progressBar.style.width = "0%";
+  el.progressCount.textContent = `0/${STAGES.length}`;
+  el.steps.innerHTML = STAGES
+    .map(([k, label]) => `<li data-stage="${k}">${esc(label)}</li>`)
+    .join("");
 }
 
 function markStage(stage, message) {
   el.progressStage.textContent = message;
-  const items = [...el.progressSteps.querySelectorAll("li")];
-  let seen = false;
-  for (const li of items) {
-    if (li.dataset.stage === stage) {
-      li.className = "active";
-      seen = true;
-    } else if (!seen) {
-      li.className = "done";
-    } else {
-      li.className = "";
-    }
-  }
+  const items = [...el.steps.querySelectorAll("li")];
+  let index = items.findIndex((li) => li.dataset.stage === stage);
+  if (stage === "done") index = items.length;
+  items.forEach((li, i) => {
+    li.className = i < index ? "done" : i === index ? "active" : "";
+  });
+  const done = Math.max(0, index);
+  el.progressBar.style.width = `${(done / STAGES.length) * 100}%`;
+  el.progressCount.textContent = `${done}/${STAGES.length}`;
 }
 
-function showError(title, html) {
-  el.verdictPill.textContent = "error";
-  el.verdictPill.className = "pill error";
+function fail(title, detail) {
+  el.verdict.textContent = "error";
+  el.verdict.className = "chip error";
   el.report.innerHTML =
-    `<div class="callout risk"><strong>${esc(title)}</strong><br>${html}</div>`;
-  el.hudStatus.textContent = "Idle";
+    `<div class="note risk"><div><strong>${esc(title)}</strong><br>${esc(detail)}</div></div>`;
+  setHudState("Idle");
 }
 
 /* ─────────────────────────── rendering ─────────────────────────── */
 
 function render(report) {
+  const pred = report.prediction || {};
   renderCandidates(report);
   renderReport(report);
 
-  const pred = report.prediction || {};
-  el.verdictPill.textContent = pred.confidence || "—";
-  el.verdictPill.className = `pill ${pred.confidence || ""}`;
+  el.verdict.textContent = pred.confidence || "—";
+  el.verdict.className = `chip ${pred.confidence || "bare"}`;
 
-  // Drop markers for every candidate, plus the EXIF claim if there is one.
   state.globe.clearMarkers();
   (report.candidates || []).forEach((c, i) => {
     state.globe.addMarker({
@@ -458,17 +476,13 @@ function render(report) {
   const gps = pred.embedded_gps;
   if (gps) {
     state.globe.addMarker({
-      id: "exif",
-      lat: gps.latitude,
-      lon: gps.longitude,
-      label: "EXIF GPS claim",
-      kind: "exif",
+      id: "exif", lat: gps.latitude, lon: gps.longitude,
+      label: "EXIF claim", kind: "exif",
     });
   }
 
-  if (report.candidates?.length) {
-    selectCandidate(0, { fly: true });
-  } else if (gps) {
+  if (report.candidates?.length) selectCandidate(0, { fly: true });
+  else if (gps) {
     state.globe.setActiveMarker("exif");
     state.globe.flyTo(gps.latitude, gps.longitude, { altitude: 1.5 });
   }
@@ -478,38 +492,30 @@ function candidateName(c) {
   const loc = c.location || {};
   const nom = c.nominatim || {};
   return (
-    nom.city ||
-    loc.nearest_places?.[0]?.name ||
-    nom.state ||
-    loc.admin1?.name ||
-    loc.country?.name ||
-    nom.country ||
-    "Unnamed"
+    nom.city || loc.nearest_places?.[0]?.name || nom.state ||
+    loc.admin1?.name || loc.country?.name || nom.country || "Unnamed"
   );
 }
 
 function candidateRegion(c) {
   const loc = c.location || {};
   const nom = c.nominatim || {};
-  return [
-    nom.state || loc.admin1?.name,
-    nom.country || loc.country?.name,
-  ]
-    .filter(Boolean)
-    .join(", ") || (loc.offshore ? "Offshore" : "—");
+  const parts = [nom.state || loc.admin1?.name, nom.country || loc.country?.name];
+  return parts.filter(Boolean).join(", ") || (loc.offshore ? "Offshore" : "—");
 }
 
 function renderCandidates(report) {
   const list = report.candidates || [];
-  el.candidateCount.textContent = String(list.length);
-  el.candidateList.innerHTML = "";
-
   const pred = report.prediction || {};
   const gps = pred.embedded_gps;
 
+  el.candidateCount.textContent = String(list.length);
+  el.candidateList.innerHTML = "";
+
   if (!list.length && !gps) {
     el.candidateList.innerHTML =
-      '<p class="empty-note">No candidates were produced for this image.</p>';
+      `<div class="empty"><p><strong>No candidates</strong>
+       The locator produced nothing for this image.</p></div>`;
     return;
   }
 
@@ -522,28 +528,29 @@ function renderCandidates(report) {
     const canvas = document.createElement("canvas");
     canvas.className = "candidate-thumb";
     drawLocator(canvas, c.latitude, c.longitude, state.countries, {
-      accent: i === 0 ? "#38bdf8" : "#7dd3fc",
+      accent: i === 0 ? "#5ab8f0" : "#7fb4d6",
+      size: 56,
     });
+
+    const pct = Math.round((c.probability || 0) * 100);
+    const adj = c.total_adjustment || 0;
+    const via = c.provenance && c.provenance !== "model"
+      ? `<span class="tagline">${esc(c.provenance)}</span>` : "";
 
     const main = document.createElement("div");
     main.className = "candidate-main";
-    const pct = Math.round((c.probability || 0) * 100);
-    const via =
-      c.provenance && c.provenance !== "model"
-        ? ` · ${esc(c.provenance)}`
-        : "";
     main.innerHTML = `
-      <span class="candidate-rank">#${i + 1}${via}</span>
+      <span class="candidate-rank">${String(i + 1).padStart(2, "0")}${via}</span>
       <span class="candidate-name">${esc(candidateName(c))}</span>
       <span class="candidate-region">${esc(candidateRegion(c))}</span>
-      <span class="candidate-coords">${esc(fmtCoord(c.latitude, c.longitude))}</span>
-      <div class="candidate-meter"><i style="width:${pct}%"></i></div>
-      <div class="candidate-foot">
-        <span class="candidate-conf">${pct}% of retained mass</span>
-        <span class="candidate-conf">${
-          c.total_adjustment >= 0 ? "+" : ""
-        }${(c.total_adjustment || 0).toFixed(2)}</span>
-      </div>`;
+      <span class="candidate-coords">${esc(fmtLatLon(c.latitude, c.longitude))}</span>
+      <span class="candidate-foot">
+        <span class="meter"><i style="width:${pct}%"></i></span>
+        <span class="candidate-pct">${pct}%</span>
+        <span class="candidate-pct" style="color:${
+          adj >= 0 ? "var(--ok)" : "var(--risk)"}">${
+          adj >= 0 ? "+" : ""}${adj.toFixed(2)}</span>
+      </span>`;
 
     node.append(canvas, main);
     node.addEventListener("click", () => selectCandidate(i, { fly: true }));
@@ -557,135 +564,120 @@ function renderCandidates(report) {
     const canvas = document.createElement("canvas");
     canvas.className = "candidate-thumb";
     drawLocator(canvas, gps.latitude, gps.longitude, state.countries, {
-      accent: "#c084fc",
+      accent: "#a78bfa", size: 56,
     });
     const place = gps.place || {};
     const main = document.createElement("div");
     main.className = "candidate-main";
     main.innerHTML = `
-      <span class="candidate-rank">EXIF · embedded claim</span>
+      <span class="candidate-rank">EXIF<span class="tagline"
+        style="color:var(--exif)">file claim</span></span>
       <span class="candidate-name">${esc(
-        place.nearest_places?.[0]?.name || place.country?.name || "GPS tag"
-      )}</span>
-      <span class="candidate-region">${esc(
-        place.country?.name || "—"
-      )}</span>
+        place.nearest_places?.[0]?.name || place.country?.name || "GPS tag")}</span>
+      <span class="candidate-region">${esc(place.country?.name || "—")}</span>
       <span class="candidate-coords">${esc(
-        fmtCoord(gps.latitude, gps.longitude)
-      )}</span>
-      <div class="candidate-foot">
-        <span class="candidate-conf">not an estimate — a tag in the file</span>
-      </div>`;
+        fmtLatLon(gps.latitude, gps.longitude))}</span>
+      <span class="candidate-foot">
+        <span class="candidate-pct">not an estimate — a tag in the file</span>
+      </span>`;
     node.append(canvas, main);
     node.addEventListener("click", () => {
       state.globe.setActiveMarker("exif");
       state.globe.flyTo(gps.latitude, gps.longitude, { altitude: 1.5 });
-      el.hudStatus.textContent = "Showing the EXIF GPS claim";
+      setHudState("Showing the EXIF GPS claim");
+      for (const n of el.candidateList.querySelectorAll(".candidate")) {
+        n.classList.remove("active");
+      }
+      node.classList.add("active");
     });
     el.candidateList.appendChild(node);
   }
 }
 
 function selectCandidate(index, { fly = false } = {}) {
-  const list = state.report?.candidates || [];
-  const c = list[index];
+  const c = state.report?.candidates?.[index];
   if (!c) return;
   state.selected = index;
-
   for (const node of el.candidateList.querySelectorAll(".candidate")) {
     node.classList.toggle("active", node.dataset.index === String(index));
   }
   state.globe.setActiveMarker(index);
 
   if (fly) {
-    el.hudStatus.textContent = `Approaching ${candidateName(c)}`;
-    const conf = state.report?.prediction?.confidence;
-    // Tight results earn a close approach; loose ones stop where the whole
-    // uncertainty circle is still on screen.
-    const unc = state.report?.prediction?.uncertainty_km || 0;
-    const altitude =
-      conf === "insufficient" ? 2.4 : Math.max(1.06, Math.min(2.2, 1.05 + unc / 900));
-    state.globe.flyTo(c.latitude, c.longitude, { altitude }).then(() => {
-      el.hudStatus.textContent = candidateName(c);
-    });
+    const name = candidateName(c);
+    setHudState(`Approaching ${name}`);
+    const pred = state.report?.prediction || {};
+    const unc = pred.uncertainty_km || 0;
+    // Ask to come in as close as the uncertainty justifies; the globe will
+    // refuse to go below what the imagery can actually show.
+    const altitude = pred.confidence === "insufficient"
+      ? 2.6
+      : Math.max(1.06, Math.min(2.4, 1.05 + unc / 700));
+    state.globe.flyTo(c.latitude, c.longitude, { altitude })
+      .then(() => setHudState(name));
   }
 }
 
 /* ────────────────────────── the report ────────────────────────── */
 
-function block(title, bodyHtml) {
-  return `<div class="report-block"><h3 class="block-title">${esc(
-    title
-  )}</h3>${bodyHtml}</div>`;
-}
+const block = (title, body) =>
+  `<section class="block"><h3 class="block-head">${esc(title)}</h3>${body}</section>`;
 
 function renderReport(report) {
   const pred = report.prediction || {};
   const est = pred.estimated;
-  const parts = [];
+  const out = [];
 
   /* headline ---------------------------------------------------------- */
   if (!pred.determinate || !est) {
-    parts.push(
-      block(
-        "Assessment",
-        `<div class="callout risk"><strong>${esc(
-          CONFIDENCE_WORDS[pred.confidence] || "No determination"
-        )}</strong><br>${esc(pred.confidence_reason || "")}</div>`
-      )
-    );
+    out.push(block("Assessment", `
+      <div class="verdict indeterminate">
+        <p class="place">No location determined</p>
+        <p class="place-sub">${esc(CONFIDENCE[pred.confidence] || pred.confidence)}</p>
+        <div class="note risk"><div>${esc(pred.confidence_reason || "")}</div></div>
+      </div>`));
   } else {
     const place = est.place || {};
     const name =
       [place.city, place.region, place.country].filter(Boolean).join(", ") ||
-      place.display_name ||
-      "Unnamed location";
-    parts.push(
-      block(
-        "Estimated location",
-        `<p class="headline-place">${esc(name)}</p>
-         <p class="headline-sub">${esc(
-           CONFIDENCE_WORDS[pred.confidence] || pred.confidence
-         )} · ±${esc(fmtKm(pred.uncertainty_km))}</p>
-         <dl class="kv">
-           <dt>Latitude</dt><dd class="mono">${est.latitude.toFixed(6)}</dd>
-           <dt>Longitude</dt><dd class="mono">${est.longitude.toFixed(6)}</dd>
-           <dt>DMS</dt><dd class="mono">${esc(
-             fmtDms(est.latitude, est.longitude)
-           )}</dd>
-           ${place.road ? `<dt>Road</dt><dd>${esc(place.road)}</dd>` : ""}
-           ${place.suburb ? `<dt>Suburb</dt><dd>${esc(place.suburb)}</dd>` : ""}
-           ${place.city ? `<dt>City</dt><dd>${esc(place.city)}</dd>` : ""}
-           ${place.region ? `<dt>Region</dt><dd>${esc(place.region)}</dd>` : ""}
-           ${
-             place.country
-               ? `<dt>Country</dt><dd>${esc(place.country)}${
-                   place.country_code ? ` (${esc(place.country_code)})` : ""
-                 }</dd>`
-               : ""
-           }
-           ${
-             place.postcode
-               ? `<dt>Postcode</dt><dd class="mono">${esc(place.postcode)}</dd>`
-               : ""
-           }
-           ${timezoneRow(report)}
-           <dt>Named by</dt><dd>${esc(place.source || "—")}</dd>
-         </dl>
-         <div class="callout info" style="margin-top:9px">${esc(
-           pred.confidence_reason || ""
-         )}</div>
-         ${
-           place.boundary_note
-             ? `<div class="callout warn">${esc(place.boundary_note)}</div>`
-             : ""
-         }`
-      )
-    );
+      place.display_name || "Unnamed location";
+    out.push(block("Estimated location", `
+      <div class="verdict determinate">
+        <p class="place">${esc(name)}</p>
+        <p class="place-sub">
+          <span class="chip ${esc(pred.confidence)}">${esc(
+            CONFIDENCE[pred.confidence] || pred.confidence)}</span>
+          <span>±${esc(fmtKm(pred.uncertainty_km))}</span>
+        </p>
+        <div class="coord-pair">
+          <div class="coord"><span class="k">Latitude</span>
+            <span class="v">${est.latitude.toFixed(6)}</span></div>
+          <div class="coord"><span class="k">Longitude</span>
+            <span class="v">${est.longitude.toFixed(6)}</span></div>
+        </div>
+        <dl class="rows">
+          <div class="row"><dt>DMS</dt><dd class="mono">${esc(
+            dms(est.latitude, "N", "S"))} ${esc(dms(est.longitude, "E", "W"))}</dd></div>
+          ${row("Road", place.road)}
+          ${row("Suburb", place.suburb)}
+          ${row("City", place.city)}
+          ${row("Region", place.region)}
+          ${row("Country", place.country
+              ? `${place.country}${place.country_code ? ` (${place.country_code})` : ""}`
+              : null)}
+          ${row("Postcode", place.postcode, true)}
+          ${timezoneRow(report)}
+          ${row("Named by", place.source)}
+        </dl>
+        <div class="note info" style="margin-top:9px"><div>${esc(
+          pred.confidence_reason || "")}</div></div>
+        ${place.boundary_note
+          ? `<div class="note warn"><div>${esc(place.boundary_note)}</div></div>` : ""}
+      </div>`));
   }
 
   for (const note of pred.notes || []) {
-    parts.push(`<div class="callout warn">${esc(note)}</div>`);
+    out.push(`<div class="note warn"><div>${esc(note)}</div></div>`);
   }
 
   /* embedded GPS ------------------------------------------------------ */
@@ -693,285 +685,165 @@ function renderReport(report) {
   if (gps) {
     const agree = pred.exif_vs_estimate;
     const place = gps.place || {};
-    parts.push(
-      block(
-        "Embedded GPS — a claim, not proof",
-        `<div class="callout exif">
-           <strong>The file carries a GPS tag.</strong> That is what the writer
-           recorded, not what the picture shows. It is trivially editable.
-         </div>
-         <dl class="kv">
-           <dt>Latitude</dt><dd class="mono">${gps.latitude.toFixed(6)}</dd>
-           <dt>Longitude</dt><dd class="mono">${gps.longitude.toFixed(6)}</dd>
-           ${
-             gps.altitude_m != null
-               ? `<dt>Altitude</dt><dd class="mono">${gps.altitude_m} m</dd>`
-               : ""
-           }
-           ${
-             gps.timestamp_utc
-               ? `<dt>GPS time</dt><dd class="mono">${esc(gps.timestamp_utc)}</dd>`
-               : ""
-           }
-           ${
-             gps.processing_method
-               ? `<dt>Method</dt><dd>${esc(gps.processing_method)}</dd>`
-               : ""
-           }
-           <dt>Resolves to</dt><dd>${esc(
-             [
-               place.nearest_places?.[0]?.name,
-               place.admin1?.name,
-               place.country?.name,
-             ]
-               .filter(Boolean)
-               .join(", ") || "—"
-           )}</dd>
-         </dl>
-         ${
-           agree
-             ? `<div class="callout ${agree.consistent ? "info" : "risk"}"
-                  style="margin-top:8px">
-                  <strong>${
-                    agree.consistent ? "Consistent" : "Disagreement"
-                  }</strong> — ${esc(fmtKm(agree.distance_km))} from the image
-                  estimate.<br>${esc(agree.note)}
-                </div>`
-             : ""
-         }
-         ${(gps.trust_warnings || [])
-           .map((w) => `<div class="callout warn">${esc(w)}</div>`)
-           .join("")}`
-      )
-    );
+    out.push(block("Embedded GPS — a claim, not proof", `
+      <div class="note exif"><div><strong>The file carries a GPS tag.</strong>
+        That is what the writer recorded, not what the picture shows, and it is
+        trivially editable.</div></div>
+      <dl class="rows">
+        <div class="row"><dt>Latitude</dt><dd class="mono">${
+          gps.latitude.toFixed(6)}</dd></div>
+        <div class="row"><dt>Longitude</dt><dd class="mono">${
+          gps.longitude.toFixed(6)}</dd></div>
+        ${row("Altitude", gps.altitude_m != null ? `${gps.altitude_m} m` : null, true)}
+        ${row("GPS time", gps.timestamp_utc, true)}
+        ${row("Method", gps.processing_method)}
+        ${row("Resolves to", [place.nearest_places?.[0]?.name,
+                              place.admin1?.name,
+                              place.country?.name].filter(Boolean).join(", "))}
+      </dl>
+      ${agree ? `
+        <div class="note ${agree.consistent ? "ok" : "risk"}" style="margin-top:8px">
+          <div><strong>${agree.consistent ? "Consistent" : "Disagreement"}</strong>
+          — ${esc(fmtKm(agree.distance_km))} from the image estimate.<br>
+          ${esc(agree.note)}</div></div>` : ""}
+      ${(gps.trust_warnings || [])
+        .map((w) => `<div class="note warn"><div>${esc(w)}</div></div>`).join("")}`));
   }
 
   /* evidence ---------------------------------------------------------- */
-  const readings = (report.evidence?.readings || []).filter((r) => r.called);
-  const uncalled = (report.evidence?.readings || []).filter(
-    (r) => !r.called && r.confidence >= 0.3
-  );
-  if (readings.length || uncalled.length) {
-    const rows = readings
-      .map(
-        (r) => `
-        <div class="evidence-item">
-          <span class="evidence-label">${esc(r.label)}</span>
-          <span class="evidence-score">${Math.round(r.confidence * 100)}%</span>
-          <div class="evidence-bar"><i style="width:${Math.round(
-            r.confidence * 100
-          )}%"></i></div>
-          <span class="evidence-detail">${esc(r.title)}${
+  const readings = (report.evidence?.readings || []);
+  const used = readings.filter((r) => r.called);
+  const observed = readings.filter((r) => !r.called && r.confidence >= 0.30);
+  if (used.length || observed.length) {
+    const rows = used.map((r) => `
+      <div class="ev">
+        <span class="ev-label">${esc(r.label)}</span>
+        <span class="ev-value">${Math.round(r.confidence * 100)}%</span>
+        <span class="ev-bar"><i style="width:${Math.round(r.confidence * 100)}%"></i></span>
+        <span class="ev-detail">${esc(r.title)}${
           r.runners_up?.length
-            ? ` · next: ${esc(r.runners_up[0][0])} ${Math.round(
-                r.runners_up[0][1] * 100
-              )}%`
-            : ""
-        }</span>
-        </div>`
-      )
-      .join("");
-    const observed = uncalled.length
-      ? `<div class="evidence-detail" style="margin-top:8px">
-           Observed but not used (below threshold or geographically
-           unconstraining): ${uncalled
-             .map((r) => `${esc(r.label)} ${Math.round(r.confidence * 100)}%`)
-             .join(" · ")}
-         </div>`
+            ? ` · next best: ${esc(r.runners_up[0][0])} ${
+                Math.round(r.runners_up[0][1] * 100)}%` : ""}</span>
+      </div>`).join("");
+    const tail = observed.length
+      ? `<p class="ev-detail" style="margin-top:9px">Observed but not used —
+         below threshold, or geographically unconstraining:<br>${
+           observed.map((r) => `${esc(r.label)} ${
+             Math.round(r.confidence * 100)}%`).join(" · ")}</p>`
       : "";
-    parts.push(
-      block(
-        readings.length
-          ? `Detected evidence (${readings.length} used)`
-          : "Detected evidence",
-        (rows ||
-          '<p class="empty-note">No visual clue cleared its threshold, so nothing was re-ranked.</p>') +
-          observed
-      )
-    );
+    out.push(block(
+      used.length ? `Detected evidence · ${used.length} used` : "Detected evidence",
+      (rows || `<p class="ev-detail">No visual clue cleared its threshold, so
+        nothing was re-ranked.</p>`) + tail));
   }
 
-  /* how the winner moved ---------------------------------------------- */
+  /* scoring ----------------------------------------------------------- */
   const top = (report.candidates || [])[0];
   if (top?.adjustments?.length) {
     const rows = top.adjustments
-      .slice()
-      .sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta))
-      .slice(0, 8)
-      .map(
-        (a) => `
-        <div class="evidence-item">
-          <span class="evidence-label">${esc(a.source.replace(/_/g, " "))}</span>
-          <span class="evidence-score ${
-            a.delta >= 0 ? "" : ""
-          }">${a.delta >= 0 ? "+" : ""}${a.delta.toFixed(2)}</span>
-          <span class="evidence-detail">${esc(a.detail)}</span>
-        </div>`
-      )
-      .join("");
-    const diag = pred.diagnostics || {};
-    parts.push(
-      block(
-        "How the leading candidate was scored",
-        rows +
-          `<div class="tag-row" style="margin-top:8px">
-             <span class="tag">locator mass ${(
-               (diag.locator_mass || 0) * 100
-             ).toFixed(1)}%</span>
-             <span class="tag">concentration ${Math.round(
-               (diag.concentration || 0) * 100
-             )}%</span>
-             <span class="tag">dispersion ${esc(
-               fmtKm(diag.dispersion_km)
-             )}</span>
-             <span class="tag ${
-               (diag.evidence_support || 0) >= 0 ? "pos" : "neg"
-             }">evidence ${(diag.evidence_support || 0) >= 0 ? "+" : ""}${(
-            diag.evidence_support || 0
-          ).toFixed(2)}</span>
-           </div>`
-      )
-    );
+      .slice().sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta)).slice(0, 8)
+      .map((a) => `
+        <div class="ev">
+          <span class="ev-label">${esc(a.source.replace(/_/g, " "))}</span>
+          <span class="ev-value ${a.delta >= 0 ? "pos" : "neg"}">${
+            a.delta >= 0 ? "+" : ""}${a.delta.toFixed(2)}</span>
+          <span class="ev-detail">${esc(a.detail)}</span>
+        </div>`).join("");
+    const d = pred.diagnostics || {};
+    out.push(block("How the leading candidate scored", rows + `
+      <div class="tags">
+        <span class="tag">locator mass ${((d.locator_mass || 0) * 100).toFixed(1)}%</span>
+        <span class="tag">concentration ${Math.round((d.concentration || 0) * 100)}%</span>
+        <span class="tag">dispersion ${esc(fmtKm(d.dispersion_km))}</span>
+        <span class="tag ${(d.evidence_support || 0) >= 0 ? "pos" : "neg"}">evidence ${
+          (d.evidence_support || 0) >= 0 ? "+" : ""}${
+          (d.evidence_support || 0).toFixed(2)}</span>
+      </div>`));
   }
 
-  /* text read off the image ------------------------------------------- */
+  /* text -------------------------------------------------------------- */
   const ocr = report.ocr || {};
   if (ocr.line_count) {
     const scripts = ocr.scripts?.proportions || {};
-    const scriptTags = Object.entries(scripts)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 5)
-      .map(
-        ([s, p]) => `<span class="tag">${esc(s)} ${Math.round(p * 100)}%</span>`
-      )
+    const tags = Object.entries(scripts).sort((a, b) => b[1] - a[1]).slice(0, 5)
+      .map(([s, p]) => `<span class="tag">${esc(s)} ${Math.round(p * 100)}%</span>`)
       .join("");
-    parts.push(
-      block(
-        `Text read from the image (${ocr.line_count})`,
-        `<div class="ocr-text">${esc(ocr.text)}</div>
-         ${scriptTags ? `<div class="tag-row">${scriptTags}</div>` : ""}`
-      )
-    );
+    out.push(block(`Text read from the image · ${ocr.line_count}`,
+      `<div class="ocr">${esc(ocr.text)}</div>` +
+      (tags ? `<div class="tags">${tags}</div>` : "")));
   } else if (ocr.error) {
-    parts.push(
-      block("Text", `<div class="callout warn">${esc(ocr.error)}</div>`)
-    );
+    out.push(block("Text", `<div class="note warn"><div>${esc(ocr.error)}</div></div>`));
   }
 
   if (report.toponyms?.length) {
-    const rows = report.toponyms
-      .map(
-        (t) => `
-        <li>
-          <span class="fname">${esc(t.text)} → ${esc(t.matched_name)}${
-          t.language ? ` <span class="tag">${esc(t.language)}</span>` : ""
-        }</span>
-          <span class="fdist">${
-            t.corroborated_km != null ? esc(fmtKm(t.corroborated_km)) : "—"
-          }</span>
-        </li>`
-      )
-      .join("");
-    parts.push(
-      block(
-        "Place names matched in the gazetteer",
-        `<ul class="feature-list">${rows}</ul>`
-      )
-    );
+    out.push(block("Place names matched in the gazetteer", `<ul class="list">${
+      report.toponyms.map((t) => `<li>
+        <span class="a">${esc(t.text)} → ${esc(t.matched_name)}${
+          t.language ? ` <span class="tag">${esc(t.language)}</span>` : ""}</span>
+        <span class="b">${t.corroborated_km != null
+          ? esc(fmtKm(t.corroborated_km)) : "—"}</span></li>`).join("")}</ul>`));
   }
 
   /* surroundings ------------------------------------------------------- */
   const surr = top?.surroundings;
   if (surr?.features?.length) {
-    const rows = surr.features
-      .slice(0, 10)
-      .map(
-        (f) => `
-        <li><span class="fname">${esc(f.name)}</span>
-        <span class="fdist">${f.distance_m} m ${esc(f.direction)}</span></li>`
-      )
-      .join("");
-    parts.push(
-      block(
-        "Nearby named features",
-        `<ul class="feature-list">${rows}</ul>` +
-          (surr.road_refs?.length
-            ? `<div class="tag-row">${surr.road_refs
-                .slice(0, 10)
-                .map((r) => `<span class="tag">${esc(r)}</span>`)
-                .join("")}</div>`
-            : "")
-      )
-    );
+    out.push(block("Nearby named features", `<ul class="list">${
+      surr.features.slice(0, 10).map((f) => `<li>
+        <span class="a">${esc(f.name)}</span>
+        <span class="b">${f.distance_m} m ${esc(f.direction)}</span></li>`).join("")
+      }</ul>` + (surr.road_refs?.length
+        ? `<div class="tags">${surr.road_refs.slice(0, 10)
+            .map((r) => `<span class="tag">${esc(r)}</span>`).join("")}</div>` : "")));
   }
 
-  /* file facts ---------------------------------------------------------- */
+  /* file --------------------------------------------------------------- */
   const exif = report.exif || {};
   const img = report.image || {};
-  parts.push(
-    block(
-      "File",
-      `<dl class="kv">
-        <dt>Name</dt><dd>${esc(img.filename || "—")}</dd>
-        <dt>Format</dt><dd>${esc(img.format || "—")} · ${img.width}×${
-        img.height
-      }</dd>
-        <dt>Size</dt><dd>${((img.bytes || 0) / 1024).toFixed(0)} KB</dd>
-        ${
-          exif.camera_make || exif.camera_model
-            ? `<dt>Camera</dt><dd>${esc(
-                [exif.camera_make, exif.camera_model].filter(Boolean).join(" ")
-              )}</dd>`
-            : ""
-        }
-        ${exif.lens ? `<dt>Lens</dt><dd>${esc(exif.lens)}</dd>` : ""}
-        ${
-          exif.captured_at
-            ? `<dt>Captured</dt><dd class="mono">${esc(exif.captured_at)}</dd>`
-            : ""
-        }
-        ${exif.software ? `<dt>Software</dt><dd>${esc(exif.software)}</dd>` : ""}
-        <dt>EXIF</dt><dd>${exif.has_exif ? "present" : "absent"}</dd>
-      </dl>
-      ${
-        !gps
-          ? (exif.trust_warnings || [])
-              .map((w) => `<div class="callout warn">${esc(w)}</div>`)
-              .join("")
-          : ""
-      }`
-    )
-  );
+  out.push(block("File", `
+    <dl class="rows">
+      ${row("Name", img.filename)}
+      ${row("Format", `${img.format || "—"} · ${img.width}×${img.height}`)}
+      ${row("Size", `${((img.bytes || 0) / 1024).toFixed(0)} KB`)}
+      ${row("Camera", [exif.camera_make, exif.camera_model].filter(Boolean).join(" "))}
+      ${row("Lens", exif.lens)}
+      ${row("Captured", exif.captured_at, true)}
+      ${row("Software", exif.software)}
+      ${row("EXIF", exif.has_exif ? "present" : "absent")}
+    </dl>
+    ${!gps ? (exif.trust_warnings || [])
+      .map((w) => `<div class="note warn" style="margin-top:8px"><div>${
+        esc(w)}</div></div>`).join("") : ""}`));
 
   for (const w of report.warnings || []) {
-    parts.push(`<div class="callout warn">${esc(w)}</div>`);
+    out.push(`<div class="note warn"><div>${esc(w)}</div></div>`);
   }
 
-  parts.push(
-    `<div class="evidence-detail" style="margin-top:6px">
-       Analysed in ${report.elapsed_s}s. Image processed locally; it was not
-       uploaded anywhere.
-     </div>`
-  );
+  out.push(`<p class="footnote">Analysed in ${report.elapsed_s}s on this
+    machine. The image was not uploaded anywhere.</p>`);
 
-  el.report.innerHTML = parts.join("");
-  el.attribution.textContent = (report.attribution || []).join(" · ");
+  el.report.innerHTML = out.join("");
+  const attrib = (report.attribution || []).join("   ·   ");
+  el.attribution.textContent = attrib;
   el.attribution.title = (report.attribution || []).join("\n");
+}
+
+function row(label, value, mono = false) {
+  if (value == null || value === "" || value === "—") return "";
+  return `<div class="row"><dt>${esc(label)}</dt><dd${
+    mono ? ' class="mono"' : ""}>${esc(value)}</dd></div>`;
 }
 
 function timezoneRow(report) {
   const tz = (report.candidates || [])[0]?.timezone;
   if (!tz) return "";
   if (tz.iana_name) {
-    const off =
-      tz.utc_offset_hours != null
-        ? ` (UTC${tz.utc_offset_hours >= 0 ? "+" : ""}${tz.utc_offset_hours})`
-        : "";
-    return `<dt>Timezone</dt><dd>${esc(tz.iana_name)}${esc(off)}</dd>`;
+    const off = tz.utc_offset_hours != null
+      ? ` (UTC${tz.utc_offset_hours >= 0 ? "+" : ""}${tz.utc_offset_hours})` : "";
+    const local = tz.local_time ? ` · ${tz.local_time.slice(11, 16)} local` : "";
+    return row("Timezone", `${tz.iana_name}${off}${local}`);
   }
-  return `<dt>Timezone</dt><dd>estimated UTC${
-    tz.utc_offset_hours >= 0 ? "+" : ""
-  }${tz.utc_offset_hours} — ${esc(tz.method)}</dd>`;
+  return row("Timezone",
+    `estimated UTC${tz.utc_offset_hours >= 0 ? "+" : ""}${tz.utc_offset_hours}`);
 }
 
 boot();

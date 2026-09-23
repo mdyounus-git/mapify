@@ -143,6 +143,10 @@ def create_app(cfg: Config | None = None, token: str | None = None,
             "geolocation=(), camera=(), microphone=(), interest-cohort=()"
         )
         response.headers["Cross-Origin-Opener-Policy"] = "same-origin"
+        # The window ships with its own assets and the port changes every
+        # launch, so there is nothing to gain from caching and a stale
+        # stylesheet to lose.
+        response.headers["Cache-Control"] = "no-store, must-revalidate"
         return response
 
     # ------------------------------------------------------------- window

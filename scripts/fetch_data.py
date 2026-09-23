@@ -34,26 +34,35 @@ NE_LAYERS = [
 NE_EXTS = (".shp", ".dbf", ".shx")
 
 THREE_VERSION = "0.186.0"
+
 # Three.js ships ES modules, so the front end imports them through an import
-# map: no bundler, no build step, nothing to trust but these files.
+# map: no bundler, no build step, nothing to trust but these files. The addon
+# directory layout is preserved because the addons import each other by
+# relative path.
+_THREE_ADDONS = [
+    "controls/OrbitControls.js",
+    "postprocessing/Pass.js",
+    "postprocessing/EffectComposer.js",
+    "postprocessing/RenderPass.js",
+    "postprocessing/ShaderPass.js",
+    "postprocessing/MaskPass.js",
+    "postprocessing/UnrealBloomPass.js",
+    "postprocessing/OutputPass.js",
+    "shaders/CopyShader.js",
+    "shaders/LuminosityHighPassShader.js",
+    "shaders/OutputShader.js",
+]
+
 VENDOR_FILES = [
-    (
-        f"https://unpkg.com/three@{THREE_VERSION}/build/three.module.js",
-        "three.module.js",
-    ),
-    (
-        f"https://unpkg.com/three@{THREE_VERSION}/build/three.core.js",
-        "three.core.js",
-    ),
-    (
-        f"https://unpkg.com/three@{THREE_VERSION}/examples/jsm/controls/"
-        "OrbitControls.js",
-        "OrbitControls.js",
-    ),
-    (
-        f"https://unpkg.com/three@{THREE_VERSION}/LICENSE",
-        "three.LICENSE.txt",
-    ),
+    (f"https://unpkg.com/three@{THREE_VERSION}/build/three.module.js",
+     "three.module.js"),
+    (f"https://unpkg.com/three@{THREE_VERSION}/build/three.core.js",
+     "three.core.js"),
+    (f"https://unpkg.com/three@{THREE_VERSION}/LICENSE",
+     "three.LICENSE.txt"),
+] + [
+    (f"https://unpkg.com/three@{THREE_VERSION}/examples/jsm/{path}", path)
+    for path in _THREE_ADDONS
 ]
 
 

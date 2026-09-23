@@ -40,7 +40,7 @@ function project(lat, lon, lat0, lon0, radius, cx, cy) {
  * @param {{accent?:string, size?:number}} opts
  */
 export function drawLocator(canvas, lat, lon, geo, opts = {}) {
-  const accent = opts.accent || "#38bdf8";
+  const accent = opts.accent || "#5ab8f0";
   const size = opts.size || 62;
   const dpr = Math.min(window.devicePixelRatio || 1, 2);
 
@@ -59,8 +59,8 @@ export function drawLocator(canvas, lat, lon, geo, opts = {}) {
 
   // Ocean disc with a little depth.
   const grad = ctx.createRadialGradient(cx - r * 0.3, cy - r * 0.35, r * 0.1, cx, cy, r);
-  grad.addColorStop(0, "#123a5e");
-  grad.addColorStop(1, "#04101f");
+  grad.addColorStop(0, "#14395c");
+  grad.addColorStop(1, "#050d18");
   ctx.beginPath();
   ctx.arc(cx, cy, r, 0, Math.PI * 2);
   ctx.fillStyle = grad;
@@ -72,8 +72,8 @@ export function drawLocator(canvas, lat, lon, geo, opts = {}) {
     ctx.beginPath();
     ctx.arc(cx, cy, r, 0, Math.PI * 2);
     ctx.clip();
-    ctx.fillStyle = "rgba(24, 58, 92, 0.95)";
-    ctx.strokeStyle = "rgba(125, 211, 252, 0.55)";
+    ctx.fillStyle = "rgba(26, 52, 78, 0.95)";
+    ctx.strokeStyle = "rgba(128, 190, 235, 0.52)";
     ctx.lineWidth = 0.6;
 
     const ring = (coords) => {
@@ -109,7 +109,7 @@ export function drawLocator(canvas, lat, lon, geo, opts = {}) {
   // Limb.
   ctx.beginPath();
   ctx.arc(cx, cy, r, 0, Math.PI * 2);
-  ctx.strokeStyle = "rgba(94, 148, 210, 0.45)";
+  ctx.strokeStyle = "rgba(148, 173, 209, 0.30)";
   ctx.lineWidth = 1;
   ctx.stroke();
 
