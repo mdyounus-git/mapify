@@ -51,3 +51,8 @@ samples/
 .tex.log
 .warm.log
 .server.log
+
+# PyInstaller output and its generated spec.
+build/
+dist/
+Mapify.spec

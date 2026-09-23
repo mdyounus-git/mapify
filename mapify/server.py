@@ -197,6 +197,8 @@ def create_app(cfg: Config | None = None, token: str | None = None,
             report = engine.analyse(data, filename)
         except ImageRejected as exc:
             raise HTTPException(status_code=415, detail=str(exc)) from exc
+        if cfg.server.keep_uploads:
+            _debug_dump(data, filename)
         return JSONResponse(report.as_dict(), status_code=200 if report.ok else 422)
 
     @app.post("/api/analyse")
@@ -252,6 +254,8 @@ def create_app(cfg: Config | None = None, token: str | None = None,
 
         async def run() -> None:
             try:
+                if cfg.server.keep_uploads:
+                    _debug_dump(data, filename)
                 report = await asyncio.to_thread(
                     engine.analyse, data, filename, progress
                 )
@@ -309,6 +313,21 @@ def create_app(cfg: Config | None = None, token: str | None = None,
 
     app.mount("/", StaticFiles(directory=str(WEB_DIR), html=False), name="web")
     return app
+
+
+def _debug_dump(data: bytes, filename: str | None) -> None:
+    """Keep a copy of an upload. Debugging only, off by default.
+
+    The normal path holds an upload in memory and drops it when the request
+    ends; this exists so a misbehaving image can be reproduced, and the config
+    comment says as much.
+    """
+    import time
+
+    out = ROOT / "data" / "uploads"
+    out.mkdir(parents=True, exist_ok=True)
+    safe = "".join(c for c in (filename or "upload") if c.isalnum() or c in "._-")
+    (out / f"{int(time.time())}_{safe[:80]}").write_bytes(data)
 
 
 def _check_size(cfg: Config, size: int) -> None:

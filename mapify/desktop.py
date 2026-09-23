@@ -27,7 +27,7 @@ from pathlib import Path
 from typing import Any
 
 from . import __version__
-from .config import Config, load_config
+from .config import ACCEPTED_EXTENSIONS, Config, load_config
 
 log = logging.getLogger("mapify.desktop")
 
@@ -88,7 +88,7 @@ class NativeBridge:
         path = Path(result[0]).resolve()
         if not path.is_file():
             return {"error": "That file could not be opened."}
-        if path.suffix.lower() not in {".jpg", ".jpeg", ".png", ".webp"}:
+        if path.suffix.lower() not in ACCEPTED_EXTENSIONS:
             return {"error": f"{path.suffix or 'That file type'} is not a supported image."}
         size = path.stat().st_size
         if size > self.cfg.server.max_upload_bytes:
@@ -181,7 +181,13 @@ def run(argv: list[str] | None = None) -> int:
     ap.add_argument("--debug", action="store_true",
                     help="open developer tools in the window")
     ap.add_argument("--log-level", default="warning")
+    ap.add_argument("--selftest", action="store_true",
+                    help="import and construct everything, then exit "
+                         "(used by build_exe.py to prove a build works)")
     args = ap.parse_args(argv)
+
+    if args.selftest:
+        return _selftest()
 
     logging.basicConfig(
         level=getattr(logging, args.log_level.upper(), logging.WARNING),
@@ -286,6 +292,90 @@ def run(argv: list[str] | None = None) -> int:
 
     server.should_exit = True
     return 0
+
+
+def _selftest() -> int:
+    """Prove that a packaged build can reach everything it needs.
+
+    PyInstaller reports success whether or not the lazily-imported model
+    stack made it into the bundle, so the build script runs this inside the
+    executable it just produced. It deliberately does not load model weights
+    -- that is a 1.7 GB download -- only that every import resolves and the
+    bundled data is where the code expects it.
+    """
+    import traceback
+
+    checks: list[tuple[str, str]] = []
+    failed = False
+
+    def check(label: str, fn) -> None:
+        nonlocal failed
+        try:
+            detail = fn()
+            checks.append((label, f"ok    {detail}" if detail else "ok"))
+        except Exception as exc:
+            failed = True
+            checks.append((label, f"FAIL  {type(exc).__name__}: {exc}"))
+            traceback.print_exc()
+
+    def _torch() -> str:
+        import torch
+        return f"{torch.__version__}"
+
+    def _models() -> str:
+        import torchvision, transformers  # noqa: F401
+        from geoclip import GeoCLIP  # noqa: F401
+        return f"transformers {transformers.__version__}"
+
+    def _webview() -> str:
+        import webview
+        return getattr(webview, "__version__", "")
+
+    def _assets() -> str:
+        missing = [
+            p.name for p in (
+                WEB_DIR / "index.html",
+                WEB_DIR / "styles.css",
+                WEB_DIR / "js" / "app.js",
+                WEB_DIR / "vendor" / "three.module.js",
+            ) if not p.exists()
+        ]
+        if missing:
+            raise FileNotFoundError("missing " + ", ".join(missing))
+        return "interface present"
+
+    def _geodata() -> str:
+        from .geo.offline import get_geocoder
+        g = get_geocoder()
+        hit = g.country_at(12.9716, 77.5946)
+        if not hit:
+            raise RuntimeError("Natural Earth lookup returned nothing")
+        return f"reverse geocode -> {hit.name}"
+
+    def _countries() -> str:
+        from .data.countries import get_table
+        return f"{len(get_table())} countries"
+
+    def _pipeline() -> str:
+        from .pipeline import AnalysisEngine
+        cfg = load_config()
+        cfg.network.offline_only = True
+        AnalysisEngine(cfg)
+        return "engine constructed"
+
+    check("torch", _torch)
+    check("model stack", _models)
+    check("pywebview", _webview)
+    check("interface assets", _assets)
+    check("natural earth", _geodata)
+    check("country table", _countries)
+    check("pipeline", _pipeline)
+
+    width = max(len(label) for label, _ in checks)
+    for label, result in checks:
+        print(f"  {label.ljust(width)}  {result}")
+    print("SELFTEST FAILED" if failed else "SELFTEST OK")
+    return 1 if failed else 0
 
 
 def _fatal(message: str) -> None:

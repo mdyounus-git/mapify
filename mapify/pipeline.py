@@ -28,7 +28,7 @@ from typing import Any, Callable
 
 from PIL import Image, ImageOps
 
-from .config import Config
+from .config import ACCEPTED_EXTENSIONS, ACCEPTED_FORMATS, Config
 from .data.countries import get_table
 from .evidence import script_detect
 from .evidence.fusion import Candidate, FusionEngine, FusionResult
@@ -48,9 +48,6 @@ from .models.ocr import build_ocr_engine
 log = logging.getLogger("mapify.pipeline")
 
 ROOT = Path(__file__).resolve().parent.parent
-
-ACCEPTED_FORMATS = {"JPEG", "PNG", "WEBP", "MPO"}
-ACCEPTED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp"}
 
 ProgressFn = Callable[[str, str], None]
 
