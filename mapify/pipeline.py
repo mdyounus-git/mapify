@@ -148,6 +148,11 @@ class AnalysisEngine:
             if ok:
                 clip_model, processor = self.geoclip.shared_clip()
                 self.clip.load(clip_model, processor)
+                # Encode the GPS gallery now. It is the same for every image,
+                # so paying for it here makes each analysis ~20x faster.
+                t0 = time.time()
+                self.geoclip.gallery_features()
+                status["geoclip"]["gallery_encode_s"] = round(time.time() - t0, 1)
         else:
             status["geoclip"] = {"loaded": False, "error": "disabled in config"}
 

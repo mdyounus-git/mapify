@@ -1251,6 +1251,8 @@ export class Globe {
     this.atmoUniforms.sunDir.value.copy(this.sunDir);
     this.atmoUniforms.strength.value = this._atmosphereStrength();
 
+    const d = this.camera.position.length();
+
     if (this.clouds.visible) this.clouds.rotation.y += dt * 0.0045;
     for (const line of this.overlay.children) {
       line.rotation.z += (line.userData.spin || 0) * dt;
@@ -1275,7 +1277,6 @@ export class Globe {
 
     // Close in, the visible surface is much brighter than a full disc, so
     // pull the exposure back the way a camera would.
-    const d = this.camera.position.length();
     this.renderer.toneMappingExposure =
       THREE.MathUtils.lerp(0.88, 1.12, THREE.MathUtils.clamp((d - 1.05) / 1.6, 0, 1));
 
