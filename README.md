@@ -130,6 +130,31 @@ Text is the strongest clue a photograph can carry, because a place name can be
 matched against the gazetteer and *checked* rather than guessed. EasyOCR pulls
 about 300 MB of dependencies, which is why it is not installed by default.
 
+Mapify picks the recogniser to load from the writing system the zero-shot pass
+identified, for that image only. This matters more than it sounds: an
+English-only recogniser does not fail on a Cyrillic sign, it returns Latin
+lookalikes. On a rendered Moscow street sign:
+
+```
+english only : MOCKBA                      -> scored as Latin 100%
+with ru+en   : МОСКВА | Тверская улица     -> Cyrillic 53%, Latin 47%
+               TOPONYM 'МОСКВА' -> Moscow (NAME_RU, Russia)
+```
+
+The first reading is worse than no reading, because "100% Latin" is evidence
+*against* Russia. The second closes the whole chain: script detected, right
+reader loaded, sign read, gazetteer matched by its Russian name.
+
+The same applies within Latin script — the English model flattens Turkish
+`İ ğ ş` to ASCII, losing exactly the characters that identify the language — so
+a peaked country prior can also select a Latin-language recogniser.
+
+On the eleven-sample benchmark OCR changed no verdict: the images it read
+(Turkish road signs in Istanbul, Kannada on the Bengaluru metro) were already
+placed correctly, and the two failures have no legible text at all. It earns
+its place on images that carry a readable place name, not as a general
+accuracy boost, and the benchmark says so rather than implying otherwise.
+
 ---
 
 ## How it works
@@ -279,7 +304,7 @@ including when it says the evidence will not support a location.
 ## Development
 
 ```bash
-.venv\Scripts\python -m pytest              # 167 tests
+.venv\Scripts\python -m pytest              # 193 tests
 .venv\Scripts\python -m mapify.server       # the service without the window
 .venv\Scripts\python -m mapify --debug      # the app with devtools open
 ```
