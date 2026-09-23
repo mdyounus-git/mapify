@@ -75,11 +75,15 @@ class FakeOcr:
         )
 
 
-def script_reading(option: str, called: bool = True) -> GroupReading:
+def script_reading(option: str, called: bool = True,
+                   confidence: float = 0.8,
+                   ranked: list[tuple[str, float]] | None = None
+                   ) -> GroupReading:
     return GroupReading(
         group_key="signage_script", group_title="Signage script",
-        option_key=option, option_label=option, confidence=0.8, margin=0.4,
-        called=called, constrains=True,
+        option_key=option, option_label=option, confidence=confidence,
+        margin=0.4, called=called, constrains=True,
+        ranked=ranked if ranked is not None else [(option, confidence)],
     )
 
 
@@ -170,6 +174,76 @@ class TestRoutingThroughThePipeline:
         report = engine.analyse(plain_jpeg, "x.jpg")
         assert report.ok
         assert engine.ocr.calls == [None]
+
+
+class TestReaderSelectionThresholds:
+    """Which reader to load is a cheaper decision than whether to believe it.
+
+    Being wrong costs one model load and reads nothing extra, so the bar is
+    deliberately far lower than the bar for moving a candidate's score.
+    """
+
+    @pytest.fixture
+    def engine(self):
+        from mapify.config import load_config
+        from mapify.pipeline import AnalysisEngine
+
+        cfg = load_config()
+        cfg.network.offline_only = True
+        cfg.models.geoclip_enabled = False
+        cfg.models.clip_evidence_enabled = False
+        return AnalysisEngine(cfg)
+
+    def choose(self, engine, readings=(), prior=None):
+        from mapify.models.base import VisualEvidence
+
+        return engine._choose_ocr_group(
+            VisualEvidence(readings=list(readings), country_prior=prior or {})
+        )
+
+    def test_a_runner_up_script_still_selects_its_reader(self, engine):
+        """Latin wins almost any mixed sign; the runner-up is the useful one."""
+        reading = script_reading(
+            "Latn", called=True, confidence=0.72,
+            ranked=[("Latn", 0.72), ("Knda", 0.18), ("Deva", 0.05)],
+        )
+        assert self.choose(engine, [reading]) == ("kn", "en")
+
+    def test_an_uncalled_script_still_selects_its_reader(self, engine):
+        reading = script_reading(
+            "Cyrl", called=False, confidence=0.22,
+            ranked=[("Cyrl", 0.22), ("Latn", 0.20)],
+        )
+        assert self.choose(engine, [reading]) == ("ru", "en")
+
+    def test_noise_below_the_floor_selects_nothing(self, engine):
+        reading = script_reading(
+            "Latn", called=True, confidence=0.94,
+            ranked=[("Latn", 0.94), ("Thai", 0.03)],
+        )
+        assert self.choose(engine, [reading]) is None
+
+    def test_a_peaked_country_prior_selects_a_latin_language_reader(self, engine):
+        """EasyOCR's English model flattens Turkish diacritics away."""
+        prior = {"TR": 0.55, "GR": 0.05, "BG": 0.04, "FR": 0.03, "DE": 0.02}
+        assert self.choose(engine, [], prior) == ("tr", "en")
+
+    def test_a_flat_country_prior_selects_nothing(self, engine):
+        prior = {"TR": 0.05, "GR": 0.05, "BG": 0.05, "FR": 0.05, "DE": 0.05}
+        assert self.choose(engine, [], prior) is None
+
+    def test_script_beats_language(self, engine):
+        """A non-Latin script is the stronger signal; do not override it."""
+        reading = script_reading(
+            "Cyrl", called=True, confidence=0.6, ranked=[("Cyrl", 0.6)],
+        )
+        prior = {"TR": 0.55, "GR": 0.05, "BG": 0.04, "FR": 0.03}
+        assert self.choose(engine, [reading], prior) == ("ru", "en")
+
+    def test_a_country_with_no_supported_language_selects_nothing(self, engine):
+        # Greek is peaked, but EasyOCR has no Greek recogniser.
+        prior = {"GR": 0.60, "TR": 0.04, "BG": 0.03, "IT": 0.02}
+        assert self.choose(engine, [], prior) is None
 
 
 @requires_geodata

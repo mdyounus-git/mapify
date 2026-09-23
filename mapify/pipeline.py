@@ -67,6 +67,8 @@ class AnalysisReport:
     candidates: list[dict[str, Any]] = field(default_factory=list)
     evidence: dict[str, Any] = field(default_factory=dict)
     ocr: dict[str, Any] = field(default_factory=dict)
+    # Which extra OCR recogniser was loaded for this image, if any.
+    ocr_reader_hint: str | None = None
     toponyms: list[dict[str, Any]] = field(default_factory=list)
     engine: dict[str, Any] = field(default_factory=dict)
     warnings: list[str] = field(default_factory=list)
@@ -82,7 +84,7 @@ class AnalysisReport:
             "prediction": self.prediction,
             "candidates": self.candidates,
             "evidence": self.evidence,
-            "ocr": self.ocr,
+            "ocr": {**self.ocr, "reader_hint": self.ocr_reader_hint},
             "toponyms": self.toponyms,
             "engine": self.engine,
             "warnings": self.warnings,
@@ -335,20 +337,15 @@ class AnalysisEngine:
             script_reading = None
             if self.ocr:
                 step("ocr", "Reading signage text")
-                # If the zero-shot pass called a non-Latin script, load the
-                # recogniser that can actually read it. An English-only reader
-                # returns nothing on a Cyrillic sign, which is exactly when
-                # signage text would have been most useful.
-                extra_group = None
-                script_call = evidence.by_group("signage_script")
-                if script_call and script_call.called:
-                    extra_group = ocr_groups.group_for_script(script_call.option_key)
+                extra_group = self._choose_ocr_group(evidence)
                 try:
                     ocr_result = self.ocr.read(image, extra_group)
                 except TypeError:
                     ocr_result = self.ocr.read(image)
                 except Exception as exc:
                     ocr_result = OcrResult(error=f"{type(exc).__name__}: {exc}")
+                if extra_group:
+                    report.ocr_reader_hint = "+".join(extra_group)
                 if ocr_result.text.strip():
                     script_reading = script_detect.analyse(ocr_result.text)
             report.ocr = ocr_result.as_dict()
@@ -382,6 +379,52 @@ class AnalysisEngine:
         report.elapsed_s = time.time() - t0
         step("done", "Complete")
         return report
+
+    def _choose_ocr_group(self, evidence: VisualEvidence
+                          ) -> tuple[str, ...] | None:
+        """Pick one extra OCR recogniser for this image.
+
+        Which reader to load is a *measurement* decision, not evidence, and
+        the two deserve different thresholds. A wrong guess here costs one
+        model load and reads nothing extra; the bar for letting a reading
+        move a candidate's score is much higher, and stays where it is.
+
+        There is no circularity in letting the model's own guesses choose the
+        reader. Loading the Turkish recogniser does not invent Turkish
+        letters -- if the sign says MAIN STREET it still reads MAIN STREET
+        and produces no language hint. The guess decides where to look; the
+        image decides what is found.
+        """
+        readings = {r.group_key: r for r in evidence.readings}
+
+        # 1. A non-Latin script, if one is plausibly present. Latin wins the
+        #    group on almost any mixed sign, so the runner-up is the
+        #    informative answer and the threshold is deliberately low.
+        script = readings.get("signage_script")
+        if script:
+            ranked = script.ranked or [(script.option_key, script.confidence)]
+            for key, conf in ranked:
+                if conf < 0.10:
+                    continue
+                group = ocr_groups.group_for_script(key)
+                if group:
+                    return group
+
+        # 2. Otherwise a Latin language whose diacritics the English model
+        #    would flatten, chosen from the country prior when it is peaked.
+        prior = evidence.country_prior
+        if prior:
+            top_iso = max(prior, key=lambda k: prior[k])
+            values = sorted(prior.values(), reverse=True)
+            median = values[len(values) // 2]
+            peaked = (prior[top_iso] - median) / max(prior[top_iso], 1e-9)
+            if peaked >= 0.30:
+                country = self.table.get(top_iso)
+                for lang in (country.languages if country else ()):
+                    group = ocr_groups.group_for_language(lang)
+                    if group:
+                        return group
+        return None
 
     # ---------------------------------------------------------- enrichment
 

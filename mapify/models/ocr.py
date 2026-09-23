@@ -64,12 +64,38 @@ SCRIPT_TO_GROUP: dict[str, tuple[str, ...]] = {
 }
 
 
+# Latin-script languages whose diacritics the English recogniser flattens.
+#
+# EasyOCR's English model reads Turkish "MECBURİ İSTİKAMET" back as
+# "MECBURi ISTiKAMET" -- the glyphs that identify the language are exactly the
+# ones it drops. Loading the language's own recogniser recovers them.
+#
+# ISO 639-1 -> EasyOCR group.
+LANGUAGE_TO_GROUP: dict[str, tuple[str, ...]] = {
+    "tr": ("tr", "en"), "pl": ("pl", "en"), "cs": ("cs", "en"),
+    "sk": ("sk", "en"), "hu": ("hu", "en"), "ro": ("ro", "en"),
+    "hr": ("hr", "en"), "sl": ("sl", "en"), "lt": ("lt", "en"),
+    "lv": ("lv", "en"), "et": ("et", "en"), "vi": ("vi", "en"),
+    "de": ("de", "en"), "fr": ("fr", "en"), "es": ("es", "en"),
+    "pt": ("pt", "en"), "it": ("it", "en"), "nl": ("nl", "en"),
+    "da": ("da", "en"), "sv": ("sv", "en"), "no": ("no", "en"),
+    "id": ("id", "en"), "ms": ("ms", "en"), "sq": ("sq", "en"),
+    "az": ("az", "en"), "uz": ("uz", "en"), "af": ("af", "en"),
+    "sw": ("sw", "en"), "tl": ("tl", "en"),
+}
+
+
 def group_for_script(script: str) -> tuple[str, ...] | None:
     """The reader group for a writing system, if one exists and differs."""
     group = SCRIPT_TO_GROUP.get(script)
     if not group or group == ("en",):
         return None
     return group
+
+
+def group_for_language(lang: str) -> tuple[str, ...] | None:
+    """The reader group for a Latin-script language with diacritics."""
+    return LANGUAGE_TO_GROUP.get((lang or "").lower())
 
 
 class EasyOcrEngine:

@@ -105,6 +105,10 @@ class ClipEvidenceExtractor:
                         (group.options[int(i)].label, float(probs[int(i)]))
                         for i in order[1:3]
                     ],
+                    ranked=[
+                        (group.options[int(i)].key, float(probs[int(i)]))
+                        for i in order[:5]
+                    ],
                 )
             )
 

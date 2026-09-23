@@ -71,7 +71,11 @@ class GroupReading:
     margin: float
     called: bool               # did it clear the group's thresholds
     constrains: bool           # does the winning option restrict geography
+    # Display labels for the report.
     runners_up: list[tuple[str, float]] = field(default_factory=list)
+    # Option keys with their probabilities, best first. The report shows
+    # labels; code that has to act on a reading needs the keys.
+    ranked: list[tuple[str, float]] = field(default_factory=list)
 
     def as_dict(self) -> dict[str, Any]:
         return {
@@ -84,6 +88,7 @@ class GroupReading:
             "called": self.called,
             "constrains": self.constrains,
             "runners_up": [(k, round(v, 4)) for k, v in self.runners_up],
+            "ranked": [(k, round(v, 4)) for k, v in self.ranked],
         }
 
 
