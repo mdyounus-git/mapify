@@ -27,7 +27,7 @@ from .base import OcrLine, OcrResult
 log = logging.getLogger("mapify.ocr")
 
 # Languages EasyOCR can combine in one reader. Anything outside a group needs
-# its own pass, which is why the sweep is opt-in.
+# its own pass, which is why a full sweep is opt-in.
 SUGGESTED_GROUPS: tuple[tuple[str, ...], ...] = (
     ("en",),
     ("ru", "en"),
@@ -38,6 +38,38 @@ SUGGESTED_GROUPS: tuple[tuple[str, ...], ...] = (
     ("ko", "en"),
     ("th", "en"),
 )
+
+# ISO 15924 writing system -> the EasyOCR group that can read it.
+#
+# An English-only reader returns nothing at all on a Cyrillic or Japanese
+# sign, which is precisely the case where signage text would have been most
+# useful. The pipeline uses this to load the right reader on demand, based on
+# the script the zero-shot pass identified, rather than loading eight
+# recognisers on every image or missing the text entirely.
+SCRIPT_TO_GROUP: dict[str, tuple[str, ...]] = {
+    "Cyrl": ("ru", "en"),
+    "Arab": ("ar", "en"),
+    "Deva": ("hi", "en"),
+    "Beng": ("bn", "en"),
+    "Taml": ("ta", "en"),
+    "Telu": ("te", "en"),
+    "Knda": ("kn", "en"),
+    "Thai": ("th", "en"),
+    "Hani": ("ch_sim", "en"),
+    "Jpan": ("ja", "en"),
+    "Hang": ("ko", "en"),
+    "Grek": ("en",),      # EasyOCR has no Greek recogniser
+    "Hebr": ("en",),      # nor Hebrew
+    "Latn": ("en",),
+}
+
+
+def group_for_script(script: str) -> tuple[str, ...] | None:
+    """The reader group for a writing system, if one exists and differs."""
+    group = SCRIPT_TO_GROUP.get(script)
+    if not group or group == ("en",):
+        return None
+    return group
 
 
 class EasyOcrEngine:
@@ -86,7 +118,8 @@ class EasyOcrEngine:
                 self._readers[langs] = None
                 return None
 
-    def read(self, image: PILImage) -> OcrResult:
+    def read(self, image: PILImage,
+             extra_group: tuple[str, ...] | None = None) -> OcrResult:
         import numpy as np
 
         groups: list[tuple[str, ...]] = [tuple(self.languages)]
@@ -94,6 +127,10 @@ class EasyOcrEngine:
             t = tuple(extra)
             if t not in groups:
                 groups.append(t)
+        # A group chosen for this image, from the script the zero-shot pass
+        # identified.
+        if extra_group and tuple(extra_group) not in groups:
+            groups.append(tuple(extra_group))
 
         array = np.array(image.convert("RGB"))
         width, height = image.size
@@ -148,7 +185,8 @@ class NullOcrEngine:
 
     name = "none"
 
-    def read(self, image: PILImage) -> OcrResult:  # noqa: ARG002
+    def read(self, image: PILImage,
+             extra_group: tuple[str, ...] | None = None) -> OcrResult:  # noqa: ARG002
         return OcrResult(
             engine=None,
             error=(

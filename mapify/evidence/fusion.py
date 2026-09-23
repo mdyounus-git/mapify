@@ -408,6 +408,58 @@ class FusionEngine:
                 )
             )
 
+    def _apply_language_hints(self, cand: Candidate, reading: ScriptReading
+                              ) -> None:
+        """Language-marking characters in the recognised text.
+
+        Script tells you the writing system; these tell you the language
+        inside it, which is far more discriminating. Latin covers half the
+        world, but a sign reading MECBURI ISTIKAMET OTOBUSLERI carries
+        characters only a handful of languages use.
+        """
+        if not reading.language_hints:
+            return
+        country = self.table.get(cand.iso_a2)
+        if not country or not country.languages:
+            return
+
+        best_lang, best_weight = None, 0.0
+        for lang, weight in reading.language_hints.items():
+            if lang in country.languages and weight > best_weight:
+                best_lang, best_weight = lang, weight
+
+        if best_lang:
+            # A marker shared by many languages proves less than a rare one.
+            speakers = len(self.table.countries_speaking(best_lang))
+            agreement = 1.0 if speakers <= 3 else (0.7 if speakers <= 8 else 0.4)
+            detail = (
+                f"Sign text carries characters specific to {best_lang!r}, "
+                f"which {country.name} signs in"
+            )
+        else:
+            top_lang, top_weight = max(
+                reading.language_hints.items(), key=lambda kv: kv[1]
+            )
+            # Only count a mismatch when the hint is strong and narrow.
+            speakers = len(self.table.countries_speaking(top_lang))
+            if top_weight < 0.9 or speakers == 0 or speakers > 8:
+                return
+            best_weight = top_weight
+            agreement = -0.7
+            detail = (
+                f"Sign text looks like {top_lang!r}, which is not a signage "
+                f"language of {country.name}"
+            )
+
+        cand.adjustments.append(
+            Adjustment(
+                source="ocr_language",
+                detail=detail,
+                delta=self.cfg.w_script * 0.8 * best_weight * agreement,
+                agreement=agreement,
+            )
+        )
+
     def _apply_toponyms(self, cand: Candidate, hits: list[ToponymHit]) -> None:
         for hit in hits:
             d = haversine_km(
@@ -514,6 +566,7 @@ class FusionEngine:
                 self._apply_country_prior(cand, evidence.country_prior)
             if script_reading:
                 self._apply_script_reading(cand, script_reading)
+                self._apply_language_hints(cand, script_reading)
             if toponyms:
                 self._apply_toponyms(cand, toponyms)
 

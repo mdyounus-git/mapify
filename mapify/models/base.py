@@ -134,8 +134,14 @@ class EvidenceExtractor(Protocol):
 
 @runtime_checkable
 class OcrEngine(Protocol):
-    """Reads text out of an image."""
+    """Reads text out of an image.
+
+    ``extra_group`` lets the pipeline ask for one additional language group
+    for this image only, chosen from the writing system the zero-shot pass
+    identified.
+    """
 
     name: str
 
-    def read(self, image: PILImage) -> OcrResult: ...
+    def read(self, image: PILImage,
+             extra_group: tuple[str, ...] | None = None) -> OcrResult: ...

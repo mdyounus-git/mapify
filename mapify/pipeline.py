@@ -43,6 +43,7 @@ from .models.base import OcrResult, RawCandidate, VisualEvidence
 from .models.clip_backend import ClipBackend
 from .models.clip_evidence import ClipEvidenceExtractor, ClipGazetteerLocator
 from .models.geoclip_locator import GeoClipLocator
+from .models import ocr as ocr_groups
 from .models.ocr import build_ocr_engine
 
 log = logging.getLogger("mapify.pipeline")
@@ -334,7 +335,17 @@ class AnalysisEngine:
             script_reading = None
             if self.ocr:
                 step("ocr", "Reading signage text")
+                # If the zero-shot pass called a non-Latin script, load the
+                # recogniser that can actually read it. An English-only reader
+                # returns nothing on a Cyrillic sign, which is exactly when
+                # signage text would have been most useful.
+                extra_group = None
+                script_call = evidence.by_group("signage_script")
+                if script_call and script_call.called:
+                    extra_group = ocr_groups.group_for_script(script_call.option_key)
                 try:
+                    ocr_result = self.ocr.read(image, extra_group)
+                except TypeError:
                     ocr_result = self.ocr.read(image)
                 except Exception as exc:
                     ocr_result = OcrResult(error=f"{type(exc).__name__}: {exc}")
