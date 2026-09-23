@@ -36,6 +36,10 @@ WEB_DIR = Path(__file__).resolve().parent / "web"
 
 IMAGE_TYPES = ("Images (*.jpg;*.jpeg;*.png;*.webp)", "All files (*.*)")
 
+# A ceiling on one batch. At roughly three seconds an image this is already
+# half an hour of work, and an unbounded folder walk is a foot-gun.
+MAX_BATCH = 500
+
 
 def _free_port() -> int:
     """Ask the OS for an unused loopback port."""
@@ -101,6 +105,54 @@ class NativeBridge:
         with self._lock:
             self.approved_paths.add(str(path))
         return {"path": str(path), "name": path.name, "bytes": size}
+
+    def open_folder(self, recurse: bool = False) -> dict[str, Any]:
+        """Native folder dialog, returning the images inside it.
+
+        Every path is added to the approved set, the same as a single Open
+        would, so the service will read them and nothing else.
+        """
+        import webview
+
+        window = _WINDOW["ref"]
+        if window is None:
+            return {"error": "The application window is not ready yet."}
+        chosen = window.create_file_dialog(webview.FOLDER_DIALOG)
+        if not chosen:
+            return {"cancelled": True}
+
+        root = Path(chosen[0] if isinstance(chosen, (list, tuple))
+                    else chosen).resolve()
+        if not root.is_dir():
+            return {"error": "That is not a folder."}
+
+        walker = root.rglob("*") if recurse else root.glob("*")
+        files: list[dict[str, Any]] = []
+        skipped_big = 0
+        for path in sorted(walker):
+            if len(files) >= MAX_BATCH:
+                break
+            if not path.is_file():
+                continue
+            if path.suffix.lower() not in ACCEPTED_EXTENSIONS:
+                continue
+            size = path.stat().st_size
+            if size > self.cfg.server.max_upload_bytes:
+                skipped_big += 1
+                continue
+            resolved = str(path.resolve())
+            with self._lock:
+                self.approved_paths.add(resolved)
+            files.append({"path": resolved, "name": path.name, "bytes": size})
+
+        if not files:
+            return {"error": f"No JPG, PNG or WEBP images in {root.name}."}
+        return {
+            "folder": str(root),
+            "files": files,
+            "skipped_oversize": skipped_big,
+            "truncated": len(files) >= MAX_BATCH,
+        }
 
     def save_report(self, content: str, suggested: str = "mapify-report.json"
                     ) -> dict[str, Any]:

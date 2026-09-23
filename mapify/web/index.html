@@ -81,6 +81,23 @@
         Save report
       </button>
 
+      <button id="folder-btn" class="btn" type="button"
+              title="Analyse every image in a folder">
+        <svg class="btn-icon" viewBox="0 0 20 20" aria-hidden="true">
+          <path d="M2.5 15.5V5a1.5 1.5 0 0 1 1.5-1.5h3.3l1.6 2h6.6A1.5 1.5 0 0 1 17 7v8.5a1 1 0 0 1-1 1H3.5a1 1 0 0 1-1-1Z" />
+          <path d="M6 10.5h8M6 13h5" />
+        </svg>
+        Open folder
+      </button>
+
+      <button id="cancel-btn" class="btn btn-danger" type="button" hidden
+              title="Stop after the image being analysed now">
+        <svg class="btn-icon" viewBox="0 0 20 20" aria-hidden="true">
+          <rect x="5.5" y="5.5" width="9" height="9" rx="1.5" />
+        </svg>
+        Stop
+      </button>
+
       <button id="open-btn" class="btn btn-primary" type="button">
         <svg class="btn-icon" viewBox="0 0 20 20" aria-hidden="true">
           <path d="M2.5 15.5V5a1.5 1.5 0 0 1 1.5-1.5h3.3l1.6 2h6.6A1.5 1.5 0 0 1 17 7v8.5a1 1 0 0 1-1 1H3.5a1 1 0 0 1-1-1Z" />
@@ -98,8 +115,15 @@
     <!-- LEFT: candidates -->
     <aside id="left-rail" class="rail">
       <div class="rail-head">
-        <h2>Candidates</h2>
+        <h2 id="left-title">Candidates</h2>
         <span id="candidate-count" class="chip bare">—</span>
+      </div>
+      <div id="batch-bar" hidden>
+        <div class="track"><i id="batch-bar-fill"></i></div>
+        <div class="batch-stats">
+          <span id="batch-progress">0/0</span>
+          <span id="batch-rate"></span>
+        </div>
       </div>
       <div id="candidate-list" class="rail-body">
         <div class="empty">

@@ -248,7 +248,15 @@ class AnalysisEngine:
     # ------------------------------------------------------------- analyse
 
     def analyse(self, data: bytes, filename: str | None = None,
-                progress: ProgressFn | None = None) -> AnalysisReport:
+                progress: ProgressFn | None = None,
+                online_enrichment: bool = True) -> AnalysisReport:
+        """Analyse one image.
+
+        ``online_enrichment=False`` keeps the offline naming (Natural Earth,
+        time zone) and skips Nominatim and Overpass. Batch mode uses it so it
+        can cluster first and geocode once per distinct place rather than once
+        per image.
+        """
         t0 = time.time()
         report = AnalysisReport(ok=False, elapsed_s=0.0)
         step = progress or (lambda k, m: None)
@@ -362,7 +370,7 @@ class AnalysisEngine:
 
             # ---- enrichment -----------------------------------------------
             step("enrich", "Naming the location")
-            self._enrich(fused, report)
+            self._enrich(fused, report, online=online_enrichment)
 
             report.candidates = [c.as_dict() for c in fused.candidates]
             report.prediction = self._build_prediction(fused, exif_report)
@@ -428,10 +436,11 @@ class AnalysisEngine:
 
     # ---------------------------------------------------------- enrichment
 
-    def _enrich(self, fused: FusionResult, report: AnalysisReport) -> None:
+    def _enrich(self, fused: FusionResult, report: AnalysisReport,
+                online: bool = True) -> None:
         """Name the places. Offline first; online only where permitted."""
         net = self.cfg.network
-        online = not net.offline_only
+        online = online and not net.offline_only
         self.nominatim.reset_budget()
 
         for rank, cand in enumerate(fused.candidates):
@@ -468,6 +477,28 @@ class AnalysisEngine:
                     )
 
             cand.enrichment = info
+
+    def name_coordinate(self, lat: float, lon: float) -> dict[str, Any]:
+        """Everything we can say about one coordinate, online included.
+
+        Batch mode calls this once per cluster rather than once per image,
+        which is the difference between six Nominatim requests and six
+        hundred.
+        """
+        out: dict[str, Any] = {
+            "offline": self.geocoder.locate(lat, lon, place_limit=4).as_dict(),
+            "timezone": tz.lookup(lat, lon).as_dict(),
+        }
+        net = self.cfg.network
+        if net.offline_only:
+            return out
+        if net.nominatim_enabled:
+            result = self.nominatim.reverse(lat, lon)
+            if result:
+                out["nominatim"] = result.as_dict()
+            elif self.nominatim.last_error:
+                out["nominatim_error"] = self.nominatim.last_error
+        return out
 
     # ---------------------------------------------------------- prediction
 

@@ -13,7 +13,14 @@ const $ = (id) => document.getElementById(id);
 
 const el = {
   openBtn: $("open-btn"),
+  folderBtn: $("folder-btn"),
+  cancelBtn: $("cancel-btn"),
   saveBtn: $("save-btn"),
+  leftTitle: $("left-title"),
+  batchBar: $("batch-bar"),
+  batchBarFill: $("batch-bar-fill"),
+  batchProgress: $("batch-progress"),
+  batchRate: $("batch-rate"),
   fileInput: $("file-input"),
   globeMode: $("globe-mode"),
   lightMode: $("light-mode"),
@@ -84,6 +91,7 @@ const state = {
   status: null,
   native: null,
   previewUrl: null,
+  batch: null,          // { items, clusters, selected } while a batch exists
 };
 
 /* ─────────────────────────── formatting ─────────────────────────── */
@@ -114,6 +122,21 @@ function fmtKm(km) {
 }
 
 /* ───────────────────────────── boot ───────────────────────────── */
+
+/**
+ * The pywebview bridge, if there is one.
+ *
+ * Resolved at boot, but re-checked on every use: pywebviewready can fire
+ * later than the page finishes loading, and a user who clicks in that window
+ * should not be told the desktop app is a browser.
+ */
+function nativeApi() {
+  if (!state.native && window.pywebview?.api) {
+    state.native = window.pywebview.api;
+    document.body.classList.add("is-native");
+  }
+  return state.native;
+}
 
 function whenNative(timeoutMs = 4000) {
   if (window.pywebview?.api) return Promise.resolve(window.pywebview.api);
@@ -146,6 +169,8 @@ async function boot() {
   document.body.classList.toggle("is-native", Boolean(state.native));
 
   el.openBtn.addEventListener("click", openImage);
+  el.folderBtn.addEventListener("click", openFolder);
+  el.cancelBtn.addEventListener("click", cancelBatch);
   el.saveBtn.addEventListener("click", saveReport);
   el.fileInput.addEventListener("change", () => {
     const file = el.fileInput.files?.[0];
@@ -295,7 +320,7 @@ function updateCredit() {
 
 async function openImage() {
   if (state.busy) return;
-  if (!state.native) { el.fileInput.click(); return; }
+  if (!nativeApi()) { el.fileInput.click(); return; }
   let picked;
   try {
     picked = await state.native.open_image();
@@ -313,7 +338,7 @@ async function saveReport() {
   const json = JSON.stringify(state.report, null, 2);
   const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-");
   const suggested = `mapify-${stamp}.json`;
-  if (!state.native) {
+  if (!nativeApi()) {
     const blob = new Blob([json], { type: "application/json" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
@@ -325,6 +350,286 @@ async function saveReport() {
   const res = await state.native.save_report(json, suggested);
   if (res?.error) fail("Could not save", res.error);
   else if (res?.path) setHudState(`Saved — ${res.path}`);
+}
+
+/* ──────────────────────────── batch ──────────────────────────── */
+
+async function openFolder() {
+  if (state.busy) return;
+  if (!nativeApi()) {
+    fail("Folder analysis needs the desktop app",
+         "Open Mapify as an application rather than through a browser.");
+    return;
+  }
+  let picked;
+  try {
+    picked = await state.native.open_folder(false);
+  } catch (err) {
+    fail("Could not open the folder dialog", String(err));
+    return;
+  }
+  if (!picked || picked.cancelled) return;
+  if (picked.error) { fail("Cannot analyse that folder", picked.error); return; }
+  runBatch(picked);
+}
+
+async function cancelBatch() {
+  el.cancelBtn.disabled = true;
+  setHudState("Stopping after the current image…");
+  try {
+    await fetch("/api/batch/cancel", { method: "POST" });
+  } catch {}
+}
+
+async function runBatch(folder) {
+  state.busy = true;
+  state.batch = { items: [], clusters: [], selected: -1, folder: folder.folder };
+  state.report = null;
+  el.openBtn.disabled = true;
+  el.folderBtn.disabled = true;
+  el.saveBtn.disabled = true;
+  el.cancelBtn.hidden = false;
+  el.cancelBtn.disabled = false;
+  el.leftTitle.textContent = "Batch";
+  el.batchBar.hidden = false;
+  el.sourceFoot.hidden = true;
+  el.report.innerHTML = "";
+  el.verdict.textContent = "batch";
+  el.verdict.className = "chip working";
+  state.globe.clearMarkers();
+  renderBatch();
+
+  const started = Date.now();
+  if (folder.truncated) {
+    setHudState(`Folder capped at ${folder.files.length} images`);
+  }
+
+  try {
+    const resp = await fetch("/api/batch/stream", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ paths: folder.files.map((f) => f.path) }),
+    });
+    if (!resp.ok) {
+      let detail = `HTTP ${resp.status}`;
+      try { detail = (await resp.json()).detail || detail; } catch {}
+      throw new Error(detail);
+    }
+
+    const reader = resp.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+    for (;;) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      let nl;
+      while ((nl = buffer.indexOf("\n")) >= 0) {
+        const line = buffer.slice(0, nl).trim();
+        buffer = buffer.slice(nl + 1);
+        if (!line) continue;
+        let msg;
+        try { msg = JSON.parse(line); } catch { continue; }
+        handleBatchEvent(msg, started);
+      }
+    }
+  } catch (err) {
+    fail("Batch failed", err.message || String(err));
+  } finally {
+    state.busy = false;
+    el.openBtn.disabled = false;
+    el.folderBtn.disabled = false;
+    el.cancelBtn.hidden = true;
+    refreshStatus();
+  }
+}
+
+function handleBatchEvent(msg, started) {
+  const b = state.batch;
+  if (!b) return;
+
+  if (msg.type === "start") {
+    b.items = Array.from({ length: msg.total }, () => null);
+  } else if (msg.type === "item") {
+    b.items[msg.index] = msg.item;
+    if (msg.done) {
+      const frac = msg.done / msg.total;
+      el.batchBarFill.style.width = `${frac * 100}%`;
+      el.batchProgress.textContent = `${msg.done}/${msg.total}`;
+      const perImage = (Date.now() - started) / 1000 / msg.done;
+      const left = Math.round(perImage * (msg.total - msg.done));
+      el.batchRate.textContent = msg.done < msg.total
+        ? `${perImage.toFixed(1)}s each · ~${left}s left` : "";
+    }
+    renderBatch();
+  } else if (msg.type === "phase") {
+    setHudState(msg.phase === "clustering"
+      ? "Grouping results by place…"
+      : `Naming ${msg.clusters} place${msg.clusters === 1 ? "" : "s"}…`);
+  } else if (msg.type === "cluster") {
+    const i = b.clusters.findIndex((c) => c.index === msg.cluster.index);
+    if (i >= 0) b.clusters[i] = msg.cluster;
+    else b.clusters.push(msg.cluster);
+    for (const m of msg.cluster.members) {
+      if (b.items[m]) b.items[m].place = msg.cluster.place;
+    }
+    renderBatch();
+  } else if (msg.type === "complete") {
+    b.items = msg.items;
+    b.clusters = msg.clusters;
+    finishBatch(msg);
+  } else if (msg.type === "error") {
+    fail("Batch failed", msg.error);
+  }
+}
+
+function finishBatch(summary) {
+  el.batchBarFill.style.width = "100%";
+  el.batchProgress.textContent = `${summary.analysed}/${summary.total}`;
+  el.batchRate.textContent = summary.seconds_per_image
+    ? `${summary.seconds_per_image}s each` : "";
+  el.verdict.textContent = summary.cancelled ? "stopped" : "done";
+  el.verdict.className = `chip ${summary.cancelled ? "low" : "high"}`;
+  el.saveBtn.disabled = false;
+  state.report = summary;          // Save report exports the whole batch
+  setHudState(summary.cancelled
+    ? `Stopped — ${summary.analysed} of ${summary.total} analysed`
+    : `${summary.analysed} images, ${summary.clusters.length} distinct places`);
+
+  renderBatch();
+  renderBatchSummary(summary);
+
+  // One marker per place, labelled with how many images landed there.
+  state.globe.clearMarkers();
+  summary.clusters.forEach((c, i) => {
+    state.globe.addMarker({
+      id: `c${c.index}`,
+      lat: c.latitude,
+      lon: c.longitude,
+      label: `${c.place} (${c.size})`,
+      kind: i === 0 ? "primary" : "candidate",
+      radiusKm: c.radius_km > 1 ? c.radius_km : 0,
+    });
+  });
+  if (summary.clusters.length) {
+    const c = summary.clusters[0];
+    state.globe.setActiveMarker("c0");
+    state.globe.flyTo(c.latitude, c.longitude, { altitude: 1.6 });
+  }
+}
+
+function renderBatch() {
+  const b = state.batch;
+  if (!b) return;
+  const done = b.items.filter((i) => i && i.state === "done").length;
+  el.candidateCount.textContent = String(done);
+
+  // Group by cluster once naming has happened; keep file order before that.
+  const byCluster = new Map();
+  const loose = [];
+  b.items.forEach((item, index) => {
+    if (!item) return;
+    if (item.cluster != null) {
+      if (!byCluster.has(item.cluster)) byCluster.set(item.cluster, []);
+      byCluster.get(item.cluster).push([index, item]);
+    } else {
+      loose.push([index, item]);
+    }
+  });
+
+  const out = [];
+  for (const c of b.clusters) {
+    const members = byCluster.get(c.index) || [];
+    if (!members.length) continue;
+    out.push(`<div class="cluster-head">
+        <span class="cluster-name">${esc(c.place || "Naming…")}</span>
+        <span class="cluster-meta">${c.size} · ±${esc(fmtKm(c.radius_km))}</span>
+      </div>`);
+    for (const [index, item] of members) out.push(batchRow(index, item));
+  }
+  if (loose.length) {
+    if (out.length) {
+      out.push(`<div class="cluster-head">
+        <span class="cluster-name">Not grouped</span>
+        <span class="cluster-meta">${loose.length}</span></div>`);
+    }
+    for (const [index, item] of loose) out.push(batchRow(index, item));
+  }
+
+  el.candidateList.innerHTML = out.join("") ||
+    `<div class="empty"><p><strong>Queued</strong>Waiting to start.</p></div>`;
+
+  for (const node of el.candidateList.querySelectorAll(".batch-row")) {
+    node.addEventListener("click", () => selectBatchItem(Number(node.dataset.i)));
+  }
+}
+
+function batchRow(index, item) {
+  const side = item.state === "done"
+    ? (item.confidence || "")
+    : item.state === "failed" ? "failed"
+    : item.state === "running" ? "…" : "";
+  const active = state.batch.selected === index ? " active" : "";
+  return `<button type="button" class="batch-row ${esc(item.state)}${active}"
+      data-i="${index}" title="${esc(item.place || item.name)}">
+      <span class="dot"></span>
+      <span class="batch-name">${esc(item.name)}</span>
+      <span class="batch-side">${esc(side)}</span>
+    </button>`;
+}
+
+function selectBatchItem(index) {
+  const b = state.batch;
+  const item = b && b.items ? b.items[index] : null;
+  if (!item) return;
+  b.selected = index;
+  renderBatch();
+
+  if (item.latitude == null) {
+    el.report.innerHTML = `<div class="note warn"><div><strong>${
+      esc(item.name)}</strong><br>${esc(
+      item.error || "No location was produced for this image.")}</div></div>`;
+    return;
+  }
+  if (item.report) {
+    renderReport(item.report);
+    el.verdict.textContent = item.confidence || "—";
+    el.verdict.className = `chip ${item.confidence || "bare"}`;
+  }
+  if (item.cluster != null) state.globe.setActiveMarker(`c${item.cluster}`);
+  state.globe.flyTo(item.latitude, item.longitude, { altitude: 1.5 });
+  setHudState(item.place || item.name);
+}
+
+function renderBatchSummary(summary) {
+  const rows = summary.clusters.map((c, i) => `<li>
+      <span class="a">${i + 1}. ${esc(c.place)}</span>
+      <span class="b">${c.size} img · ±${esc(fmtKm(c.radius_km))}</span>
+    </li>`).join("");
+
+  el.report.innerHTML = block("Batch result", `
+    <div class="verdict determinate">
+      <p class="place">${summary.clusters.length} distinct place${
+        summary.clusters.length === 1 ? "" : "s"}</p>
+      <p class="place-sub">${summary.analysed} of ${summary.total} images
+        analysed${summary.cancelled ? " before stopping" : ""}</p>
+      <dl class="rows">
+        ${row("Folder", state.batch.folder)}
+        ${row("Analysed", `${summary.analysed}`)}
+        ${row("Failed", summary.failed ? `${summary.failed}` : null)}
+        ${row("Skipped", summary.skipped ? `${summary.skipped}` : null)}
+        ${row("Time", `${summary.elapsed_s}s · ${
+          summary.seconds_per_image || "—"}s per image`)}
+        ${row("Geocoding requests", `${summary.geocode_requests}`)}
+      </dl>
+      <p class="measured">One geocoding request per distinct place, not per
+        image: ${summary.geocode_requests} for ${summary.analysed} images.
+        Nominatim allows one per second, so this is the difference between
+        seconds and minutes.</p>
+    </div>`)
+    + block("Places found", `<ul class="list">${rows}</ul>`)
+    + `<p class="footnote">Select any image on the left for its full
+       assessment. Save report exports the whole batch.</p>`;
 }
 
 /* ─────────────────────────── analysis ─────────────────────────── */
@@ -341,7 +646,11 @@ async function analyse(source) {
   }
 
   state.busy = true;
+  state.batch = null;
+  el.leftTitle.textContent = "Candidates";
+  el.batchBar.hidden = true;
   el.openBtn.disabled = true;
+  el.folderBtn.disabled = true;
   el.saveBtn.disabled = true;
   el.report.innerHTML = "";
   el.candidateList.innerHTML = "";
@@ -386,6 +695,7 @@ async function analyse(source) {
     showProgress(false);
     state.busy = false;
     el.openBtn.disabled = false;
+    el.folderBtn.disabled = false;
     refreshStatus();
   }
 }

@@ -153,6 +153,18 @@ after that take **about three seconds each**.
 If something goes wrong, `Mapify-console.bat` runs the same application with a
 visible console and a log.
 
+### A whole folder at once
+
+**Open folder** analyses every image in a directory, then groups the results by
+place. A folder of two hundred photographs of one street costs **one**
+geocoding request, not two hundred: the batch analyses everything with the
+network half switched off, clusters the results, and names each *place* once.
+Nominatim allows one request per second, so that is the difference between
+seconds and minutes.
+
+Stop halts after the image being analysed and keeps everything already done.
+Selecting any image in the queue shows its full assessment.
+
 ### Optional: read text on signs
 
 ```bash

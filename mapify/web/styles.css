@@ -224,6 +224,19 @@ button {
   fill: none; stroke: currentColor; stroke-width: 1.6;
   stroke-linecap: round; stroke-linejoin: round; }
 
+/* An explicit display beats the user agent's [hidden] rule, so buttons that
+   are shown and hidden at runtime need this or they never go away. */
+.btn[hidden], button[hidden] { display: none !important; }
+
+.btn-danger {
+  color: #ffd9d6;
+  background: linear-gradient(180deg, #8f3b35, #6d2b26);
+  border-color: #b8564e;
+}
+.btn-danger:hover:not(:disabled) {
+  background: linear-gradient(180deg, #a34741, #7d332d);
+}
+
 /* ═══════════════════════════════ stage ══════════════════════════════ */
 
 #stage {

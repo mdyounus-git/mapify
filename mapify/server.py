@@ -301,6 +301,95 @@ def create_app(cfg: Config | None = None, token: str | None = None,
         data, name = _read_approved(payload.get("path", ""))
         return _stream(data, name)
 
+    # ------------------------------------------------------------- batch
+    #
+    # One batch at a time. The engine is a single CPU-bound pipeline; running
+    # two concurrently would halve the speed of both and make the progress
+    # meaningless.
+    batch_state: dict[str, Any] = {"runner": None}
+
+    @app.post("/api/batch/stream")
+    async def batch_stream(payload: dict[str, Any]) -> StreamingResponse:
+        from .batch import BatchRunner
+
+        paths = payload.get("paths") or []
+        if not isinstance(paths, list) or not paths:
+            raise HTTPException(status_code=400, detail="No paths given.")
+        if batch_state["runner"] is not None:
+            raise HTTPException(
+                status_code=409,
+                detail="A batch is already running. Cancel it first.",
+            )
+
+        # Same rule as a single analysis: only files the native dialog
+        # handed out.
+        approved: list[str] = []
+        for raw in paths:
+            resolved = str(Path(str(raw)).resolve())
+            if bridge is None:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Batch analysis is only available in the desktop app.",
+                )
+            if resolved not in bridge.approved_paths:
+                raise HTTPException(
+                    status_code=403,
+                    detail=(
+                        "One or more files were not chosen through the "
+                        "application's folder dialog."
+                    ),
+                )
+            approved.append(resolved)
+
+        runner = BatchRunner(engine)
+        batch_state["runner"] = runner
+
+        queue: asyncio.Queue[str | None] = asyncio.Queue()
+        loop = asyncio.get_running_loop()
+
+        def emit(event: dict[str, Any]) -> None:
+            loop.call_soon_threadsafe(queue.put_nowait, json.dumps(event))
+
+        async def run() -> None:
+            try:
+                await asyncio.to_thread(runner.run, approved, emit)
+            except Exception as exc:  # pragma: no cover - guard
+                log.exception("batch failed")
+                await queue.put(json.dumps({
+                    "type": "error",
+                    "error": f"{type(exc).__name__}: {exc}",
+                }))
+            finally:
+                batch_state["runner"] = None
+                await queue.put(None)
+
+        task = loop.create_task(run())
+
+        async def body():
+            try:
+                while True:
+                    item = await queue.get()
+                    if item is None:
+                        break
+                    yield item + "\n"
+            finally:
+                if not task.done():
+                    runner.cancel()
+
+        return StreamingResponse(
+            body(),
+            media_type="application/x-ndjson",
+            headers={"Cache-Control": "no-store", "X-Accel-Buffering": "no"},
+        )
+
+    @app.post("/api/batch/cancel")
+    async def batch_cancel() -> dict[str, Any]:
+        runner = batch_state.get("runner")
+        if runner is None:
+            return {"cancelled": False, "reason": "no batch running"}
+        runner.cancel()
+        return {"cancelled": True}
+
     @app.get("/api/attribution")
     async def attribution() -> dict[str, Any]:
         path = ROOT / "ATTRIBUTION.md"
