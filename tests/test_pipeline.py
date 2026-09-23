@@ -134,9 +134,9 @@ class TestDecode:
 class TestAnalysis:
     def test_reports_a_location_for_a_confident_locator(self, engine, plain_jpeg):
         with_locator(engine, [
-            (48.8584, 2.2945, 0.05),
-            (48.8590, 2.2950, 0.05),
-            (48.8580, 2.2940, 0.04),
+            (48.8584, 2.2945, 0.12),
+            (48.8590, 2.2950, 0.12),
+            (48.8580, 2.2940, 0.10),
         ])
         report = engine.analyse(plain_jpeg, "paris.jpg")
         assert report.ok, report.error

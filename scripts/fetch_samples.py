@@ -22,12 +22,14 @@ import argparse
 import json
 import sys
 import time
+import http.client
 import urllib.error
 import urllib.parse
 import urllib.request
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 OUT = ROOT / "samples"
 
 API = "https://commons.wikimedia.org/w/api.php"
@@ -36,33 +38,36 @@ UA = (
     "https://github.com/mdyounus-git/mapify)"
 )
 
-# Spread across continents, traffic sides, scripts and biomes, so the sample
-# actually exercises the evidence machinery rather than four European cities.
-SITES = [
-    ("paris",      48.8584,   2.2945, "Paris, France"),
-    ("tokyo",      35.6595, 139.7005, "Shibuya, Tokyo, Japan"),
-    ("bengaluru",  12.9794,  77.5912, "Vidhana Soudha, Bengaluru, India"),
-    ("moscow",     55.7525,  37.6231, "Red Square, Moscow, Russia"),
-    ("cairo",      29.9792,  31.1342, "Giza, Egypt"),
-    ("nyc",        40.7580, -73.9855, "Times Square, New York, USA"),
-    ("sydney",    -33.8568, 151.2153, "Sydney Opera House, Australia"),
-    ("rio",       -22.9519, -43.2105, "Corcovado, Rio de Janeiro, Brazil"),
-    ("reykjavik",  64.1466, -21.9426, "Reykjavik, Iceland"),
-    ("bangkok",    13.7500, 100.4913, "Grand Palace, Bangkok, Thailand"),
-    ("nairobi",    -1.2921,  36.8219, "Nairobi, Kenya"),
-    ("istanbul",   41.0082,  28.9784, "Istanbul, Turkiye"),
-]
+# The sampling frame lives in sample_sites.py so it can be inspected and
+# argued with on its own. 165 sites, with Africa and South America
+# deliberately over-sampled relative to their share of photo corpora, because
+# that is where GeoCLIP is known to fail.
+from sample_sites import SITES
 
 ALLOWED_LICENCE_MARKERS = (
     "cc0", "cc by", "cc-by", "public domain", "pd-", "attribution",
 )
 
 
-def api_get(params: dict[str, str]) -> dict:
+def api_get(params: dict[str, str], attempts: int = 3) -> dict:
+    """Query the API, retrying transient failures.
+
+    Over 165 sites the connection will be dropped at least once; that must
+    cost one site a retry, not end the run.
+    """
     url = API + "?" + urllib.parse.urlencode({**params, "format": "json"})
-    req = urllib.request.Request(url, headers={"User-Agent": UA})
-    with urllib.request.urlopen(req, timeout=45) as resp:
-        return json.load(resp)
+    last: Exception | None = None
+    for attempt in range(attempts):
+        req = urllib.request.Request(url, headers={"User-Agent": UA})
+        try:
+            with urllib.request.urlopen(req, timeout=45) as resp:
+                return json.load(resp)
+        except (urllib.error.URLError, http.client.HTTPException,
+                ConnectionError, TimeoutError, json.JSONDecodeError) as exc:
+            last = exc
+            if attempt < attempts - 1:
+                time.sleep(2.0 * (attempt + 1))
+    raise RuntimeError(f"giving up after {attempts} attempts: {last}")
 
 
 def geosearch(lat: float, lon: float, radius_m: int, limit: int) -> list[dict]:
@@ -95,29 +100,61 @@ def usable(page: dict) -> tuple[bool, str]:
     return True, licence
 
 
-def download(url: str, dest: Path) -> int:
-    req = urllib.request.Request(url, headers={"User-Agent": UA})
-    with urllib.request.urlopen(req, timeout=90) as resp:
-        data = resp.read()
-    dest.write_bytes(data)
-    return len(data)
+def download(url: str, dest: Path, attempts: int = 3) -> int:
+    last: Exception | None = None
+    for attempt in range(attempts):
+        req = urllib.request.Request(url, headers={"User-Agent": UA})
+        try:
+            with urllib.request.urlopen(req, timeout=90) as resp:
+                data = resp.read()
+            dest.write_bytes(data)
+            return len(data)
+        except (urllib.error.URLError, http.client.HTTPException,
+                ConnectionError, TimeoutError) as exc:
+            last = exc
+            if attempt < attempts - 1:
+                time.sleep(2.0 * (attempt + 1))
+    raise RuntimeError(f"download failed after {attempts} attempts: {last}")
 
 
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--per-site", type=int, default=1)
     ap.add_argument("--radius", type=int, default=600)
+    ap.add_argument("--refetch", action="store_true",
+                    help="ignore what is already downloaded")
     args = ap.parse_args()
 
     OUT.mkdir(parents=True, exist_ok=True)
     manifest: list[dict] = []
+    failures: list[str] = []
 
-    for slug, lat, lon, label in SITES:
-        print(f"{slug:11s} {label}")
+    # Resume: keep whatever a previous interrupted run already fetched.
+    existing_manifest = OUT / "manifest.json"
+    have: dict[str, dict] = {}
+    if existing_manifest.exists() and not args.refetch:
+        try:
+            for entry in json.loads(
+                existing_manifest.read_text(encoding="utf-8")
+            ).get("samples", []):
+                if (OUT / entry["file"]).exists():
+                    have[entry["site"]] = entry
+        except (json.JSONDecodeError, KeyError):
+            have = {}
+        if have:
+            print(f"resuming: {len(have)} sites already fetched\n")
+            manifest.extend(have.values())
+
+    for slug, lat, lon, region, scene, label in SITES:
+        if slug in have:
+            continue
+        print(f"{slug:16s} {region:<14} {scene:<9} {label}")
         try:
             pages = geosearch(lat, lon, args.radius, 25)
-        except urllib.error.URLError as exc:
-            print(f"            geosearch failed: {exc}")
+        except Exception as exc:
+            print(f"                 geosearch failed, skipping: "
+                  f"{type(exc).__name__}")
+            failures.append(slug)
             continue
 
         taken = 0
@@ -139,8 +176,9 @@ def main() -> int:
             dest = OUT / f"{slug}{ext}"
             try:
                 size = download(info.get("thumburl") or info["url"], dest)
-            except urllib.error.URLError as exc:
-                print(f"            download failed: {exc}")
+            except Exception as exc:
+                print(f"                 download failed: "
+                      f"{type(exc).__name__}")
                 continue
 
             def clean(key: str) -> str:
@@ -159,6 +197,8 @@ def main() -> int:
             entry = {
                 "file": dest.name,
                 "site": slug,
+                "region": region,
+                "scene": scene,
                 "expected_label": label,
                 "true_lat": true_lat,
                 "true_lon": true_lon,
@@ -171,12 +211,18 @@ def main() -> int:
             }
             manifest.append(entry)
             taken += 1
-            print(f"            {dest.name}  {size:,} B  {entry['licence']}  "
-                  f"({true_lat:.4f}, {true_lon:.4f})")
+            print(f"                 {dest.name}  {size / 1024:.0f} KB  "
+                  f"{entry['licence']}  ({true_lat:.4f}, {true_lon:.4f})")
             time.sleep(0.6)   # be polite to the API
 
         if taken == 0:
-            print("            no usable freely-licensed image found")
+            print("                 no usable freely-licensed image found")
+
+    regions: dict[str, int] = {}
+    scenes: dict[str, int] = {}
+    for e in manifest:
+        regions[e["region"]] = regions.get(e["region"], 0) + 1
+        scenes[e["scene"]] = scenes.get(e["scene"], 0) + 1
 
     (OUT / "manifest.json").write_text(
         json.dumps({
@@ -185,6 +231,8 @@ def main() -> int:
                 "evaluation. Each entry records its licence and author; "
                 "these files are not redistributed by this repository."
             ),
+            "counts": {"total": len(manifest), "by_region": regions,
+                       "by_scene": scenes},
             "samples": manifest,
         }, indent=2, ensure_ascii=False),
         encoding="utf-8",

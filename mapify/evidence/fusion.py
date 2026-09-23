@@ -658,68 +658,77 @@ class FusionEngine:
     ) -> tuple[str, str, list[str]]:
         """Decide how much to claim.
 
-        Three independent things have to hold before we claim a location:
-        the locator has to have committed real probability mass to its top-k
-        at all; that mass has to be concentrated rather than scattered; and
-        the rest of the image must not contradict it.
+        The rule here is not intuition. It was fitted over a 163-sample
+        benchmark by scripts/tune_confidence.py, searching on half the samples
+        and validating on the other half.
+
+        The previous rule led with dispersion and treated locator mass as a
+        mild downgrade, which let results 15,689 km off target be called
+        "high confidence". The data says mass is the primary separator: below
+        0.10 only a third of predictions land within 200 km, above 0.25 nearly
+        all of them do. Concentration, which the old rule leaned on hardest,
+        barely separates correct from incorrect at all.
+
+        "High" therefore requires all four conditions, not a majority of them.
         """
         cfg = self.cfg
         notes: list[str] = []
         if not candidates:
             return "insufficient", "No candidates were produced.", notes
 
-        # 1. Spread and concentration set the starting band.
-        if uncertainty_km <= cfg.high_spread_km and concentration >= cfg.high_concentration:
-            band = "high"
-            reason = (
-                f"The candidates sit within {uncertainty_km:.0f} km of each "
-                f"other and {concentration:.0%} of the retained probability is "
-                f"in the leading one."
+        # 1. Nothing recognised. Said plainly, before anything else.
+        if locator_mass > 0 and locator_mass < cfg.min_locator_mass:
+            return (
+                "insufficient",
+                f"The locator committed only {locator_mass:.1%} of its "
+                f"probability to its entire shortlist. It did not recognise "
+                f"anything specific in this image.",
+                ["No location is reported. The candidates below are what the "
+                 "model produced, not a finding."],
             )
-        elif uncertainty_km <= cfg.medium_spread_km and concentration >= cfg.medium_concentration:
+
+        # 2. High: all four, or not at all.
+        high_checks = {
+            "mass": locator_mass >= cfg.high_locator_mass,
+            "spread": uncertainty_km <= cfg.high_spread_km,
+            "concentration": concentration >= cfg.high_concentration,
+            "evidence": evidence_support >= cfg.high_min_evidence,
+        }
+        if all(high_checks.values()):
+            return (
+                "high",
+                f"The locator put {locator_mass:.0%} of its distribution into "
+                f"a shortlist that agrees to within {uncertainty_km:.0f} km, "
+                f"and the rest of the image supports it.",
+                notes,
+            )
+
+        # 3. Medium: a region, not a location.
+        if (locator_mass >= cfg.medium_locator_mass
+                and uncertainty_km <= cfg.medium_spread_km
+                and concentration >= cfg.medium_concentration):
             band = "medium"
+            missing = [k for k, ok in high_checks.items() if not ok]
             reason = (
-                f"Candidates span {uncertainty_km:.0f} km, with "
-                f"{concentration:.0%} of the retained probability leading."
+                f"Candidates span {uncertainty_km:.0f} km with "
+                f"{locator_mass:.0%} of the locator's distribution behind "
+                f"them. Short of high confidence on: {', '.join(missing)}."
             )
         elif uncertainty_km <= cfg.insufficient_spread_km:
             band = "low"
             reason = (
-                f"Candidates are spread over {uncertainty_km:.0f} km. That is "
-                f"a region, not a location."
+                f"Candidates are spread over {uncertainty_km:.0f} km with "
+                f"{locator_mass:.0%} of the locator's distribution behind "
+                f"them. Treat this as a lead, not a location."
             )
         else:
             band = "insufficient"
             reason = (
-                f"Candidates are scattered over {uncertainty_km:.0f} km, which "
-                f"is most of a hemisphere. The image cannot be placed."
+                f"Candidates are scattered over {uncertainty_km:.0f} km, "
+                f"which is most of a hemisphere. The image cannot be placed."
             )
 
-        # 2. Absolute mass. GeoCLIP softmaxes over 100,000 gallery points, so
-        #    a top-k holding almost none of that distribution means the model
-        #    recognised nothing in particular, however tidy the top-k looks.
-        if locator_mass > 0:
-            if locator_mass < cfg.min_locator_mass:
-                notes.append(
-                    f"The locator committed only {locator_mass:.1%} of its "
-                    "probability to its whole shortlist: it did not recognise "
-                    "anything specific in this image."
-                )
-                band = "insufficient"
-                reason += (
-                    f" The locator's entire shortlist holds just "
-                    f"{locator_mass:.1%} of its distribution."
-                )
-            elif locator_mass < cfg.weak_locator_mass and band in {"high", "medium"}:
-                idx = max(0, self._ORDER.index(band) - 1)
-                band = self._ORDER[idx]
-                notes.append(
-                    f"Downgraded: the locator's shortlist holds only "
-                    f"{locator_mass:.1%} of its probability distribution, so "
-                    "the tight grouping is not worth much."
-                )
-
-        # 3. Contradiction. If the rest of the image argues against the
+        # 4. Contradiction. If the rest of the image argues against the
         #    winner, say so and claim less.
         if evidence_support < cfg.contradiction_threshold and band != "insufficient":
             idx = max(0, self._ORDER.index(band) - 1)
@@ -730,15 +739,19 @@ class FusionEngine:
                 "odds). Check the evidence list before using this."
             )
 
-        # 4. Corroboration from text can restore a band, because a place name
+        # 5. Corroboration from text can lift a band, because a place name
         #    matched in the gazetteer is positional evidence in its own right.
+        #
+        #    It cannot lift anything to "high". There is no measurement
+        #    showing that a toponym match makes a high-confidence call safe,
+        #    and the high band is the one promise this tool makes.
         corroborated = [
             a for a in candidates[0].adjustments
             if a.source == "toponym" and a.delta > 0
         ]
-        if corroborated and band in {"low", "medium"} and uncertainty_km <= cfg.medium_spread_km:
-            idx = min(len(self._ORDER) - 1, self._ORDER.index(band) + 1)
-            band = self._ORDER[idx]
+        if (corroborated and band in {"low", "insufficient"}
+                and uncertainty_km <= cfg.medium_spread_km):
+            band = "medium"
             reason += (
                 " Text read from the image independently corroborates it: "
                 + corroborated[0].detail + "."

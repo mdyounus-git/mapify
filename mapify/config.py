@@ -94,21 +94,38 @@ class FusionConfig:
     w_plate: float = 0.45
     w_region_hint: float = 0.50
     max_total_adjustment: float = 2.5
-    # Confidence banding.  "concentration" is the share of retained
-    # probability held by the leading candidate; "spread" is the radius that
-    # contains 68% of the candidate mass; "locator_mass" is how much of the
-    # locator's full distribution its whole shortlist captured.
-    high_concentration: float = 0.45
-    high_spread_km: float = 160.0
+    # ---- Confidence banding -------------------------------------------
+    #
+    # These are not guesses. They were fitted by scripts/tune_confidence.py
+    # over a 163-sample benchmark, searching on half and validating on the
+    # other half, and the held-out numbers are recorded in
+    # PHASES/Implemented Phases/PHASE-13.
+    #
+    # The earlier values came from an 11-sample set and were badly wrong:
+    # "high" was reached by results 15,689 km off target.
+    #
+    # "high" requires all four of these. Mass is the primary gate -- it is
+    # what actually separates a correct prediction from a confidently wrong
+    # one -- and dispersion is secondary.
+    high_locator_mass: float = 0.25
+    high_spread_km: float = 20.0
+    high_concentration: float = 0.80
+    high_min_evidence: float = 0.0
+
+    # "medium" is a weaker claim and the data supports about 85-90% of these
+    # landing within 1500 km. It is not a location; it is a region.
+    medium_locator_mass: float = 0.08
+    medium_spread_km: float = 200.0
     medium_concentration: float = 0.20
-    medium_spread_km: float = 900.0
+
     insufficient_spread_km: float = 2500.0
-    # Below this, the locator recognised nothing in particular and we say so.
-    min_locator_mass: float = 0.015
-    # Below this, a tidy-looking shortlist is downgraded one band.
-    weak_locator_mass: float = 0.045
+
+    # Below this the locator recognised nothing in particular and we say so.
+    min_locator_mass: float = 0.03
+
     # Net log-odds below which the evidence is treated as contradicting.
     contradiction_threshold: float = -0.35
+
     candidates_returned: int = 5
     cluster_radius_km: float = 120.0
 

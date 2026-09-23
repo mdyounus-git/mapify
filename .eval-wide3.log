@@ -1,0 +1,47 @@
+Loading models (offline=True, ocr=False)…
+E:\mapify\.venv\Lib\site-packages\torch\jit\_script.py:1491: FutureWarning: `torch.jit.script` is deprecated. Please switch to `torch.compile` or `torch.export`.
+  warnings.warn(
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+WARNING:huggingface_hub.utils._http:Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+Loading weights:   0%|          | 0/590 [00:00<?, ?it/s]Loading weights:   3%|▎         | 15/590 [00:00<00:04, 141.14it/s]Loading weights:   5%|▌         | 30/590 [00:00<00:03, 142.59it/s]Loading weights:   8%|▊         | 45/590 [00:00<00:04, 117.30it/s]Loading weights:  10%|█         | 61/590 [00:00<00:04, 126.52it/s]Loading weights:  13%|█▎        | 74/590 [00:00<00:04, 108.69it/s]Loading weights:  15%|█▍        | 86/590 [00:00<00:04, 105.10it/s]Loading weights:  18%|█▊        | 109/590 [00:00<00:03, 137.21it/s]Loading weights:  21%|██        | 125/590 [00:00<00:03, 137.90it/s]Loading weights:  26%|██▌       | 151/590 [00:01<00:02, 170.40it/s]Loading weights:  29%|██▉       | 170/590 [00:01<00:02, 173.85it/s]Loading weights:  32%|███▏      | 188/590 [00:01<00:02, 172.39it/s]Loading weights:  35%|███▍      | 206/590 [00:01<00:02, 151.28it/s]Loading weights:  38%|███▊      | 224/590 [00:01<00:02, 158.55it/s]Loading weights: 100%|██████████| 590/590 [00:01<00:00, 378.99it/s]
+ready in 21s, 163 samples
+
+  25/163…
+  50/163…
+  75/163…
+  100/163…
+  125/163…
+  150/163…
+
+Accuracy over 163 samples (cumulative), 1.0s per image:
+  street     <=      1 km   30/163    18% #####
+  city       <=     25 km   61/163    37% ##########
+  region     <=    200 km   74/163    45% ############
+  country    <=    750 km   97/163    60% ###############
+  continent  <=   2500 km  113/163    69% ##################
+  median error 368.0 km
+
+Reliability — is the stated confidence earned?
+  stated            n       median         worst  <=200km  verdict
+  high             20       1.2 km        106 km    100%     100%  ok — 20 of 20 within 200 km
+  medium           54      15.5 km     15,110 km     63%      89%  no promise — 89% within 1500 km
+  low              51     657.6 km     16,854 km     37%      63%  no promise — 63% within 1500 km
+  insufficient     38   6,984.7 km     16,214 km      3%      16%  no promise — 16% within 1500 km
+
+By region — the headline hides the weakness
+                      n   <=25km   <=200km      median
+  Asia               43     47%      51%     49.9 km
+  Europe             39     38%      51%    191.7 km
+  Africa             32     12%      22%  2,396.4 km
+  South America      21     29%      33%    722.9 km
+  North America      19     58%      68%     15.1 km
+  Oceania             9     56%      56%     14.4 km
+
+By scene — landmarks are the easy case
+                      n   <=25km   <=200km      median
+  street            130     34%      39%    560.9 km
+  rural              12     42%      75%     70.9 km
+  landmark           11     82%      91%      0.1 km
+  coastal            10     30%      40%  1,158.1 km
+
+wrote data/eval_wide.json

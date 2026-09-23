@@ -19,7 +19,7 @@ finished, whatever the code says.
 
 ## Status
 
-**10 of 20 phases implemented (50%).**
+**11 of 20 phases implemented (55%).**
 
 | # | Phase | State |
 |---|---|---|
@@ -35,7 +35,7 @@ finished, whatever the code says.
 | 10 | OCR and script-adaptive reading | ✅ implemented |
 | 11 | Batch analysis | ⬜ implementable |
 | 12 | Report export | ⬜ implementable |
-| 13 | A wider benchmark, and a calibration curve | ⬜ implementable |
+| 13 | A wider benchmark, and a calibration that survives it | ✅ implemented |
 | 14 | Landmark verification against OSM and Wikidata | ⬜ implementable |
 | 15 | Shadow and sun-angle latitude estimation | ⬜ implementable |
 | 16 | A second locator, and an ensemble | ⬜ implementable |
@@ -67,5 +67,10 @@ unusable if it were missing:
 > The tool is allowed to be wrong. It is not allowed to be confidently wrong.
 
 Any phase that would improve a headline number while weakening that property
-does not get built. Phase 3 and Phase 5 exist to make violations of it fail
-loudly, and Phase 13 exists to keep measuring it as the sample grows.
+does not get built.
+
+Phase 13 is why this is written down. On eleven samples the rule appeared to
+hold; on 163 it did not, and `high` confidence was being assigned to results
+15,689 km off target. The thresholds were refitted on a held-out split and the
+promise narrowed to what the evidence supports. The headline accuracy numbers
+got substantially worse in the process, and that was the right outcome.

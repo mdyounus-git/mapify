@@ -61,6 +61,20 @@ const CONFIDENCE = {
   insufficient: "Insufficient evidence",
 };
 
+// What each band was measured to do, over the 163-sample benchmark. Shown on
+// hover so the wording on screen can be checked against the evidence for it
+// rather than taken on trust. See PHASES/Implemented Phases/PHASE-13.
+const CONFIDENCE_MEASURED = {
+  high: "Measured over 163 samples: all 20 high-confidence calls landed "
+      + "within 106 km of the true location.",
+  medium: "Measured over 163 samples: 89% of medium calls landed within "
+        + "1500 km, median 16 km. A region to check, not a location.",
+  low: "Measured over 163 samples: 63% within 1500 km, median 658 km. "
+     + "A lead, nothing more.",
+  insufficient: "Measured over 163 samples: only 16% within 1500 km. "
+              + "The evidence does not support naming a location.",
+};
+
 const state = {
   globe: null,
   report: null,
@@ -461,6 +475,7 @@ function render(report) {
 
   el.verdict.textContent = pred.confidence || "—";
   el.verdict.className = `chip ${pred.confidence || "bare"}`;
+  el.verdict.title = CONFIDENCE_MEASURED[pred.confidence] || "";
 
   state.globe.clearMarkers();
   (report.candidates || []).forEach((c, i) => {
@@ -634,6 +649,8 @@ function renderReport(report) {
       <div class="verdict indeterminate">
         <p class="place">No location determined</p>
         <p class="place-sub">${esc(CONFIDENCE[pred.confidence] || pred.confidence)}</p>
+        <p class="measured">${esc(
+          CONFIDENCE_MEASURED[pred.confidence] || "")}</p>
         <div class="note risk"><div>${esc(pred.confidence_reason || "")}</div></div>
       </div>`));
   } else {
@@ -645,10 +662,13 @@ function renderReport(report) {
       <div class="verdict determinate">
         <p class="place">${esc(name)}</p>
         <p class="place-sub">
-          <span class="chip ${esc(pred.confidence)}">${esc(
+          <span class="chip ${esc(pred.confidence)}" title="${esc(
+            CONFIDENCE_MEASURED[pred.confidence] || "")}">${esc(
             CONFIDENCE[pred.confidence] || pred.confidence)}</span>
           <span>±${esc(fmtKm(pred.uncertainty_km))}</span>
         </p>
+        <p class="measured">${esc(
+          CONFIDENCE_MEASURED[pred.confidence] || "")}</p>
         <div class="coord-pair">
           <div class="coord"><span class="k">Latitude</span>
             <span class="v">${est.latitude.toFixed(6)}</span></div>

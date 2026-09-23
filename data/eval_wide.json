@@ -1,0 +1,4093 @@
+{
+  "generated": "2026-09-23 22:00",
+  "offline": true,
+  "ocr": false,
+  "n": 163,
+  "median_error_km": 367.98,
+  "bands": {
+    "street": 30,
+    "city": 61,
+    "region": 74,
+    "country": 97,
+    "continent": 113
+  },
+  "seconds_per_image": 0.99,
+  "rows": [
+    {
+      "site": "paris-eiffel",
+      "region": "Europe",
+      "scene": "landmark",
+      "expected": "Eiffel Tower, France",
+      "true": [
+        48.858387,
+        2.2945185
+      ],
+      "predicted": [
+        48.858377,
+        2.294569
+      ],
+      "error_km": 0.0,
+      "band": "street",
+      "confidence": "medium",
+      "diagnostics": {
+        "locator_mass": 0.13078,
+        "concentration": 1.0,
+        "dispersion_km": 0.0,
+        "evidence_support": 0.834
+      },
+      "place": "Paris, France",
+      "ocr_lines": 0
+    },
+    {
+      "site": "paris-belleville",
+      "region": "Europe",
+      "scene": "street",
+      "expected": "Belleville, Paris",
+      "true": [
+        48.871578,
+        2.384017
+      ],
+      "predicted": [
+        48.890718,
+        2.242279
+      ],
+      "error_km": 10.58,
+      "band": "city",
+      "confidence": "insufficient",
+      "diagnostics": {
+        "locator_mass": 0.07758,
+        "concentration": 1.0,
+        "dispersion_km": 0.0,
+        "evidence_support": -0.381
+      },
+      "place": "Paris, France",
+      "ocr_lines": 0
+    },
+    {
+      "site": "london-south",
+      "region": "Europe",
+      "scene": "street",
+      "expected": "Peckham, London",
+      "true": [
+        51.474527,
+        -0.090626
+      ],
+      "predicted": [
+        51.454387,
+        5.479141
+      ],
+      "error_km": 385.76,
+      "band": "country",
+      "confidence": "medium",
+      "diagnostics": {
+        "locator_mass": 0.21444,
+        "concentration": 0.7958,
+        "dispersion_km": 89.8,
+        "evidence_support": 0.121
+      },
+      "place": "Eindhoven, Netherlands",
+      "ocr_lines": 0
+    },
+    {
+      "site": "london-bridge",
+      "region": "Europe",
+      "scene": "landmark",
+      "expected": "Tower Bridge, London",
+      "true": [
+        51.5055,
+        -0.0754
+      ],
+      "predicted": [
+        51.50566,
+        -0.075424
+      ],
+      "error_km": 0.02,
+      "band": "street",
+      "confidence": "medium",
+      "diagnostics": {
+        "locator_mass": 0.16865,
+        "concentration": 1.0,
+        "dispersion_km": 0.0,
+        "evidence_support": 0.778
+      },
+      "place": "London, United Kingdom",
+      "ocr_lines": 0
+    },
+    {
+      "site": "berlin-kreuzberg",
+      "region": "Europe",
+      "scene": "street",
+      "expected": "Kreuzberg, Berlin",
+      "true": [
+        52.49896118,
+        13.41830993
+      ],
+      "predicted": [
+        51.341574,
+        12.378553
+      ],
+      "error_km": 147.13,
+      "band": "region",
+      "confidence": "low",
+      "diagnostics": {
+        "locator_mass": 0.04215,
+        "concentration": 0.786,
+        "dispersion_km": 30.9,
+        "evidence_support": -0.058
+      },
+      "place": "Leipzig, Germany",
+      "ocr_lines": 0
+    },
+    {
+      "site": "munich",
+      "region": "Europe",
+      "scene": "street",
+      "expected": "Marienplatz, Munich",
+      "true": [
+        48.137462,
+        11.575528
+      ],
+      "predicted": [
+        50.090407,
+        14.399449
+      ],
+      "error_km": 298.96,
+      "band": "country",
+      "confidence": "insufficient",
+      "diagnostics": {
+        "locator_mass": 0.02058,
+        "concentration": 0.8715,
+        "dispersion_km": 744.2,
+        "evidence_support": -1.03
+      },
+      "place": "Prague, Czechia",
+      "ocr_lines": 0
+    },
+    {
+      "site": "amsterdam",
+      "region": "Europe",
+      "scene": "street",
+      "expected": "Amsterdam centre",
+      "true": [
+        52.36738889,
+        4.90388889
+      ],
+      "predicted": [
+        51.999775,
+        4.338068
+      ],
+      "error_km": 56.21,
+      "band": "region",
+      "confidence": "medium",
+      "diagnostics": {
+        "locator_mass": 0.14192,
+        "concentration": 0.5608,
+        "dispersion_km": 44.5,
+        "evidence_support": 0.537
+      },
+      "place": "The Hague, Netherlands",
+      "ocr_lines": 0
+    },
+    {
+      "site": "rotterdam",
+      "region": "Europe",
+      "scene": "street",
+      "expected": "Rotterdam",
+      "true": [
+        51.92233333,
+        4.47916667
+      ],
+      "predicted": [
+        39.952854,
+        -75.164107
+      ],
+      "error_km": 5983.27,
+      "band": "off-target",
+      "confidence": "insufficient",
+      "diagnostics": {
+        "locator_mass": 0.03424,
+        "concentration": 0.5892,
+        "dispersion_km": 3780.2,
+        "evidence_support": -0.437
+      },
+      "place": "Philadelphia, United States of America",
+      "ocr_lines": 0
+    },
+    {
+      "site": "madrid",
+      "region": "Europe",
+      "scene": "street",
+      "expected": "Madrid centre",
+      "true": [
+        40.4167754,
+        -3.7037902
+      ],
+      "predicted": [
+        59.908834,
+        10.752645
+      ],
+      "error_km": 2387.49,
+      "band": "continent",
+      "confidence": "insufficient",
+      "diagnostics": {
+        "locator_mass": 0.02153,
+        "concentration": 0.3841,
+        "dispersion_km": 815.3,
+        "evidence_support": 0.354
+      },
+      "place": "Oslo, Norway",
+      "ocr_lines": 0
+    },
+    {
+      "site": "seville",
+      "region": "Europe",
+      "scene": "street",
+      "expected": "Seville",
+      "true": [
+        37.387894,
+        -5.981286
+      ],
+      "predicted": [
+        40.94827,
+        -4.115942
+      ],
+      "error_km": 427.28,
+      "band": "country",
+      "confidence": "medium",
+      "diagnostics": {
+        "locator_mass": 0.20626,
+        "concentration": 0.7392,
+        "dispersion_km": 63.1,
+        "evidence_support": 1.098
+      },
+      "place": "Madrid, Spain",
+      "ocr_lines": 0
+    },
+    {
+      "site": "lisbon",
+      "region": "Europe",
+      "scene": "street",
+      "expected": "Lisbon",
+      "true": [
+        38.7222524,
+        -9.1393366
+      ],
+      "predicted": [
+        37.383213,
+        -8.836275
+      ],
+      "error_km": 151.24,
+      "band": "region",
+      "confidence": "low",
+      "diagnostics": {
+        "locator_mass": 0.27666,
+        "concentration": 0.6335,
+        "dispersion_km": 790.3,
+        "evidence_support": 0
+      },
+      "place": "Portim\u00e3o",
+      "ocr_lines": 0
+    },
+    {
+      "site": "rome",
+      "region": "Europe",
+      "scene": "landmark",
+      "expected": "Colosseum, Rome",
+      "true": [
+        41.890209,
+        12.492219
+      ],
+      "predicted": [
+        41.890328,
+        12.492082
+      ],
+      "error_km": 0.02,
+      "band": "street",
+      "confidence": "medium",
+      "diagnostics": {
+        "locator_mass": 0.1774,
+        "concentration": 1.0,
+        "dispersion_km": 0.0,
+        "evidence_support": 0.643
+      },
+      "place": "Rome, Italy",
+      "ocr_lines": 0
+    },
+    {
+      "site": "naples",
+      "region": "Europe",
+      "scene": "street",
+      "expected": "Naples",
+      "true": [
+        40.85191667,
+        14.26841667
+      ],
+      "predicted": [
+        45.465,
+        9.189629
+      ],
+      "error_km": 657.6,
+      "band": "country",
+      "confidence": "low",
+      "diagnostics": {
+        "locator_mass": 0.08163,
+        "concentration": 1.0,
+        "dispersion_km": 0.0,
+        "evidence_support": -0.664
+      },
+      "place": "Milan, Italy",
+      "ocr_lines": 0
+    },
+    {
+      "site": "venice",
+      "region": "Europe",
+      "scene": "street",
+      "expected": "Venice",
+      "true": [
+        45.434163,
+        12.338848
+      ],
+      "predicted": [
+        45.434093,
+        12.338065
+      ],
+      "error_km": 0.06,
+      "band": "street",
+      "confidence": "low",
+      "diagnostics": {
+        "locator_mass": 0.07406,
+        "concentration": 1.0,
+        "dispersion_km": 0.0,
+        "evidence_support": 1.129
+      },
+      "place": "Venice, Italy",
+      "ocr_lines": 0
+    },
+    {
+      "site": "athens",
+      "region": "Europe",
+      "scene": "landmark",
+      "expected": "Acropolis, Athens",
+      "true": [
+        37.97161111,
+        23.72577778
+      ],
+      "predicted": [
+        37.971455,
+        23.72562
+      ],
+      "error_km": 0.02,
+      "band": "street",
+      "confidence": "high",
+      "diagnostics": {
+        "locator_mass": 0.37227,
+        "concentration": 1.0,
+        "dispersion_km": 0.0,
+        "evidence_support": 1.03
+      },
+      "place": "Athens, Greece",
+      "ocr_lines": 0
+    },
+    {
+      "site": "thessaloniki",
+      "region": "Europe",
+      "scene": "street",
+      "expected": "Thessaloniki",
+      "true": [
+        40.639227,
+        22.945289
+      ],
+      "predicted": [
+        37.838002,
+        21.7716
+      ],
+      "error_km": 327.46,
+      "band": "country",
+      "confidence": "insufficient",
+      "diagnostics": {
+        "locator_mass": 0.02598,
+        "concentration": 0.8755,
+        "dispersion_km": 40.9,
+        "evidence_support": 1.704
+      },
+      "place": "Pirgos, Greece",
+      "ocr_lines": 0
+    },
+    {
+      "site": "warsaw",
+      "region": "Europe",
+      "scene": "street",
+      "expected": "Warsaw",
+      "true": [
+        52.2296756,
+        21.0122287
+      ],
+      "predicted": [
+        49.240477,
+        -123.125625
+      ],
+      "error_km": 8234.88,
+      "band": "off-target",
+      "confidence": "insufficient",
+      "diagnostics": {
+        "locator_mass": 0.02579,
+        "concentration": 0.586,
+        "dispersion_km": 109.2,
+        "evidence_support": 0.982
+      },
+      "place": "Vancouver, Canada",
+      "ocr_lines": 0
+    },
+    {
+      "site": "krakow",
+      "region": "Europe",
+      "scene": "street",
+      "expected": "Krakow",
+      "true": [
+        50.061319,
+        19.936634
+      ],
+      "predicted": [
+        59.43736,
+        24.744696
+      ],
+      "error_km": 1086.57,
+      "band": "continent",
+      "confidence": "medium",
+      "diagnostics": {
+        "locator_mass": 0.08218,
+        "concentration": 0.8446,
+        "dispersion_km": 115.7,
+        "evidence_support": -0.349
+      },
+      "place": "Tallinn, Estonia",
+      "ocr_lines": 0
+    },
+    {
+      "site": "prague",
+      "region": "Europe",
+      "scene": "street",
+      "expected": "Prague",
+      "true": [
+        50.08752778,
+        14.42125
+      ],
+      "predicted": [
+        50.087286,
+        14.419855
+      ],
+      "error_km": 0.1,
+      "band": "street",
+      "confidence": "medium",
+      "diagnostics": {
+        "locator_mass": 0.10639,
+        "concentration": 1.0,
+        "dispersion_km": 0.0,
+        "evidence_support": -0.268
+      },
+      "place": "Prague, Czechia",
+      "ocr_lines": 0
+    },
+    {
+      "site": "budapest",
+      "region": "Europe",
+      "scene": "street",
+      "expected": "Budapest",
+      "true": [
+        47.497912,
+        19.040235
+      ],
+      "predicted": [
+        47.498727,
+        19.041462
+      ],
+      "error_km": 0.13,
+      "band": "street",
+      "confidence": "medium",
+      "diagnostics": {
+        "locator_mass": 0.22059,
+        "concentration": 1.0,
+        "dispersion_km": 0.0,
+        "evidence_support": 0.135
+      },
+      "place": "Budapest, Hungary",
+      "ocr_lines": 0
+    },
+    {
+      "site": "bucharest",
+      "region": "Europe",
+      "scene": "street",
+      "expected": "Bucharest",
+      "true": [
+        44.4267674,
+        26.1025384
+      ],
+      "predicted": [
+        43.349259,
+        -4.051818
+      ],
+      "error_km": 2405.78,
+      "band": "continent",
+      "confidence": "low",
+      "diagnostics": {
+        "locator_mass": 0.035,
+        "concentration": 0.7938,
+        "dispersion_km": 138.6,
+        "evidence_support": -0.229
+      },
+      "place": "Santander, Spain",
+      "ocr_lines": 0
+    },
+    {
+      "site": "sofia",
+      "region": "Europe",
+      "scene": "street",
+      "expected": "Sofia",
+      "true": [
+        42.697707,
+        23.321968
+      ],
+      "predicted": [
+        42.695451,
+        23.324864
+      ],
+      "error_km": 0.34,
+      "band": "street",
+      "confidence": "high",
+      "diagnostics": {
+        "locator_mass": 0.3459,
+        "concentration": 1.0,
+        "dispersion_km": 0.0,
+        "evidence_support": 0.327
+      },
+      "place": "Sofia, Bulgaria",
+      "ocr_lines": 0
+    },
+    {
+      "site": "belgrade",
+      "region": "Europe",
+      "scene": "street",
+      "expected": "Belgrade",
+      "true": [
+        44.812088,
+        20.461204
+      ],
+      "predicted": [
+        45.812357,
+        15.974638
+      ],
+      "error_km": 367.98,
+      "band": "country",
+      "confidence": "medium",
+      "diagnostics": {
+        "locator_mass": 0.29481,
+        "concentration": 1.0,
+        "dispersion_km": 0.0,
+        "evidence_support": -0.307
+      },
+      "place": "Zagreb, Croatia",
+      "ocr_lines": 0
+    },
+    {
+      "site": "zagreb",
+      "region": "Europe",
+      "scene": "street",
+      "expected": "Zagreb",
+      "true": [
+        45.8150108,
+        15.981919
+      ],
+      "predicted": [
+        32.227597,
+        76.320556
+      ],
+      "error_km": 5293.85,
+      "band": "off-target",
+      "confidence": "low",
+      "diagnostics": {
+        "locator_mass": 0.11996,
+        "concentration": 0.5656,
+        "dispersion_km": 534.5,
+        "evidence_support": 0.078
+      },
+      "place": "Pathankot, India",
+      "ocr_lines": 0
+    },
+    {
+      "site": "vienna",
+      "region": "Europe",
+      "scene": "street",
+      "expected": "Vienna",
+      "true": [
+        48.2081743,
+        16.3738189
+      ],
+      "predicted": [
+        48.209241,
+        16.369088
+      ],
+      "error_km": 0.37,
+      "band": "street",
+      "confidence": "medium",
+      "diagnostics": {
+        "locator_mass": 0.12373,
+        "concentration": 1.0,
+        "dispersion_km": 0.0,
+        "evidence_support": 0.322
+      },
+      "place": "Vienna, Austria",
+      "ocr_lines": 0
+    },
+    {
+      "site": "zurich",
+      "region": "Europe",
+      "scene": "street",
+      "expected": "Zurich",
+      "true": [
+        47.3768866,
+        8.541694
+      ],
+      "predicted": [
+        47.377374,
+        8.539358
+      ],
+      "error_km": 0.18,
+      "band": "street",
+      "confidence": "medium",
+      "diagnostics": {
+        "locator_mass": 0.13035,
+        "concentration": 1.0,
+        "dispersion_km": 0.0,
+        "evidence_support": 0.539
+      },
+      "place": "Z\u00fcrich, Switzerland",
+      "ocr_lines": 0
+    },
+    {
+      "site": "stockholm",
+      "region": "Europe",
+      "scene": "street",
+      "expected": "Stockholm",
+      "true": [
+        59.3293206,
+        18.0686039
+      ],
+      "predicted": [
+        23.541026,
+        90.395369
+      ],
+      "error_km": 6777.82,
+      "band": "off-target",
+      "confidence": "medium",
+      "diagnostics": {
+        "locator_mass": 0.15824,
+        "concentration": 1.0,
+        "dispersion_km": 0.0,
+        "evidence_support": 1.002
+      },
+      "place": "Narayanganj, Bangladesh",
+      "ocr_lines": 0
+    },
+    {
+      "site": "oslo",
+      "region": "Europe",
+      "scene": "street",
+      "expected": "Oslo",
+      "true": [
+        59.91429194,
+        10.752509
+      ],
+      "predicted": [
+        58.590761,
+        16.182363
+      ],
+      "error_km": 341.83,
+      "band": "country",
+      "confidence": "medium",
+      "diagnostics": {
+        "locator_mass": 0.10102,
+        "concentration": 0.5052,
+        "dispersion_km": 173.1,
+        "evidence_support": 0.228
+      },
+      "place": "Norrk\u00f6ping, Sweden",
+      "ocr_lines": 0
+    },
+    {
+      "site": "copenhagen",
+      "region": "Europe",
+      "scene": "street",
+      "expected": "Copenhagen",
+      "true": [
+        55.6760968,
+        12.5683371
+      ],
+      "predicted": [
+        40.167619,
+        -80.246302
+      ],
+      "error_km": 6586.45,
+      "band": "off-target",
+      "confidence": "insufficient",
+      "diagnostics": {
+        "locator_mass": 0.01578,
+        "concentration": 0.2881,
+        "dispersion_km": 3295.8,
+        "evidence_support": -0.206
+      },
+      "place": "Pittsburgh, United States of America",
+      "ocr_lines": 0
+    },
+    {
+      "site": "helsinki",
+      "region": "Europe",
+      "scene": "street",
+      "expected": "Helsinki",
+      "true": [
+        60.1698557,
+        24.938379
+      ],
+      "predicted": [
+        38.991143,
+        -0.520377
+      ],
+      "error_km": 2946.95,
+      "band": "off-target",
+      "confidence": "low",
+      "diagnostics": {
+        "locator_mass": 0.06274,
+        "concentration": 0.7498,
+        "dispersion_km": 333.4,
+        "evidence_support": -0.224
+      },
+      "place": "Valencia, Spain",
+      "ocr_lines": 0
+    },
+    {
+      "site": "reykjavik",
+      "region": "Europe",
+      "scene": "street",
+      "expected": "Reykjavik",
+      "true": [
+        64.1466,
+        -21.9426
+      ],
+      "predicted": [
+        64.135772,
+        -22.030634
+      ],
+      "error_km": 4.44,
+      "band": "city",
+      "confidence": "medium",
+      "diagnostics": {
+        "locator_mass": 0.20522,
+        "concentration": 1.0,
+        "dispersion_km": 0.0,
+        "evidence_support": 0.318
+      },
+      "place": "Reykjav\u00edk, Iceland",
+      "ocr_lines": 0
+    },
+    {
+      "site": "dublin",
+      "region": "Europe",
+      "scene": "street",
+      "expected": "Dublin",
+      "true": [
+        53.3498053,
+        -6.2603097
+      ],
+      "predicted": [
+        52.271079,
+        4.546212
+      ],
+      "error_km": 735.43,
+      "band": "country",
+      "confidence": "insufficient",
+      "diagnostics": {
+        "locator_mass": 0.05761,
+        "concentration": 0.6913,
+        "dispersion_km": 2548.6,
+        "evidence_support": -0.353
+      },
+      "place": "Haarlem, Netherlands",
+      "ocr_lines": 0
+    },
+    {
+      "site": "edinburgh",
+      "region": "Europe",
+      "scene": "street",
+      "expected": "Edinburgh",
+      "true": [
+        55.953379,
+        -3.188258
+      ],
+      "predicted": [
+        55.950861,
+        -3.19793
+      ],
+      "error_km": 0.66,
+      "band": "street",
+      "confidence": "medium",
+      "diagnostics": {
+        "locator_mass": 0.12606,
+        "concentration": 1.0,
+        "dispersion_km": 0.0,
+        "evidence_support": 0.219
+      },
+      "place": "Edinburgh, United Kingdom",
+      "ocr_lines": 0
+    },
+    {
+      "site": "porto",
+      "region": "Europe",
+      "scene": "coastal",
+      "expected": "Porto",
+      "true": [
+        41.157944,
+        -8.629105
+      ],
+      "predicted": [
+        46.51959,
+        6.567806
+      ],
+      "error_km": 1353.8,
+      "band": "continent",
+      "confidence": "medium",
+      "diagnostics": {
+        "locator_mass": 0.10696,
+        "concentration": 0.9604,
+        "dispersion_km": 136.6,
+        "evidence_support": 0.295
+      },
+      "place": "Lausanne, Switzerland",
+      "ocr_lines": 0
+    },
+    {
+      "site": "norway-fjord",
+      "region": "Europe",
+      "scene": "rural",
+      "expected": "Norwegian fjord",
+      "true": [
+        62.101753,
+        7.207287
+      ],
+      "predicted": [
+        60.3911,
+        6.765149
+      ],
+      "error_km": 191.68,
+      "band": "region",
+      "confidence": "medium",
+      "diagnostics": {
+        "locator_mass": 0.41344,
+        "concentration": 0.534,
+        "dispersion_km": 103.1,
+        "evidence_support": 0.911
+      },
+      "place": "Vossavangen, Norway",
+      "ocr_lines": 0
+    },
+    {
+      "site": "swiss-alps",
+      "region": "Europe",
+      "scene": "rural",
+      "expected": "Zermatt, Switzerland",
+      "true": [
+        46.02058333,
+        7.74847222
+      ],
+      "predicted": [
+        46.055195,
+        7.772066
+      ],
+      "error_km": 4.26,
+      "band": "city",
+      "confidence": "medium",
+      "diagnostics": {
+        "locator_mass": 0.81002,
+        "concentration": 1.0,
+        "dispersion_km": 0.0,
+        "evidence_support": 0.254
+      },
+      "place": "Sion, Switzerland",
+      "ocr_lines": 0
+    },
+    {
+      "site": "moscow",
+      "region": "Europe",
+      "scene": "landmark",
+      "expected": "Red Square, Moscow",
+      "true": [
+        55.7525,
+        37.623056
+      ],
+      "predicted": [
+        56.422709,
+        40.443358
+      ],
+      "error_km": 190.16,
+      "band": "region",
+      "confidence": "low",
+      "diagnostics": {
+        "locator_mass": 0.12142,
+        "concentration": 0.6973,
+        "dispersion_km": 584.9,
+        "evidence_support": 0.58
+      },
+      "place": "Vladimir, Russia",
+      "ocr_lines": 0
+    },
+    {
+      "site": "st-petersburg",
+      "region": "Europe",
+      "scene": "street",
+      "expected": "St Petersburg",
+      "true": [
+        59.939808,
+        30.314603
+      ],
+      "predicted": [
+        59.793052,
+        30.313609
+      ],
+      "error_km": 16.32,
+      "band": "city",
+      "confidence": "low",
+      "diagnostics": {
+        "locator_mass": 0.16531,
+        "concentration": 0.9597,
+        "dispersion_km": 82.5,
+        "evidence_support": -0.637
+      },
+      "place": "St.  Petersburg, Russia",
+      "ocr_lines": 0
+    },
+    {
+      "site": "kyiv",
+      "region": "Europe",
+      "scene": "street",
+      "expected": "Kyiv",
+      "true": [
+        50.4501,
+        30.5234
+      ],
+      "predicted": [
+        54.553126,
+        36.355099
+      ],
+      "error_km": 602.89,
+      "band": "country",
+      "confidence": "low",
+      "diagnostics": {
+        "locator_mass": 0.19977,
+        "concentration": 0.5607,
+        "dispersion_km": 511.1,
+        "evidence_support": 0.139
+      },
+      "place": "Kaluga, Russia",
+      "ocr_lines": 0
+    },
+    {
+      "site": "tokyo-shibuya",
+      "region": "Asia",
+      "scene": "street",
+      "expected": "Shibuya, Tokyo",
+      "true": [
+        35.6595,
+        139.7005
+      ],
+      "predicted": [
+        35.691875,
+        139.56627
+      ],
+      "error_km": 12.65,
+      "band": "city",
+      "confidence": "low",
+      "diagnostics": {
+        "locator_mass": 0.06909,
+        "concentration": 1.0,
+        "dispersion_km": 0.0,
+        "evidence_support": 0.881
+      },
+      "place": "Tokyo, Japan",
+      "ocr_lines": 0
+    },
+    {
+      "site": "tokyo-asakusa",
+      "region": "Asia",
+      "scene": "landmark",
+      "expected": "Sensoji, Tokyo",
+      "true": [
+        35.714755,
+        139.79666167
+      ],
+      "predicted": [
+        35.713452,
+        139.796578
+      ],
+      "error_km": 0.15,
+      "band": "street",
+      "confidence": "high",
+      "diagnostics": {
+        "locator_mass": 0.32013,
+        "concentration": 1.0,
+        "dispersion_km": 0.0,
+        "evidence_support": 0.597
+      },
+      "place": "Tokyo, Japan",
+      "ocr_lines": 0
+    },
+    {
+      "site": "osaka",
+      "region": "Asia",
+      "scene": "street",
+      "expected": "Dotonbori, Osaka",
+      "true": [
+        34.66858,
+        135.50150944
+      ],
+      "predicted": [
+        34.69551,
+        135.497685
+      ],
+      "error_km": 3.01,
+      "band": "city",
+      "confidence": "medium",
+      "diagnostics": {
+        "locator_mass": 0.10219,
+        "concentration": 1.0,
+        "dispersion_km": 0.0,
+        "evidence_support": 0.806
+      },
+      "place": "\u014csaka, Japan",
+      "ocr_lines": 0
+    },
+    {
+      "site": "kyoto",
+      "region": "Asia",
+      "scene": "street",
+      "expected": "Kyoto",
+      "true": [
+        35.011554,
+        135.768099
+      ],
+      "predicted": [
+        32.759698,
+        129.869153
+      ],
+      "error_km": 599.19,
+      "band": "country",
+      "confidence": "low",
+      "diagnostics": {
+        "locator_mass": 0.17194,
+        "concentration": 0.6782,
+        "dispersion_km": 203.8,
+        "evidence_support": -0.178
+      },
+      "place": "Nagasaki, Japan",
+      "ocr_lines": 0
+    },
+    {
+      "site": "seoul",
+      "region": "Asia",
+      "scene": "street",
+      "expected": "Seoul",
+      "true": [
+        37.5665,
+        126.978
+      ],
+      "predicted": [
+        37.99296,
+        23.768058
+      ],
+      "error_km": 8512.3,
+      "band": "off-target",
+      "confidence": "medium",
+      "diagnostics": {
+        "locator_mass": 0.33068,
+        "concentration": 0.7673,
+        "dispersion_km": 164.6,
+        "evidence_support": 0.65
+      },
+      "place": "Athens, Greece",
+      "ocr_lines": 0
+    },
+    {
+      "site": "busan",
+      "region": "Asia",
+      "scene": "coastal",
+      "expected": "Busan",
+      "true": [
+        35.178697,
+        129.075955
+      ],
+      "predicted": [
+        35.706809,
+        139.684603
+      ],
+      "error_km": 962.36,
+      "band": "continent",
+      "confidence": "low",
+      "diagnostics": {
+        "locator_mass": 0.05684,
+        "concentration": 0.3371,
+        "dispersion_km": 445.5,
+        "evidence_support": -0.224
+      },
+      "place": "Tokyo, Japan",
+      "ocr_lines": 0
+    },
+    {
+      "site": "beijing",
+      "region": "Asia",
+      "scene": "landmark",
+      "expected": "Forbidden City, Beijing",
+      "true": [
+        39.917241,
+        116.3974
+      ],
+      "predicted": [
+        39.914185,
+        116.39005
+      ],
+      "error_km": 0.71,
+      "band": "street",
+      "confidence": "medium",
+      "diagnostics": {
+        "locator_mass": 0.22643,
+        "concentration": 1.0,
+        "dispersion_km": 0.0,
+        "evidence_support": 0.905
+      },
+      "place": "Beijing, China",
+      "ocr_lines": 0
+    },
+    {
+      "site": "shanghai",
+      "region": "Asia",
+      "scene": "street",
+      "expected": "Shanghai",
+      "true": [
+        31.230416,
+        121.473701
+      ],
+      "predicted": [
+        51.403766,
+        6.596392
+      ],
+      "error_km": 8849.15,
+      "band": "off-target",
+      "confidence": "insufficient",
+      "diagnostics": {
+        "locator_mass": 0.02727,
+        "concentration": 0.6069,
+        "dispersion_km": 129.5,
+        "evidence_support": -0.247
+      },
+      "place": "Duisburg, Germany",
+      "ocr_lines": 0
+    },
+    {
+      "site": "hong-kong",
+      "region": "Asia",
+      "scene": "street",
+      "expected": "Hong Kong",
+      "true": [
+        22.27939167,
+        114.162705
+      ],
+      "predicted": [
+        22.280759,
+        114.160124
+      ],
+      "error_km": 0.31,
+      "band": "street",
+      "confidence": "medium",
+      "diagnostics": {
+        "locator_mass": 0.12061,
+        "concentration": 1.0,
+        "dispersion_km": 0.0,
+        "evidence_support": 0.689
+      },
+      "place": "Hong Kong, Hong Kong",
+      "ocr_lines": 0
+    },
+    {
+      "site": "taipei",
+      "region": "Asia",
+      "scene": "street",
+      "expected": "Taipei",
+      "true": [
+        25.0329694,
+        121.5654177
+      ],
+      "predicted": [
+        25.04324,
+        121.506773
+      ],
+      "error_km": 6.02,
+      "band": "city",
+      "confidence": "low",
+      "diagnostics": {
+        "locator_mass": 0.04677,
+        "concentration": 0.5612,
+        "dispersion_km": 965.2,
+        "evidence_support": 0.067
+      },
+      "place": "New Taipei, Taiwan",
+      "ocr_lines": 0
+    },
+    {
+      "site": "bangkok",
+      "region": "Asia",
+      "scene": "street",
+      "expected": "Bangkok",
+      "true": [
+        13.7563309,
+        100.5017651
+      ],
+      "predicted": [
+        37.977048,
+        23.724455
+      ],
+      "error_km": 7922.54,
+      "band": "off-target",
+      "confidence": "insufficient",
+      "diagnostics": {
+        "locator_mass": 0.01061,
+        "concentration": 0.4297,
+        "dispersion_km": 939.1,
+        "evidence_support": 0.272
+      },
+      "place": "Athens, Greece",
+      "ocr_lines": 0
+    },
+    {
+      "site": "chiang-mai",
+      "region": "Asia",
+      "scene": "street",
+      "expected": "Chiang Mai",
+      "true": [
+        18.7885,
+        98.985131
+      ],
+      "predicted": [
+        15.225144,
+        104.853516
+      ],
+      "error_km": 739.04,
+      "band": "country",
+      "confidence": "low",
+      "diagnostics": {
+        "locator_mass": 0.16293,
+        "concentration": 0.2806,
+        "dispersion_km": 332.7,
+        "evidence_support": 0.328
+      },
+      "place": "Ubon Ratchathani, Thailand",
+      "ocr_lines": 0
+    },
+    {
+      "site": "hanoi",
+      "region": "Asia",
+      "scene": "street",
+      "expected": "Hanoi",
+      "true": [
+        21.028163,
+        105.85395
+      ],
+      "predicted": [
+        21.030536,
+        105.85122
+      ],
+      "error_km": 0.39,
+      "band": "street",
+      "confidence": "medium",
+      "diagnostics": {
+        "locator_mass": 0.24742,
+        "concentration": 1.0,
+        "dispersion_km": 0.0,
+        "evidence_support": 0.477
+      },
+      "place": "Hanoi, Vietnam",
+      "ocr_lines": 0
+    },
+    {
+      "site": "ho-chi-minh",
+      "region": "Asia",
+      "scene": "street",
+      "expected": "Ho Chi Minh City",
+      "true": [
+        10.77654722,
+        106.70096667
+      ],
+      "predicted": [
+        10.775564,
+        106.701635
+      ],
+      "error_km": 0.13,
+      "band": "street",
+      "confidence": "high",
+      "diagnostics": {
+        "locator_mass": 0.30262,
+        "concentration": 1.0,
+        "dispersion_km": 0.0,
+        "evidence_support": 0.464
+      },
+      "place": "Ho Chi Minh City, Vietnam",
+      "ocr_lines": 0
+    },
+    {
+      "site": "phnom-penh",
+      "region": "Asia",
+      "scene": "street",
+      "expected": "Phnom Penh",
+      "true": [
+        11.55654,
+        104.928765
+      ],
+      "predicted": [
+        31.62346,
+        -7.999819
+      ],
+      "error_km": 11420.53,
+      "band": "off-target",
+      "confidence": "medium",
+      "diagnostics": {
+        "locator_mass": 0.22616,
+        "concentration": 1.0,
+        "dispersion_km": 0.0,
+        "evidence_support": 0.476
+      },
+      "place": "Marrakesh, Morocco",
+      "ocr_lines": 0
+    },
+    {
+      "site": "singapore",
+      "region": "Asia",
+      "scene": "street",
+      "expected": "Singapore",
+      "true": [
+        1.2835,
+        103.8605
+      ],
+      "predicted": [
+        1.283664,
+        103.859244
+      ],
+      "error_km": 0.14,
+      "band": "street",
+      "confidence": "medium",
+      "diagnostics": {
+        "locator_mass": 0.20667,
+        "concentration": 1.0,
+        "dispersion_km": 0.0,
+        "evidence_support": 0.694
+      },
+      "place": "Singapore, Singapore",
+      "ocr_lines": 0
+    },
+    {
+      "site": "kuala-lumpur",
+      "region": "Asia",
+      "scene": "street",
+      "expected": "Kuala Lumpur",
+      "true": [
+        3.147854,
+        101.695493
+      ],
+      "predicted": [
+        3.157576,
+        101.710401
+      ],
+      "error_km": 1.98,
+      "band": "city",
+      "confidence": "medium",
+      "diagnostics": {
+        "locator_mass": 0.16958,
+        "concentration": 1.0,
+        "dispersion_km": 0.0,
+        "evidence_support": 0.026
+      },
+      "place": "Kuala Lumpur, Malaysia",
+      "ocr_lines": 0
+    },
+    {
+      "site": "jakarta",
+      "region": "Asia",
+      "scene": "street",
+      "expected": "Jakarta",
+      "true": [
+        -6.17516944,
+        106.82700833
+      ],
+      "predicted": [
+        33.956493,
+        -118.325351
+      ],
+      "error_km": 14445.87,
+      "band": "off-target",
+      "confidence": "insufficient",
+      "diagnostics": {
+        "locator_mass": 0.14145,
+        "concentration": 0.6092,
+        "dispersion_km": 3880.4,
+        "evidence_support": -0.566
+      },
+      "place": "Los Angeles, United States of America",
+      "ocr_lines": 0
+    },
+    {
+      "site": "bali",
+      "region": "Asia",
+      "scene": "rural",
+      "expected": "Ubud, Bali",
+      "true": [
+        -8.5068,
+        115.2625
+      ],
+      "predicted": [
+        -8.608682,
+        115.10028
+      ],
+      "error_km": 21.13,
+      "band": "city",
+      "confidence": "medium",
+      "diagnostics": {
+        "locator_mass": 0.28791,
+        "concentration": 1.0,
+        "dispersion_km": 0.0,
+        "evidence_support": 1.194
+      },
+      "place": "Denpasar, Indonesia",
+      "ocr_lines": 0
+    },
+    {
+      "site": "manila",
+      "region": "Asia",
+      "scene": "street",
+      "expected": "Manila",
+      "true": [
+        14.6,
+        120.984167
+      ],
+      "predicted": [
+        23.138889,
+        -82.355133
+      ],
+      "error_km": 15110.21,
+      "band": "off-target",
+      "confidence": "medium",
+      "diagnostics": {
+        "locator_mass": 0.2277,
+        "concentration": 1.0,
+        "dispersion_km": 0.0,
+        "evidence_support": 0.325
+      },
+      "place": "Havana, Cuba",
+      "ocr_lines": 0
+    },
+    {
+      "site": "delhi",
+      "region": "Asia",
+      "scene": "street",
+      "expected": "Delhi",
+      "true": [
+        28.6139,
+        77.209
+      ],
+      "predicted": [
+        27.705883,
+        85.314676
+      ],
+      "error_km": 800.85,
+      "band": "continent",
+      "confidence": "low",
+      "diagnostics": {
+        "locator_mass": 0.06536,
+        "concentration": 0.6557,
+        "dispersion_km": 561.4,
+        "evidence_support": 0.444
+      },
+      "place": "Kathmandu, Nepal",
+      "ocr_lines": 0
+    },
+    {
+      "site": "bengaluru",
+      "region": "Asia",
+      "scene": "street",
+      "expected": "Bengaluru",
+      "true": [
+        12.97998889,
+        77.59094722
+      ],
+      "predicted": [
+        12.973763,
+        77.590963
+      ],
+      "error_km": 0.69,
+      "band": "street",
+      "confidence": "high",
+      "diagnostics": {
+        "locator_mass": 0.40102,
+        "concentration": 1.0,
+        "dispersion_km": 0.0,
+        "evidence_support": 0.992
+      },
+      "place": "Bengaluru, India",
+      "ocr_lines": 0
+    },
+    {
+      "site": "mumbai",
+      "region": "Asia",
+      "scene": "street",
+      "expected": "Mumbai",
+      "true": [
+        18.92211111,
+        72.83477778
+      ],
+      "predicted": [
+        18.928674,
+        72.832647
+      ],
+      "error_km": 0.76,
+      "band": "street",
+      "confidence": "high",
+      "diagnostics": {
+        "locator_mass": 0.3174,
+        "concentration": 1.0,
+        "dispersion_km": 0.0,
+        "evidence_support": 0
+      },
+      "place": "Mumbai, India",
+      "ocr_lines": 0
+    },
+    {
+      "site": "kolkata",
+      "region": "Asia",
+      "scene": "street",
+      "expected": "Kolkata",
+      "true": [
+        22.5726,
+        88.3639
+      ],
+      "predicted": [
+        27.706258,
+        85.314905
+      ],
+      "error_km": 648.03,
+      "band": "country",
+      "confidence": "low",
+      "diagnostics": {
+        "locator_mass": 0.05339,
+        "concentration": 0.4888,
+        "dispersion_km": 701.8,
+        "evidence_support": 1.292
+      },
+      "place": "Kathmandu, Nepal",
+      "ocr_lines": 0
+    },
+    {
+      "site": "chennai",
+      "region": "Asia",
+      "scene": "street",
+      "expected": "Chennai",
+      "true": [
+        13.0827,
+        80.2707
+      ],
+      "predicted": [
+        13.423713,
+        -16.701489
+      ],
+      "error_km": 10405.73,
+      "band": "off-target",
+      "confidence": "insufficient",
+      "diagnostics": {
+        "locator_mass": 0.03146,
+        "concentration": 0.3652,
+        "dispersion_km": 7912.3,
+        "evidence_support": 0.18
+      },
+      "place": "Banjul, Gambia",
+      "ocr_lines": 0
+    },
+    {
+      "site": "jaipur",
+      "region": "Asia",
+      "scene": "street",
+      "expected": "Jaipur",
+      "true": [
+        26.912433,
+        75.787269
+      ],
+      "predicted": [
+        28.502437,
+        77.081238
+      ],
+      "error_km": 217.91,
+      "band": "country",
+      "confidence": "medium",
+      "diagnostics": {
+        "locator_mass": 0.12328,
+        "concentration": 0.943,
+        "dispersion_km": 70.8,
+        "evidence_support": 0.825
+      },
+      "place": "Gurgaon, India",
+      "ocr_lines": 0
+    },
+    {
+      "site": "kathmandu",
+      "region": "Asia",
+      "scene": "street",
+      "expected": "Kathmandu",
+      "true": [
+        27.7172,
+        85.324
+      ],
+      "predicted": [
+        27.686086,
+        85.383342
+      ],
+      "error_km": 6.79,
+      "band": "city",
+      "confidence": "high",
+      "diagnostics": {
+        "locator_mass": 0.49936,
+        "concentration": 1.0,
+        "dispersion_km": 0.0,
+        "evidence_support": 0.867
+      },
+      "place": "Lalitpur, Nepal",
+      "ocr_lines": 0
+    },
+    {
+      "site": "dhaka",
+      "region": "Asia",
+      "scene": "street",
+      "expected": "Dhaka",
+      "true": [
+        23.8103,
+        90.4125
+      ],
+      "predicted": [
+        -22.896751,
+        -47.060135
+      ],
+      "error_km": 15688.96,
+      "band": "off-target",
+      "confidence": "low",
+      "diagnostics": {
+        "locator_mass": 0.04715,
+        "concentration": 0.6825,
+        "dispersion_km": 78.0,
+        "evidence_support": 0.75
+      },
+      "place": "Campinas, Brazil",
+      "ocr_lines": 0
+    },
+    {
+      "site": "colombo",
+      "region": "Asia",
+      "scene": "street",
+      "expected": "Colombo",
+      "true": [
+        6.927,
+        79.86
+      ],
+      "predicted": [
+        34.343666,
+        134.10817
+      ],
+      "error_km": 6320.65,
+      "band": "off-target",
+      "confidence": "insufficient",
+      "diagnostics": {
+        "locator_mass": 0.03301,
+        "concentration": 0.3668,
+        "dispersion_km": 6830.6,
+        "evidence_support": -0.888
+      },
+      "place": "Takamatsu, Japan",
+      "ocr_lines": 0
+    },
+    {
+      "site": "karachi",
+      "region": "Asia",
+      "scene": "street",
+      "expected": "Karachi",
+      "true": [
+        24.85862639,
+        67.00798111
+      ],
+      "predicted": [
+        24.867608,
+        67.017271
+      ],
+      "error_km": 1.37,
+      "band": "city",
+      "confidence": "high",
+      "diagnostics": {
+        "locator_mass": 0.87665,
+        "concentration": 0.9786,
+        "dispersion_km": 16.9,
+        "evidence_support": 0.751
+      },
+      "place": "Karachi, Pakistan",
+      "ocr_lines": 0
+    },
+    {
+      "site": "lahore",
+      "region": "Asia",
+      "scene": "street",
+      "expected": "Lahore",
+      "true": [
+        31.5204,
+        74.3587
+      ],
+      "predicted": [
+        46.344501,
+        -72.570643
+      ],
+      "error_km": 10741.11,
+      "band": "off-target",
+      "confidence": "insufficient",
+      "diagnostics": {
+        "locator_mass": 0.03016,
+        "concentration": 0.4405,
+        "dispersion_km": 3301.6,
+        "evidence_support": -0.338
+      },
+      "place": "Trois-Rivi\u00e8res, Canada",
+      "ocr_lines": 0
+    },
+    {
+      "site": "tehran",
+      "region": "Asia",
+      "scene": "street",
+      "expected": "Tehran",
+      "true": [
+        35.688164,
+        51.392757
+      ],
+      "predicted": [
+        12.29806,
+        76.655315
+      ],
+      "error_km": 3631.16,
+      "band": "off-target",
+      "confidence": "insufficient",
+      "diagnostics": {
+        "locator_mass": 0.06014,
+        "concentration": 0.5774,
+        "dispersion_km": 479.4,
+        "evidence_support": -0.442
+      },
+      "place": "Mysuru, India",
+      "ocr_lines": 0
+    },
+    {
+      "site": "istanbul",
+      "region": "Asia",
+      "scene": "street",
+      "expected": "Istanbul",
+      "true": [
+        41.00820833,
+        28.97843056
+      ],
+      "predicted": [
+        41.009004,
+        28.972112
+      ],
+      "error_km": 0.54,
+      "band": "street",
+      "confidence": "medium",
+      "diagnostics": {
+        "locator_mass": 0.09547,
+        "concentration": 1.0,
+        "dispersion_km": 0.0,
+        "evidence_support": 0.009
+      },
+      "place": "Istanbul, Turkey",
+      "ocr_lines": 0
+    },
+    {
+      "site": "dubai",
+      "region": "Asia",
+      "scene": "street",
+      "expected": "Dubai",
+      "true": [
+        25.204849,
+        55.270782
+      ],
+      "predicted": [
+        25.1581,
+        55.212288
+      ],
+      "error_km": 7.85,
+      "band": "city",
+      "confidence": "high",
+      "diagnostics": {
+        "locator_mass": 0.41848,
+        "concentration": 1.0,
+        "dispersion_km": 0.0,
+        "evidence_support": 1.359
+      },
+      "place": "Dubai, United Arab Emirates",
+      "ocr_lines": 0
+    },
+    {
+      "site": "doha",
+      "region": "Asia",
+      "scene": "street",
+      "expected": "Doha",
+      "true": [
+        25.28705,
+        51.53138
+      ],
+      "predicted": [
+        25.499785,
+        51.471117
+      ],
+      "error_km": 24.42,
+      "band": "city",
+      "confidence": "high",
+      "diagnostics": {
+        "locator_mass": 0.50588,
+        "concentration": 0.9747,
+        "dispersion_km": 3.1,
+        "evidence_support": 1.215
+      },
+      "place": "Doha, Qatar",
+      "ocr_lines": 0
+    },
+    {
+      "site": "jerusalem",
+      "region": "Asia",
+      "scene": "street",
+      "expected": "Jerusalem",
+      "true": [
+        31.76831818,
+        35.21371078
+      ],
+      "predicted": [
+        32.093756,
+        34.850066
+      ],
+      "error_km": 49.87,
+      "band": "region",
+      "confidence": "low",
+      "diagnostics": {
+        "locator_mass": 0.10672,
+        "concentration": 0.4536,
+        "dispersion_km": 1944.7,
+        "evidence_support": 0.34
+      },
+      "place": "Tel Aviv, Israel",
+      "ocr_lines": 0
+    },
+    {
+      "site": "amman",
+      "region": "Asia",
+      "scene": "street",
+      "expected": "Amman",
+      "true": [
+        31.953833,
+        35.908667
+      ],
+      "predicted": [
+        31.950931,
+        35.915593
+      ],
+      "error_km": 0.73,
+      "band": "street",
+      "confidence": "high",
+      "diagnostics": {
+        "locator_mass": 0.82785,
+        "concentration": 1.0,
+        "dispersion_km": 0.0,
+        "evidence_support": 0.364
+      },
+      "place": "Amman, Jordan",
+      "ocr_lines": 0
+    },
+    {
+      "site": "tbilisi",
+      "region": "Asia",
+      "scene": "street",
+      "expected": "Tbilisi",
+      "true": [
+        41.7151,
+        44.8271
+      ],
+      "predicted": [
+        40.379828,
+        49.847059
+      ],
+      "error_km": 446.3,
+      "band": "country",
+      "confidence": "low",
+      "diagnostics": {
+        "locator_mass": 0.05597,
+        "concentration": 0.7497,
+        "dispersion_km": 113.4,
+        "evidence_support": 0.071
+      },
+      "place": "Baku, Azerbaijan",
+      "ocr_lines": 0
+    },
+    {
+      "site": "yerevan",
+      "region": "Asia",
+      "scene": "street",
+      "expected": "Yerevan",
+      "true": [
+        40.179001,
+        44.499952
+      ],
+      "predicted": [
+        40.393534,
+        44.260934
+      ],
+      "error_km": 31.31,
+      "band": "region",
+      "confidence": "high",
+      "diagnostics": {
+        "locator_mass": 0.67097,
+        "concentration": 0.972,
+        "dispersion_km": 4.2,
+        "evidence_support": 0.754
+      },
+      "place": "Ashtarak, Armenia",
+      "ocr_lines": 0
+    },
+    {
+      "site": "almaty",
+      "region": "Asia",
+      "scene": "street",
+      "expected": "Almaty",
+      "true": [
+        43.227239,
+        76.856259
+      ],
+      "predicted": [
+        46.839724,
+        29.62469
+      ],
+      "error_km": 3676.83,
+      "band": "off-target",
+      "confidence": "low",
+      "diagnostics": {
+        "locator_mass": 0.11184,
+        "concentration": 0.4814,
+        "dispersion_km": 784.8,
+        "evidence_support": 0.207
+      },
+      "place": "Tiraspol, Moldova",
+      "ocr_lines": 0
+    },
+    {
+      "site": "tashkent",
+      "region": "Asia",
+      "scene": "street",
+      "expected": "Tashkent",
+      "true": [
+        41.300328,
+        69.240692
+      ],
+      "predicted": [
+        38.596581,
+        -121.406133
+      ],
+      "error_km": 11065.62,
+      "band": "off-target",
+      "confidence": "medium",
+      "diagnostics": {
+        "locator_mass": 0.19187,
+        "concentration": 0.7496,
+        "dispersion_km": 46.6,
+        "evidence_support": 0.918
+      },
+      "place": "Sacramento, United States of America",
+      "ocr_lines": 0
+    },
+    {
+      "site": "ulaanbaatar",
+      "region": "Asia",
+      "scene": "street",
+      "expected": "Ulaanbaatar",
+      "true": [
+        47.88651389,
+        106.91583889
+      ],
+      "predicted": [
+        45.642128,
+        63.305283
+      ],
+      "error_km": 3286.75,
+      "band": "off-target",
+      "confidence": "low",
+      "diagnostics": {
+        "locator_mass": 0.53626,
+        "concentration": 0.3143,
+        "dispersion_km": 885.5,
+        "evidence_support": 0.654
+      },
+      "place": "Baykonur, Baikonur",
+      "ocr_lines": 0
+    },
+    {
+      "site": "himalaya",
+      "region": "Asia",
+      "scene": "rural",
+      "expected": "Everest region, Nepal",
+      "true": [
+        27.98801833,
+        86.925235
+      ],
+      "predicted": [
+        27.979706,
+        86.739228
+      ],
+      "error_km": 18.29,
+      "band": "city",
+      "confidence": "low",
+      "diagnostics": {
+        "locator_mass": 0.31341,
+        "concentration": 0.8008,
+        "dispersion_km": 593.3,
+        "evidence_support": 0.297
+      },
+      "place": "Ramechhap, Nepal",
+      "ocr_lines": 0
+    },
+    {
+      "site": "cairo-giza",
+      "region": "Africa",
+      "scene": "landmark",
+      "expected": "Giza, Egypt",
+      "true": [
+        29.9792,
+        31.1342
+      ],
+      "predicted": [
+        -32.532665,
+        -59.368
+      ],
+      "error_km": 11783.26,
+      "band": "off-target",
+      "confidence": "insufficient",
+      "diagnostics": {
+        "locator_mass": 0.01938,
+        "concentration": 0.1851,
+        "dispersion_km": 6003.9,
+        "evidence_support": -0.139
+      },
+      "place": "Gualeguay, Argentina",
+      "ocr_lines": 0
+    },
+    {
+      "site": "cairo-city",
+      "region": "Africa",
+      "scene": "street",
+      "expected": "Cairo centre",
+      "true": [
+        30.04442222,
+        31.23568889
+      ],
+      "predicted": [
+        30.044524,
+        31.23544
+      ],
+      "error_km": 0.03,
+      "band": "street",
+      "confidence": "medium",
+      "diagnostics": {
+        "locator_mass": 0.54313,
+        "concentration": 0.7723,
+        "dispersion_km": 107.8,
+        "evidence_support": 1.649
+      },
+      "place": "Cairo, Egypt",
+      "ocr_lines": 0
+    },
+    {
+      "site": "alexandria",
+      "region": "Africa",
+      "scene": "coastal",
+      "expected": "Alexandria",
+      "true": [
+        31.19797222,
+        29.91680556
+      ],
+      "predicted": [
+        30.149948,
+        31.217291
+      ],
+      "error_km": 170.44,
+      "band": "region",
+      "confidence": "medium",
+      "diagnostics": {
+        "locator_mass": 0.2458,
+        "concentration": 0.8246,
+        "dispersion_km": 30.1,
+        "evidence_support": 0.685
+      },
+      "place": "Cairo, Egypt",
+      "ocr_lines": 0
+    },
+    {
+      "site": "marrakesh",
+      "region": "Africa",
+      "scene": "street",
+      "expected": "Marrakesh",
+      "true": [
+        31.626974,
+        -7.978906
+      ],
+      "predicted": [
+        34.064278,
+        -4.976351
+      ],
+      "error_km": 389.99,
+      "band": "country",
+      "confidence": "medium",
+      "diagnostics": {
+        "locator_mass": 0.15988,
+        "concentration": 0.7261,
+        "dispersion_km": 127.5,
+        "evidence_support": -0.123
+      },
+      "place": "Fez, Morocco",
+      "ocr_lines": 0
+    },
+    {
+      "site": "casablanca",
+      "region": "Africa",
+      "scene": "street",
+      "expected": "Casablanca",
+      "true": [
+        33.571666,
+        -7.5985
+      ],
+      "predicted": [
+        34.022937,
+        -6.838337
+      ],
+      "error_km": 86.32,
+      "band": "region",
+      "confidence": "low",
+      "diagnostics": {
+        "locator_mass": 0.66754,
+        "concentration": 0.771,
+        "dispersion_km": 440.5,
+        "evidence_support": 0.188
+      },
+      "place": "Rabat, Morocco",
+      "ocr_lines": 0
+    },
+    {
+      "site": "fes",
+      "region": "Africa",
+      "scene": "street",
+      "expected": "Fes",
+      "true": [
+        34.0181246,
+        -5.0078451
+      ],
+      "predicted": [
+        31.626375,
+        -7.988359
+      ],
+      "error_km": 385.05,
+      "band": "country",
+      "confidence": "medium",
+      "diagnostics": {
+        "locator_mass": 0.24041,
+        "concentration": 1.0,
+        "dispersion_km": 0.0,
+        "evidence_support": 1.141
+      },
+      "place": "Marrakesh, Morocco",
+      "ocr_lines": 0
+    },
+    {
+      "site": "tunis",
+      "region": "Africa",
+      "scene": "street",
+      "expected": "Tunis",
+      "true": [
+        36.806261,
+        10.180549
+      ],
+      "predicted": [
+        33.854189,
+        -7.156949
+      ],
+      "error_km": 1604.28,
+      "band": "continent",
+      "confidence": "medium",
+      "diagnostics": {
+        "locator_mass": 0.41838,
+        "concentration": 0.9154,
+        "dispersion_km": 134.7,
+        "evidence_support": 0.214
+      },
+      "place": "Rabat",
+      "ocr_lines": 0
+    },
+    {
+      "site": "algiers",
+      "region": "Africa",
+      "scene": "street",
+      "expected": "Algiers",
+      "true": [
+        36.75483333,
+        3.06052778
+      ],
+      "predicted": [
+        36.75194,
+        3.028818
+      ],
+      "error_km": 2.84,
+      "band": "city",
+      "confidence": "medium",
+      "diagnostics": {
+        "locator_mass": 0.48321,
+        "concentration": 0.6837,
+        "dispersion_km": 100.7,
+        "evidence_support": 0.347
+      },
+      "place": "Algiers, Algeria",
+      "ocr_lines": 0
+    },
+    {
+      "site": "lagos",
+      "region": "Africa",
+      "scene": "street",
+      "expected": "Lagos",
+      "true": [
+        6.5244,
+        3.3792
+      ],
+      "predicted": [
+        9.152123,
+        7.313846
+      ],
+      "error_km": 522.68,
+      "band": "country",
+      "confidence": "low",
+      "diagnostics": {
+        "locator_mass": 0.19364,
+        "concentration": 0.5406,
+        "dispersion_km": 278.2,
+        "evidence_support": 0.734
+      },
+      "place": "Abuja, Nigeria",
+      "ocr_lines": 0
+    },
+    {
+      "site": "abuja",
+      "region": "Africa",
+      "scene": "street",
+      "expected": "Abuja",
+      "true": [
+        9.0765,
+        7.3986
+      ],
+      "predicted": [
+        18.61563,
+        -68.710659
+      ],
+      "error_km": 8232.53,
+      "band": "off-target",
+      "confidence": "insufficient",
+      "diagnostics": {
+        "locator_mass": 0.22127,
+        "concentration": 0.4292,
+        "dispersion_km": 1265.6,
+        "evidence_support": -1.224
+      },
+      "place": "Higuey, Dominican Rep.",
+      "ocr_lines": 0
+    },
+    {
+      "site": "accra",
+      "region": "Africa",
+      "scene": "street",
+      "expected": "Accra",
+      "true": [
+        5.602083,
+        -0.185244
+      ],
+      "predicted": [
+        37.018646,
+        68.797104
+      ],
+      "error_km": 7771.78,
+      "band": "off-target",
+      "confidence": "insufficient",
+      "diagnostics": {
+        "locator_mass": 0.48781,
+        "concentration": 0.3234,
+        "dispersion_km": 8107.1,
+        "evidence_support": 0.549
+      },
+      "place": "Kondoz, Afghanistan",
+      "ocr_lines": 0
+    },
+    {
+      "site": "dakar",
+      "region": "Africa",
+      "scene": "street",
+      "expected": "Dakar",
+      "true": [
+        14.7117,
+        -17.472401
+      ],
+      "predicted": [
+        38.941707,
+        1.36848
+      ],
+      "error_km": 3264.16,
+      "band": "off-target",
+      "confidence": "low",
+      "diagnostics": {
+        "locator_mass": 0.25424,
+        "concentration": 1.0,
+        "dispersion_km": 0.0,
+        "evidence_support": -0.803
+      },
+      "place": "Palma, Spain",
+      "ocr_lines": 0
+    },
+    {
+      "site": "abidjan",
+      "region": "Africa",
+      "scene": "street",
+      "expected": "Abidjan",
+      "true": [
+        5.361833,
+        -4.003667
+      ],
+      "predicted": [
+        3.881799,
+        11.525703
+      ],
+      "error_km": 1728.94,
+      "band": "continent",
+      "confidence": "low",
+      "diagnostics": {
+        "locator_mass": 0.65156,
+        "concentration": 0.7103,
+        "dispersion_km": 841.0,
+        "evidence_support": 0.385
+      },
+      "place": "Yaound\u00e9, Cameroon",
+      "ocr_lines": 0
+    },
+    {
+      "site": "bamako",
+      "region": "Africa",
+      "scene": "street",
+      "expected": "Bamako",
+      "true": [
+        12.64651,
+        -8.001325
+      ],
+      "predicted": [
+        0.330461,
+        32.583825
+      ],
+      "error_km": 4678.56,
+      "band": "off-target",
+      "confidence": "low",
+      "diagnostics": {
+        "locator_mass": 0.49065,
+        "concentration": 0.5635,
+        "dispersion_km": 711.6,
+        "evidence_support": 0.496
+      },
+      "place": "Kampala, Uganda",
+      "ocr_lines": 0
+    },
+    {
+      "site": "nairobi",
+      "region": "Africa",
+      "scene": "street",
+      "expected": "Nairobi",
+      "true": [
+        -1.2920659,
+        36.8219462
+      ],
+      "predicted": [
+        4.807186,
+        -75.690392
+      ],
+      "error_km": 12513.89,
+      "band": "off-target",
+      "confidence": "low",
+      "diagnostics": {
+        "locator_mass": 0.03049,
+        "concentration": 0.5118,
+        "dispersion_km": 755.8,
+        "evidence_support": 0.014
+      },
+      "place": "Pereira, Colombia",
+      "ocr_lines": 0
+    },
+    {
+      "site": "mombasa",
+      "region": "Africa",
+      "scene": "coastal",
+      "expected": "Mombasa",
+      "true": [
+        -4.0434771,
+        39.6682065
+      ],
+      "predicted": [
+        46.96766,
+        28.785228
+      ],
+      "error_km": 5771.91,
+      "band": "off-target",
+      "confidence": "insufficient",
+      "diagnostics": {
+        "locator_mass": 0.08256,
+        "concentration": 0.3885,
+        "dispersion_km": 679.8,
+        "evidence_support": -1.452
+      },
+      "place": "Chi\u0219in\u0103u, Moldova",
+      "ocr_lines": 0
+    },
+    {
+      "site": "kampala",
+      "region": "Africa",
+      "scene": "street",
+      "expected": "Kampala",
+      "true": [
+        0.3476,
+        32.5825
+      ],
+      "predicted": [
+        40.05034,
+        0.048779
+      ],
+      "error_km": 5505.83,
+      "band": "off-target",
+      "confidence": "insufficient",
+      "diagnostics": {
+        "locator_mass": 0.12111,
+        "concentration": 0.4052,
+        "dispersion_km": 2864.7,
+        "evidence_support": -0.981
+      },
+      "place": "Castello, Spain",
+      "ocr_lines": 0
+    },
+    {
+      "site": "kigali",
+      "region": "Africa",
+      "scene": "street",
+      "expected": "Kigali",
+      "true": [
+        -1.946404,
+        30.062163
+      ],
+      "predicted": [
+        -0.296629,
+        -91.032715
+      ],
+      "error_km": 13461.58,
+      "band": "off-target",
+      "confidence": "insufficient",
+      "diagnostics": {
+        "locator_mass": 0.09945,
+        "concentration": 0.3988,
+        "dispersion_km": 11448.9,
+        "evidence_support": 0.246
+      },
+      "place": "Puerto Villamil",
+      "ocr_lines": 0
+    },
+    {
+      "site": "dar-es-salaam",
+      "region": "Africa",
+      "scene": "street",
+      "expected": "Dar es Salaam",
+      "true": [
+        -6.7925,
+        39.21111111
+      ],
+      "predicted": [
+        -3.967842,
+        39.718117
+      ],
+      "error_km": 319.06,
+      "band": "country",
+      "confidence": "medium",
+      "diagnostics": {
+        "locator_mass": 0.60623,
+        "concentration": 0.7742,
+        "dispersion_km": 115.5,
+        "evidence_support": -0.085
+      },
+      "place": "Mombasa, Kenya",
+      "ocr_lines": 0
+    },
+    {
+      "site": "addis-ababa",
+      "region": "Africa",
+      "scene": "street",
+      "expected": "Addis Ababa",
+      "true": [
+        9.029967,
+        38.749208
+      ],
+      "predicted": [
+        51.562827,
+        -0.450587
+      ],
+      "error_km": 5918.01,
+      "band": "off-target",
+      "confidence": "insufficient",
+      "diagnostics": {
+        "locator_mass": 0.01912,
+        "concentration": 0.8231,
+        "dispersion_km": 55.0,
+        "evidence_support": -0.296
+      },
+      "place": "London, United Kingdom",
+      "ocr_lines": 0
+    },
+    {
+      "site": "khartoum",
+      "region": "Africa",
+      "scene": "street",
+      "expected": "Khartoum",
+      "true": [
+        15.5006544,
+        32.5598994
+      ],
+      "predicted": [
+        25.273698,
+        55.31265
+      ],
+      "error_km": 2603.18,
+      "band": "off-target",
+      "confidence": "insufficient",
+      "diagnostics": {
+        "locator_mass": 0.01165,
+        "concentration": 1.0,
+        "dispersion_km": 0.0,
+        "evidence_support": 0.113
+      },
+      "place": "Dubai, United Arab Emirates",
+      "ocr_lines": 0
+    },
+    {
+      "site": "johannesburg",
+      "region": "Africa",
+      "scene": "street",
+      "expected": "Johannesburg",
+      "true": [
+        -26.20483333,
+        28.04733333
+      ],
+      "predicted": [
+        -22.906703,
+        -43.177493
+      ],
+      "error_km": 7119.96,
+      "band": "off-target",
+      "confidence": "insufficient",
+      "diagnostics": {
+        "locator_mass": 0.02794,
+        "concentration": 0.4786,
+        "dispersion_km": 4524.0,
+        "evidence_support": -0.03
+      },
+      "place": "Rio de Janeiro, Brazil",
+      "ocr_lines": 0
+    },
+    {
+      "site": "cape-town",
+      "region": "Africa",
+      "scene": "coastal",
+      "expected": "Cape Town",
+      "true": [
+        -33.9249,
+        18.4241
+      ],
+      "predicted": [
+        -33.914501,
+        18.41866
+      ],
+      "error_km": 1.26,
+      "band": "city",
+      "confidence": "medium",
+      "diagnostics": {
+        "locator_mass": 0.17858,
+        "concentration": 0.8685,
+        "dispersion_km": 166.9,
+        "evidence_support": 1.142
+      },
+      "place": "Cape Town, South Africa",
+      "ocr_lines": 0
+    },
+    {
+      "site": "durban",
+      "region": "Africa",
+      "scene": "coastal",
+      "expected": "Durban",
+      "true": [
+        -29.85854722,
+        31.02226944
+      ],
+      "predicted": [
+        -43.531419,
+        172.637342
+      ],
+      "error_km": 10966.53,
+      "band": "off-target",
+      "confidence": "insufficient",
+      "diagnostics": {
+        "locator_mass": 0.12348,
+        "concentration": 0.7997,
+        "dispersion_km": 341.3,
+        "evidence_support": -0.731
+      },
+      "place": "Christchurch, New Zealand",
+      "ocr_lines": 0
+    },
+    {
+      "site": "windhoek",
+      "region": "Africa",
+      "scene": "street",
+      "expected": "Windhoek",
+      "true": [
+        -22.563972,
+        17.070451
+      ],
+      "predicted": [
+        -31.949756,
+        141.470888
+      ],
+      "error_km": 11549.3,
+      "band": "off-target",
+      "confidence": "insufficient",
+      "diagnostics": {
+        "locator_mass": 0.36041,
+        "concentration": 0.4117,
+        "dispersion_km": 7243.7,
+        "evidence_support": -0.544
+      },
+      "place": "Broken Hill, Australia",
+      "ocr_lines": 0
+    },
+    {
+      "site": "gaborone",
+      "region": "Africa",
+      "scene": "street",
+      "expected": "Gaborone",
+      "true": [
+        -24.6282,
+        25.9231
+      ],
+      "predicted": [
+        35.063564,
+        -106.780342
+      ],
+      "error_km": 15353.31,
+      "band": "off-target",
+      "confidence": "insufficient",
+      "diagnostics": {
+        "locator_mass": 0.03901,
+        "concentration": 0.2224,
+        "dispersion_km": 6718.3,
+        "evidence_support": -0.002
+      },
+      "place": "Albuquerque, United States of America",
+      "ocr_lines": 0
+    },
+    {
+      "site": "harare",
+      "region": "Africa",
+      "scene": "street",
+      "expected": "Harare",
+      "true": [
+        -17.83133333,
+        31.03566667
+      ],
+      "predicted": [
+        -30.10152,
+        29.706062
+      ],
+      "error_km": 1371.02,
+      "band": "continent",
+      "confidence": "low",
+      "diagnostics": {
+        "locator_mass": 0.69593,
+        "concentration": 0.5452,
+        "dispersion_km": 243.1,
+        "evidence_support": 0.132
+      },
+      "place": "Pietermaritzburg, South Africa",
+      "ocr_lines": 0
+    },
+    {
+      "site": "lusaka",
+      "region": "Africa",
+      "scene": "street",
+      "expected": "Lusaka",
+      "true": [
+        -15.39225,
+        28.316925
+      ],
+      "predicted": [
+        14.664564,
+        -17.451859
+      ],
+      "error_km": 6038.75,
+      "band": "off-target",
+      "confidence": "insufficient",
+      "diagnostics": {
+        "locator_mass": 0.05463,
+        "concentration": 0.3146,
+        "dispersion_km": 3284.8,
+        "evidence_support": 0.532
+      },
+      "place": "Dakar, Senegal",
+      "ocr_lines": 0
+    },
+    {
+      "site": "maputo",
+      "region": "Africa",
+      "scene": "street",
+      "expected": "Maputo",
+      "true": [
+        -25.96942694,
+        32.57272482
+      ],
+      "predicted": [
+        -25.965445,
+        32.578009
+      ],
+      "error_km": 0.69,
+      "band": "street",
+      "confidence": "low",
+      "diagnostics": {
+        "locator_mass": 0.21844,
+        "concentration": 0.649,
+        "dispersion_km": 505.8,
+        "evidence_support": 0.559
+      },
+      "place": "Maputo, Mozambique",
+      "ocr_lines": 0
+    },
+    {
+      "site": "antananarivo",
+      "region": "Africa",
+      "scene": "street",
+      "expected": "Antananarivo",
+      "true": [
+        -18.8792,
+        47.5079
+      ],
+      "predicted": [
+        -30.119501,
+        29.679832
+      ],
+      "error_km": 2189.68,
+      "band": "continent",
+      "confidence": "low",
+      "diagnostics": {
+        "locator_mass": 0.42641,
+        "concentration": 0.3297,
+        "dispersion_km": 2274.3,
+        "evidence_support": 0.824
+      },
+      "place": "Pietermaritzburg, South Africa",
+      "ocr_lines": 0
+    },
+    {
+      "site": "serengeti",
+      "region": "Africa",
+      "scene": "rural",
+      "expected": "Serengeti",
+      "true": [
+        -2.333333,
+        34.833333
+      ],
+      "predicted": [
+        -1.494284,
+        35.286793
+      ],
+      "error_km": 106.04,
+      "band": "region",
+      "confidence": "high",
+      "diagnostics": {
+        "locator_mass": 0.30383,
+        "concentration": 0.8916,
+        "dispersion_km": 16.0,
+        "evidence_support": 0.529
+      },
+      "place": "Sotik, Kenya",
+      "ocr_lines": 0
+    },
+    {
+      "site": "sahara-morocco",
+      "region": "Africa",
+      "scene": "rural",
+      "expected": "Sahara, Morocco",
+      "true": [
+        31.09944444,
+        -4.00388889
+      ],
+      "predicted": [
+        26.54423,
+        13.102994
+      ],
+      "error_km": 1739.65,
+      "band": "continent",
+      "confidence": "low",
+      "diagnostics": {
+        "locator_mass": 0.84093,
+        "concentration": 0.646,
+        "dispersion_km": 1348.9,
+        "evidence_support": 0.512
+      },
+      "place": "Marzuq, Libya",
+      "ocr_lines": 0
+    },
+    {
+      "site": "rio-corcovado",
+      "region": "South America",
+      "scene": "landmark",
+      "expected": "Corcovado, Rio",
+      "true": [
+        -22.95191,
+        -43.21056
+      ],
+      "predicted": [
+        -22.938598,
+        -43.201026
+      ],
+      "error_km": 1.77,
+      "band": "city",
+      "confidence": "low",
+      "diagnostics": {
+        "locator_mass": 0.08937,
+        "concentration": 0.5126,
+        "dispersion_km": 1173.2,
+        "evidence_support": 0.865
+      },
+      "place": "Rio de Janeiro, Brazil",
+      "ocr_lines": 0
+    },
+    {
+      "site": "rio-copacabana",
+      "region": "South America",
+      "scene": "coastal",
+      "expected": "Copacabana, Rio",
+      "true": [
+        -22.972175,
+        -43.18327833
+      ],
+      "predicted": [
+        -22.984759,
+        -43.195727
+      ],
+      "error_km": 1.89,
+      "band": "city",
+      "confidence": "high",
+      "diagnostics": {
+        "locator_mass": 0.54156,
+        "concentration": 1.0,
+        "dispersion_km": 0.0,
+        "evidence_support": 0.742
+      },
+      "place": "Rio de Janeiro, Brazil",
+      "ocr_lines": 0
+    },
+    {
+      "site": "sao-paulo",
+      "region": "South America",
+      "scene": "street",
+      "expected": "Sao Paulo",
+      "true": [
+        -23.5505,
+        -46.6333
+      ],
+      "predicted": [
+        -23.574701,
+        -46.659493
+      ],
+      "error_km": 3.79,
+      "band": "city",
+      "confidence": "medium",
+      "diagnostics": {
+        "locator_mass": 0.20418,
+        "concentration": 0.6975,
+        "dispersion_km": 114.9,
+        "evidence_support": 1.373
+      },
+      "place": "S\u00e3o Paulo, Brazil",
+      "ocr_lines": 0
+    },
+    {
+      "site": "salvador",
+      "region": "South America",
+      "scene": "street",
+      "expected": "Salvador, Brazil",
+      "true": [
+        -12.977794,
+        -38.501586
+      ],
+      "predicted": [
+        12.901033,
+        100.866938
+      ],
+      "error_km": 15616.67,
+      "band": "off-target",
+      "confidence": "low",
+      "diagnostics": {
+        "locator_mass": 0.16976,
+        "concentration": 0.7202,
+        "dispersion_km": 203.0,
+        "evidence_support": 0.297
+      },
+      "place": "Si Racha, Thailand",
+      "ocr_lines": 0
+    },
+    {
+      "site": "brasilia",
+      "region": "South America",
+      "scene": "street",
+      "expected": "Brasilia",
+      "true": [
+        -15.794096,
+        -47.882275
+      ],
+      "predicted": [
+        32.884595,
+        13.153869
+      ],
+      "error_km": 8440.27,
+      "band": "off-target",
+      "confidence": "insufficient",
+      "diagnostics": {
+        "locator_mass": 0.03697,
+        "concentration": 0.2263,
+        "dispersion_km": 1337.6,
+        "evidence_support": -0.643
+      },
+      "place": "Tripoli, Libya",
+      "ocr_lines": 0
+    },
+    {
+      "site": "buenos-aires",
+      "region": "South America",
+      "scene": "street",
+      "expected": "Buenos Aires",
+      "true": [
+        -34.60371667,
+        -58.3816
+      ],
+      "predicted": [
+        37.504064,
+        15.089424
+      ],
+      "error_km": 11031.16,
+      "band": "off-target",
+      "confidence": "insufficient",
+      "diagnostics": {
+        "locator_mass": 0.0186,
+        "concentration": 0.9167,
+        "dispersion_km": 35.1,
+        "evidence_support": 0.289
+      },
+      "place": "Catania, Italy",
+      "ocr_lines": 0
+    },
+    {
+      "site": "cordoba-ar",
+      "region": "South America",
+      "scene": "street",
+      "expected": "Cordoba, Argentina",
+      "true": [
+        -31.42047222,
+        -64.18905
+      ],
+      "predicted": [
+        -34.601493,
+        -58.382537
+      ],
+      "error_km": 646.54,
+      "band": "country",
+      "confidence": "medium",
+      "diagnostics": {
+        "locator_mass": 0.08357,
+        "concentration": 1.0,
+        "dispersion_km": 0.0,
+        "evidence_support": 0.817
+      },
+      "place": "Buenos Aires, Argentina",
+      "ocr_lines": 0
+    },
+    {
+      "site": "montevideo",
+      "region": "South America",
+      "scene": "street",
+      "expected": "Montevideo",
+      "true": [
+        -34.901527,
+        -56.164352
+      ],
+      "predicted": [
+        -34.543468,
+        -58.465079
+      ],
+      "error_km": 214.0,
+      "band": "country",
+      "confidence": "medium",
+      "diagnostics": {
+        "locator_mass": 0.09802,
+        "concentration": 0.8326,
+        "dispersion_km": 90.6,
+        "evidence_support": 1.12
+      },
+      "place": "Buenos Aires, Argentina",
+      "ocr_lines": 0
+    },
+    {
+      "site": "santiago",
+      "region": "South America",
+      "scene": "street",
+      "expected": "Santiago",
+      "true": [
+        -33.4488897,
+        -70.6692655
+      ],
+      "predicted": [
+        -32.532665,
+        -59.368
+      ],
+      "error_km": 1058.4,
+      "band": "continent",
+      "confidence": "insufficient",
+      "diagnostics": {
+        "locator_mass": 0.1452,
+        "concentration": 0.3271,
+        "dispersion_km": 5536.5,
+        "evidence_support": 0.458
+      },
+      "place": "Gualeguay, Argentina",
+      "ocr_lines": 0
+    },
+    {
+      "site": "valparaiso",
+      "region": "South America",
+      "scene": "coastal",
+      "expected": "Valparaiso",
+      "true": [
+        -33.047238,
+        -71.6126885
+      ],
+      "predicted": [
+        -33.043733,
+        -71.618428
+      ],
+      "error_km": 0.66,
+      "band": "street",
+      "confidence": "high",
+      "diagnostics": {
+        "locator_mass": 0.34545,
+        "concentration": 1.0,
+        "dispersion_km": 0.0,
+        "evidence_support": 1.195
+      },
+      "place": "Valpara\u00edso, Chile",
+      "ocr_lines": 0
+    },
+    {
+      "site": "lima",
+      "region": "South America",
+      "scene": "street",
+      "expected": "Lima",
+      "true": [
+        -12.046374,
+        -77.0427934
+      ],
+      "predicted": [
+        9.932365,
+        -84.07798
+      ],
+      "error_km": 2564.57,
+      "band": "off-target",
+      "confidence": "low",
+      "diagnostics": {
+        "locator_mass": 0.06235,
+        "concentration": 0.8153,
+        "dispersion_km": 866.8,
+        "evidence_support": 1.078
+      },
+      "place": "San Jos\u00e9, Costa Rica",
+      "ocr_lines": 0
+    },
+    {
+      "site": "cusco",
+      "region": "South America",
+      "scene": "street",
+      "expected": "Cusco",
+      "true": [
+        -13.531784,
+        -71.968426
+      ],
+      "predicted": [
+        -13.518148,
+        -71.980015
+      ],
+      "error_km": 1.97,
+      "band": "city",
+      "confidence": "low",
+      "diagnostics": {
+        "locator_mass": 0.25969,
+        "concentration": 0.5622,
+        "dispersion_km": 274.4,
+        "evidence_support": 0.744
+      },
+      "place": "Cusco, Peru",
+      "ocr_lines": 0
+    },
+    {
+      "site": "la-paz",
+      "region": "South America",
+      "scene": "street",
+      "expected": "La Paz",
+      "true": [
+        -16.483746,
+        -68.121848
+      ],
+      "predicted": [
+        -17.369245,
+        -66.204567
+      ],
+      "error_km": 226.48,
+      "band": "country",
+      "confidence": "low",
+      "diagnostics": {
+        "locator_mass": 0.22033,
+        "concentration": 0.8031,
+        "dispersion_km": 455.3,
+        "evidence_support": 1.534
+      },
+      "place": "Cochabamba, Bolivia",
+      "ocr_lines": 0
+    },
+    {
+      "site": "quito",
+      "region": "South America",
+      "scene": "street",
+      "expected": "Quito",
+      "true": [
+        -0.180653,
+        -78.467834
+      ],
+      "predicted": [
+        4.631059,
+        -74.09182
+      ],
+      "error_km": 722.87,
+      "band": "country",
+      "confidence": "low",
+      "diagnostics": {
+        "locator_mass": 0.52834,
+        "concentration": 0.5289,
+        "dispersion_km": 1938.2,
+        "evidence_support": 1.355
+      },
+      "place": "Bogota, Colombia",
+      "ocr_lines": 0
+    },
+    {
+      "site": "bogota",
+      "region": "South America",
+      "scene": "street",
+      "expected": "Bogota",
+      "true": [
+        4.7109886,
+        -74.072092
+      ],
+      "predicted": [
+        -23.57852,
+        -46.670744
+      ],
+      "error_km": 4327.11,
+      "band": "off-target",
+      "confidence": "low",
+      "diagnostics": {
+        "locator_mass": 0.07048,
+        "concentration": 1.0,
+        "dispersion_km": 0.0,
+        "evidence_support": 0.816
+      },
+      "place": "S\u00e3o Paulo, Brazil",
+      "ocr_lines": 0
+    },
+    {
+      "site": "medellin",
+      "region": "South America",
+      "scene": "street",
+      "expected": "Medellin",
+      "true": [
+        6.244203,
+        -75.5812119
+      ],
+      "predicted": [
+        47.384921,
+        8.574028
+      ],
+      "error_km": 9057.42,
+      "band": "off-target",
+      "confidence": "insufficient",
+      "diagnostics": {
+        "locator_mass": 0.13976,
+        "concentration": 0.5053,
+        "dispersion_km": 2451.0,
+        "evidence_support": -0.848
+      },
+      "place": "Z\u00fcrich, Switzerland",
+      "ocr_lines": 0
+    },
+    {
+      "site": "cartagena",
+      "region": "South America",
+      "scene": "coastal",
+      "expected": "Cartagena",
+      "true": [
+        10.394687,
+        -75.47998
+      ],
+      "predicted": [
+        17.967095,
+        102.609187
+      ],
+      "error_km": 16854.45,
+      "band": "off-target",
+      "confidence": "low",
+      "diagnostics": {
+        "locator_mass": 0.14227,
+        "concentration": 0.2721,
+        "dispersion_km": 993.5,
+        "evidence_support": -0.076
+      },
+      "place": "Vientiane, Laos",
+      "ocr_lines": 0
+    },
+    {
+      "site": "caracas",
+      "region": "South America",
+      "scene": "street",
+      "expected": "Caracas",
+      "true": [
+        10.48781188,
+        -66.90673828
+      ],
+      "predicted": [
+        10.522944,
+        -66.904167
+      ],
+      "error_km": 3.92,
+      "band": "city",
+      "confidence": "high",
+      "diagnostics": {
+        "locator_mass": 0.40559,
+        "concentration": 0.9842,
+        "dispersion_km": 16.4,
+        "evidence_support": 1.29
+      },
+      "place": "Caracas, Venezuela",
+      "ocr_lines": 0
+    },
+    {
+      "site": "asuncion",
+      "region": "South America",
+      "scene": "street",
+      "expected": "Asuncion",
+      "true": [
+        -25.27098,
+        -57.57346
+      ],
+      "predicted": [
+        10.082532,
+        -69.291165
+      ],
+      "error_km": 4131.05,
+      "band": "off-target",
+      "confidence": "insufficient",
+      "diagnostics": {
+        "locator_mass": 0.02839,
+        "concentration": 0.1961,
+        "dispersion_km": 4922.6,
+        "evidence_support": -0.399
+      },
+      "place": "Barquisimeto, Venezuela",
+      "ocr_lines": 0
+    },
+    {
+      "site": "patagonia",
+      "region": "South America",
+      "scene": "rural",
+      "expected": "Torres del Paine",
+      "true": [
+        -50.934255,
+        -73.40684
+      ],
+      "predicted": [
+        -51.145089,
+        -72.722525
+      ],
+      "error_km": 53.28,
+      "band": "region",
+      "confidence": "medium",
+      "diagnostics": {
+        "locator_mass": 0.54982,
+        "concentration": 0.7624,
+        "dispersion_km": 47.6,
+        "evidence_support": 0.396
+      },
+      "place": "28 de Noviembre, Chile",
+      "ocr_lines": 0
+    },
+    {
+      "site": "amazon",
+      "region": "South America",
+      "scene": "rural",
+      "expected": "Manaus, Amazon",
+      "true": [
+        -3.1190275,
+        -60.0217314
+      ],
+      "predicted": [
+        36.766515,
+        126.554719
+      ],
+      "error_km": 16213.58,
+      "band": "off-target",
+      "confidence": "insufficient",
+      "diagnostics": {
+        "locator_mass": 0.04757,
+        "concentration": 0.3557,
+        "dispersion_km": 6088.4,
+        "evidence_support": -0.326
+      },
+      "place": "Suwon, South Korea",
+      "ocr_lines": 0
+    },
+    {
+      "site": "nyc-times-sq",
+      "region": "North America",
+      "scene": "street",
+      "expected": "Times Square, NY",
+      "true": [
+        40.75804611,
+        -73.985514
+      ],
+      "predicted": [
+        40.756602,
+        -73.986699
+      ],
+      "error_km": 0.19,
+      "band": "street",
+      "confidence": "medium",
+      "diagnostics": {
+        "locator_mass": 0.08843,
+        "concentration": 1.0,
+        "dispersion_km": 0.0,
+        "evidence_support": 0.625
+      },
+      "place": "New York, United States of America",
+      "ocr_lines": 0
+    },
+    {
+      "site": "nyc-brooklyn",
+      "region": "North America",
+      "scene": "street",
+      "expected": "Brooklyn, NY",
+      "true": [
+        40.67955556,
+        -73.94694444
+      ],
+      "predicted": [
+        40.815207,
+        -73.956612
+      ],
+      "error_km": 15.11,
+      "band": "city",
+      "confidence": "low",
+      "diagnostics": {
+        "locator_mass": 0.05782,
+        "concentration": 0.6823,
+        "dispersion_km": 93.6,
+        "evidence_support": 0.193
+      },
+      "place": "New York, United States of America",
+      "ocr_lines": 0
+    },
+    {
+      "site": "chicago",
+      "region": "North America",
+      "scene": "street",
+      "expected": "Chicago",
+      "true": [
+        41.882789,
+        -87.623423
+      ],
+      "predicted": [
+        41.882757,
+        -87.62165
+      ],
+      "error_km": 0.15,
+      "band": "street",
+      "confidence": "medium",
+      "diagnostics": {
+        "locator_mass": 0.0852,
+        "concentration": 1.0,
+        "dispersion_km": 0.0,
+        "evidence_support": 0.496
+      },
+      "place": "Chicago, United States of America",
+      "ocr_lines": 0
+    },
+    {
+      "site": "san-francisco",
+      "region": "North America",
+      "scene": "landmark",
+      "expected": "Golden Gate",
+      "true": [
+        37.8199286,
+        -122.4782551
+      ],
+      "predicted": [
+        37.81014,
+        -122.476511
+      ],
+      "error_km": 1.1,
+      "band": "city",
+      "confidence": "high",
+      "diagnostics": {
+        "locator_mass": 0.2547,
+        "concentration": 1.0,
+        "dispersion_km": 0.0,
+        "evidence_support": 0.078
+      },
+      "place": "San Francisco, United States of America",
+      "ocr_lines": 0
+    },
+    {
+      "site": "los-angeles",
+      "region": "North America",
+      "scene": "street",
+      "expected": "Los Angeles",
+      "true": [
+        34.0522,
+        -118.2437
+      ],
+      "predicted": [
+        34.154766,
+        -118.41752
+      ],
+      "error_km": 19.65,
+      "band": "city",
+      "confidence": "low",
+      "diagnostics": {
+        "locator_mass": 0.04103,
+        "concentration": 0.4583,
+        "dispersion_km": 768.7,
+        "evidence_support": 0.197
+      },
+      "place": "Los Angeles, United States of America",
+      "ocr_lines": 0
+    },
+    {
+      "site": "seattle",
+      "region": "North America",
+      "scene": "street",
+      "expected": "Seattle",
+      "true": [
+        47.606208,
+        -122.33207
+      ],
+      "predicted": [
+        38.284039,
+        -85.82177
+      ],
+      "error_km": 3113.68,
+      "band": "off-target",
+      "confidence": "low",
+      "diagnostics": {
+        "locator_mass": 0.10834,
+        "concentration": 0.5758,
+        "dispersion_km": 1496.6,
+        "evidence_support": 0.857
+      },
+      "place": "New Albany, United States of America",
+      "ocr_lines": 0
+    },
+    {
+      "site": "new-orleans",
+      "region": "North America",
+      "scene": "street",
+      "expected": "New Orleans",
+      "true": [
+        29.958086,
+        -90.064698
+      ],
+      "predicted": [
+        29.958749,
+        -90.064668
+      ],
+      "error_km": 0.07,
+      "band": "street",
+      "confidence": "low",
+      "diagnostics": {
+        "locator_mass": 0.2348,
+        "concentration": 1.0,
+        "dispersion_km": 0.0,
+        "evidence_support": -0.766
+      },
+      "place": "New Orleans, United States of America",
+      "ocr_lines": 0
+    },
+    {
+      "site": "miami",
+      "region": "North America",
+      "scene": "coastal",
+      "expected": "Miami Beach",
+      "true": [
+        25.7907,
+        -80.13
+      ],
+      "predicted": [
+        -32.946053,
+        -60.636903
+      ],
+      "error_km": 6849.35,
+      "band": "off-target",
+      "confidence": "insufficient",
+      "diagnostics": {
+        "locator_mass": 0.01694,
+        "concentration": 0.3554,
+        "dispersion_km": 5251.7,
+        "evidence_support": -0.984
+      },
+      "place": "Rosario, Argentina",
+      "ocr_lines": 0
+    },
+    {
+      "site": "denver",
+      "region": "North America",
+      "scene": "street",
+      "expected": "Denver",
+      "true": [
+        39.7392358,
+        -104.990251
+      ],
+      "predicted": [
+        33.873685,
+        -117.210678
+      ],
+      "error_km": 1266.77,
+      "band": "continent",
+      "confidence": "insufficient",
+      "diagnostics": {
+        "locator_mass": 0.01592,
+        "concentration": 0.4533,
+        "dispersion_km": 1872.7,
+        "evidence_support": -0.434
+      },
+      "place": "Riverside, United States of America",
+      "ocr_lines": 0
+    },
+    {
+      "site": "toronto",
+      "region": "North America",
+      "scene": "street",
+      "expected": "Toronto",
+      "true": [
+        43.6426,
+        -79.3871
+      ],
+      "predicted": [
+        43.642521,
+        -79.386612
+      ],
+      "error_km": 0.04,
+      "band": "street",
+      "confidence": "high",
+      "diagnostics": {
+        "locator_mass": 0.27773,
+        "concentration": 1.0,
+        "dispersion_km": 0.0,
+        "evidence_support": 0.823
+      },
+      "place": "Toronto, Canada",
+      "ocr_lines": 0
+    },
+    {
+      "site": "montreal",
+      "region": "North America",
+      "scene": "street",
+      "expected": "Montreal",
+      "true": [
+        45.5017,
+        -73.5673
+      ],
+      "predicted": [
+        45.967714,
+        -73.016031
+      ],
+      "error_km": 67.2,
+      "band": "region",
+      "confidence": "medium",
+      "diagnostics": {
+        "locator_mass": 0.25881,
+        "concentration": 1.0,
+        "dispersion_km": 0.0,
+        "evidence_support": 0.802
+      },
+      "place": "Joliette, Canada",
+      "ocr_lines": 0
+    },
+    {
+      "site": "vancouver",
+      "region": "North America",
+      "scene": "street",
+      "expected": "Vancouver",
+      "true": [
+        49.282688,
+        -123.120739
+      ],
+      "predicted": [
+        49.26604,
+        -123.253232
+      ],
+      "error_km": 9.79,
+      "band": "city",
+      "confidence": "medium",
+      "diagnostics": {
+        "locator_mass": 0.10938,
+        "concentration": 1.0,
+        "dispersion_km": 0.0,
+        "evidence_support": -0.241
+      },
+      "place": "Vancouver, Canada",
+      "ocr_lines": 0
+    },
+    {
+      "site": "mexico-city",
+      "region": "North America",
+      "scene": "street",
+      "expected": "Mexico City",
+      "true": [
+        19.4326077,
+        -99.133208
+      ],
+      "predicted": [
+        19.499696,
+        -99.070476
+      ],
+      "error_km": 9.95,
+      "band": "city",
+      "confidence": "medium",
+      "diagnostics": {
+        "locator_mass": 0.09946,
+        "concentration": 0.6925,
+        "dispersion_km": 183.7,
+        "evidence_support": 0.599
+      },
+      "place": "Mexico City, Mexico",
+      "ocr_lines": 0
+    },
+    {
+      "site": "oaxaca",
+      "region": "North America",
+      "scene": "street",
+      "expected": "Oaxaca",
+      "true": [
+        17.071225,
+        -96.729125
+      ],
+      "predicted": [
+        38.742805,
+        -0.439621
+      ],
+      "error_km": 9356.35,
+      "band": "off-target",
+      "confidence": "insufficient",
+      "diagnostics": {
+        "locator_mass": 0.02927,
+        "concentration": 0.4579,
+        "dispersion_km": 599.5,
+        "evidence_support": 1.248
+      },
+      "place": "Alicante, Spain",
+      "ocr_lines": 0
+    },
+    {
+      "site": "havana",
+      "region": "North America",
+      "scene": "street",
+      "expected": "Havana",
+      "true": [
+        23.1135925,
+        -82.3665956
+      ],
+      "predicted": [
+        23.045017,
+        -82.344192
+      ],
+      "error_km": 7.96,
+      "band": "city",
+      "confidence": "high",
+      "diagnostics": {
+        "locator_mass": 0.51296,
+        "concentration": 1.0,
+        "dispersion_km": 0.0,
+        "evidence_support": 0.369
+      },
+      "place": "Havana, Cuba",
+      "ocr_lines": 0
+    },
+    {
+      "site": "panama-city",
+      "region": "North America",
+      "scene": "street",
+      "expected": "Panama City",
+      "true": [
+        8.9827404,
+        -79.516267
+      ],
+      "predicted": [
+        8.969071,
+        -79.531187
+      ],
+      "error_km": 2.24,
+      "band": "city",
+      "confidence": "high",
+      "diagnostics": {
+        "locator_mass": 0.47867,
+        "concentration": 1.0,
+        "dispersion_km": 0.0,
+        "evidence_support": 1.152
+      },
+      "place": "Panama City, Panama",
+      "ocr_lines": 0
+    },
+    {
+      "site": "guatemala",
+      "region": "North America",
+      "scene": "street",
+      "expected": "Guatemala City",
+      "true": [
+        14.637113,
+        -90.512549
+      ],
+      "predicted": [
+        19.04697,
+        -98.194973
+      ],
+      "error_km": 953.11,
+      "band": "continent",
+      "confidence": "medium",
+      "diagnostics": {
+        "locator_mass": 0.2487,
+        "concentration": 0.9192,
+        "dispersion_km": 162.8,
+        "evidence_support": -0.18
+      },
+      "place": "Puebla, Mexico",
+      "ocr_lines": 0
+    },
+    {
+      "site": "grand-canyon",
+      "region": "North America",
+      "scene": "rural",
+      "expected": "Grand Canyon",
+      "true": [
+        36.0544,
+        -112.1401
+      ],
+      "predicted": [
+        35.300253,
+        -111.823971
+      ],
+      "error_km": 88.59,
+      "band": "region",
+      "confidence": "medium",
+      "diagnostics": {
+        "locator_mass": 0.35491,
+        "concentration": 1.0,
+        "dispersion_km": 0.0,
+        "evidence_support": 0.19
+      },
+      "place": "Flagstaff, United States of America",
+      "ocr_lines": 0
+    },
+    {
+      "site": "alaska",
+      "region": "North America",
+      "scene": "rural",
+      "expected": "Anchorage, Alaska",
+      "true": [
+        61.2181,
+        -149.9003
+      ],
+      "predicted": [
+        40.914678,
+        -73.12286
+      ],
+      "error_km": 5438.52,
+      "band": "off-target",
+      "confidence": "insufficient",
+      "diagnostics": {
+        "locator_mass": 0.01353,
+        "concentration": 0.2232,
+        "dispersion_km": 1096.3,
+        "evidence_support": 0.391
+      },
+      "place": "Bridgeport, United States of America",
+      "ocr_lines": 0
+    },
+    {
+      "site": "sydney-opera",
+      "region": "Oceania",
+      "scene": "landmark",
+      "expected": "Sydney Opera House",
+      "true": [
+        -33.856771,
+        151.215246
+      ],
+      "predicted": [
+        -33.857322,
+        151.214789
+      ],
+      "error_km": 0.07,
+      "band": "street",
+      "confidence": "medium",
+      "diagnostics": {
+        "locator_mass": 0.16483,
+        "concentration": 1.0,
+        "dispersion_km": 0.0,
+        "evidence_support": 0.479
+      },
+      "place": "Sydney, Australia",
+      "ocr_lines": 0
+    },
+    {
+      "site": "sydney-street",
+      "region": "Oceania",
+      "scene": "street",
+      "expected": "Surry Hills, Sydney",
+      "true": [
+        -33.88333333,
+        151.20516667
+      ],
+      "predicted": [
+        -33.990793,
+        151.118666
+      ],
+      "error_km": 14.37,
+      "band": "city",
+      "confidence": "low",
+      "diagnostics": {
+        "locator_mass": 0.10973,
+        "concentration": 0.4175,
+        "dispersion_km": 1919.3,
+        "evidence_support": 0.515
+      },
+      "place": "Sydney, Australia",
+      "ocr_lines": 0
+    },
+    {
+      "site": "melbourne",
+      "region": "Oceania",
+      "scene": "street",
+      "expected": "Melbourne",
+      "true": [
+        -37.8136,
+        144.9631
+      ],
+      "predicted": [
+        -27.468647,
+        153.024779
+      ],
+      "error_km": 1374.5,
+      "band": "continent",
+      "confidence": "low",
+      "diagnostics": {
+        "locator_mass": 0.05912,
+        "concentration": 0.9503,
+        "dispersion_km": 36.4,
+        "evidence_support": 0.232
+      },
+      "place": "Brisbane, Australia",
+      "ocr_lines": 0
+    },
+    {
+      "site": "brisbane",
+      "region": "Oceania",
+      "scene": "street",
+      "expected": "Brisbane",
+      "true": [
+        -27.46986944,
+        153.02508611
+      ],
+      "predicted": [
+        -33.872308,
+        151.207049
+      ],
+      "error_km": 732.8,
+      "band": "country",
+      "confidence": "medium",
+      "diagnostics": {
+        "locator_mass": 0.10667,
+        "concentration": 0.9171,
+        "dispersion_km": 60.7,
+        "evidence_support": -0.178
+      },
+      "place": "Sydney, Australia",
+      "ocr_lines": 0
+    },
+    {
+      "site": "perth",
+      "region": "Oceania",
+      "scene": "street",
+      "expected": "Perth",
+      "true": [
+        -31.95219444,
+        115.86130556
+      ],
+      "predicted": [
+        -34.980536,
+        138.511434
+      ],
+      "error_km": 2123.13,
+      "band": "continent",
+      "confidence": "low",
+      "diagnostics": {
+        "locator_mass": 0.44661,
+        "concentration": 0.4431,
+        "dispersion_km": 719.9,
+        "evidence_support": 0.467
+      },
+      "place": "Adelaide, Australia",
+      "ocr_lines": 0
+    },
+    {
+      "site": "auckland",
+      "region": "Oceania",
+      "scene": "street",
+      "expected": "Auckland",
+      "true": [
+        -36.84861111,
+        174.76333333
+      ],
+      "predicted": [
+        -36.84951,
+        174.765109
+      ],
+      "error_km": 0.19,
+      "band": "street",
+      "confidence": "medium",
+      "diagnostics": {
+        "locator_mass": 0.20731,
+        "concentration": 1.0,
+        "dispersion_km": 0.0,
+        "evidence_support": 0.175
+      },
+      "place": "Auckland, New Zealand",
+      "ocr_lines": 0
+    },
+    {
+      "site": "wellington",
+      "region": "Oceania",
+      "scene": "street",
+      "expected": "Wellington",
+      "true": [
+        -41.28662872,
+        174.77616882
+      ],
+      "predicted": [
+        -34.927313,
+        138.600219
+      ],
+      "error_km": 3218.69,
+      "band": "off-target",
+      "confidence": "low",
+      "diagnostics": {
+        "locator_mass": 0.08233,
+        "concentration": 0.5233,
+        "dispersion_km": 342.2,
+        "evidence_support": 0.133
+      },
+      "place": "Adelaide, Australia",
+      "ocr_lines": 0
+    },
+    {
+      "site": "queenstown",
+      "region": "Oceania",
+      "scene": "rural",
+      "expected": "Queenstown, NZ",
+      "true": [
+        -45.03235,
+        168.66251667
+      ],
+      "predicted": [
+        -44.999888,
+        168.723408
+      ],
+      "error_km": 5.99,
+      "band": "city",
+      "confidence": "low",
+      "diagnostics": {
+        "locator_mass": 0.43724,
+        "concentration": 1.0,
+        "dispersion_km": 0.0,
+        "evidence_support": -0.474
+      },
+      "place": "Queenstown, New Zealand",
+      "ocr_lines": 0
+    },
+    {
+      "site": "outback",
+      "region": "Oceania",
+      "scene": "rural",
+      "expected": "Uluru, Australia",
+      "true": [
+        -25.345,
+        131.036111
+      ],
+      "predicted": [
+        -25.335908,
+        130.95471
+      ],
+      "error_km": 8.24,
+      "band": "city",
+      "confidence": "low",
+      "diagnostics": {
+        "locator_mass": 0.23926,
+        "concentration": 0.4194,
+        "dispersion_km": 608.8,
+        "evidence_support": 0.25
+      },
+      "place": "Yulara, Australia",
+      "ocr_lines": 0
+    }
+  ],
+  "failures": []
+}

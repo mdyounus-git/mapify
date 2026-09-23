@@ -45,48 +45,81 @@ the whole design principle, and there is a benchmark below that holds it to it.
 ## Accuracy, measured
 
 `scripts/evaluate.py` runs the pipeline over geotagged, freely-licensed
-photographs from Wikimedia Commons and reports the error. Eleven samples across
-six continents, offline mode, OCR off:
+photographs from Wikimedia Commons. **163 samples**, six continents, offline
+mode, OCR off. The sampling frame is in `scripts/sample_sites.py` and
+deliberately over-samples Africa and South America, because that is where the
+model is known to be weak.
 
 | Band | Threshold | Hit rate |
 |---|---|---|
-| Street | ≤ 1 km | 5/11 — 45% |
-| City | ≤ 25 km | 8/11 — 73% |
-| Region | ≤ 200 km | 9/11 — 82% |
-| Country | ≤ 750 km | 9/11 — 82% |
+| Street | ≤ 1 km | 30/163 — 18% |
+| City | ≤ 25 km | 61/163 — 37% |
+| Region | ≤ 200 km | 74/163 — 45% |
+| Country | ≤ 750 km | 97/163 — 60% |
+| Continent | ≤ 2500 km | 113/163 — 69% |
 
-Median error **1.8 km**.
+Median error **368 km**.
 
-The number that matters more is the calibration:
+That is a much weaker result than an earlier eleven-sample set suggested
+(45% street-level, median 1.8 km). The eleven samples were mostly landmarks in
+well-photographed cities. They were not representative, and the numbers they
+produced were flattering rather than wrong-by-accident. This is what the tool
+actually does.
 
-| Stated confidence | n | Median error | Worst error |
+### The number that matters
+
+| Stated confidence | n | Median | Worst | ≤200 km | ≤1500 km |
+|---|---|---|---|---|---|
+| **high** | 20 | **1.2 km** | **106 km** | **100%** | 100% |
+| medium | 54 | 15.5 km | 15,110 km | 63% | 89% |
+| low | 51 | 658 km | 16,854 km | 37% | 63% |
+| insufficient | 38 | 6,985 km | 16,214 km | 3% | 16% |
+
+**When Mapify says high confidence, all 20 such calls landed within 106 km.**
+The bands fall monotonically from there, so they carry real information.
+
+Only `high` makes a promise. `medium` is reported with its measured rate —
+89% within 1500 km — because threshold fitting showed that is its ceiling on
+this data, and promising a distance it cannot keep would be the exact failure
+this project exists to avoid.
+
+Those thresholds are not guesses. They were fitted by
+`scripts/tune_confidence.py`, which searches on half the samples and validates
+on the half it never saw. The chosen rule scored 100% precision on both halves.
+[Phase 13](PHASES/Implemented%20Phases/PHASE-13-wider-benchmark.md) records how,
+including the version that got it wrong.
+
+### Where it is weak, stated plainly
+
+| Region | n | ≤25 km | Median |
 |---|---|---|---|
-| high | 7 | 0.5 km | 12.7 km |
-| medium | 1 | 190 km | 190 km |
-| low | 2 | 12,514 km | 12,514 km |
-| insufficient | 1 | 11,783 km | 11,783 km |
+| North America | 19 | 58% | 15 km |
+| Oceania | 9 | 56% | 14 km |
+| Asia | 43 | 47% | 50 km |
+| Europe | 39 | 38% | 192 km |
+| South America | 21 | 29% | 723 km |
+| **Africa** | **32** | **12%** | **2,396 km** |
 
-Both catastrophic misses — Cairo read as Argentina, Nairobi as Colombia — were
-labelled `low` and `insufficient`. Nothing labelled `high` was worse than 13 km
-out. **The tool is allowed to be wrong. It is not allowed to be confidently
-wrong.**
+| Scene | n | ≤25 km | Median |
+|---|---|---|---|
+| landmark | 11 | 82% | 0.1 km |
+| rural | 12 | 42% | 71 km |
+| street | 130 | 34% | 561 km |
+| coastal | 10 | 30% | 1,158 km |
 
-Reproduce it yourself:
+Two things to take from this. **GeoCLIP is substantially worse in Africa** —
+tropical and Sub-Saharan scenes are frequently read as Latin America, and the
+headline number hides it. And **landmarks are the easy case**: 82% within
+25 km against 34% for ordinary streets. Any geolocation benchmark built from
+tourist photography will look better than the tool really is.
+
+Reproduce all of it:
 
 ```bash
-python scripts/fetch_samples.py
+python scripts/fetch_samples.py      # 163 geotagged CC/PD photographs
 python scripts/evaluate.py --offline
+python scripts/tune_confidence.py    # refit and validate the thresholds
 ```
-
-### Known weakness
-
-GeoCLIP's training distribution shows: tropical and Sub-Saharan African scenes
-are frequently misread as Latin America. Evidence fusion re-ranks around this
-when the image gives it something to work with, and the confidence band catches
-it when it does not, but the underlying bias is real and you should know about
-it before trusting a result from those regions.
-
----
 
 ## Install
 

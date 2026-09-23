@@ -193,27 +193,45 @@ class TestConfidenceBanding:
         return FusionEngine(FusionConfig(), geocoder, countries)
 
     def test_tight_confident_cluster_is_high(self, engine):
+        """Enough mass, tight, and nothing arguing against it."""
         result = engine.fuse([
-            raw(48.8584, 2.2945, 0.04), raw(48.8590, 2.2950, 0.04),
-            raw(48.8580, 2.2940, 0.04),
+            raw(48.8584, 2.2945, 0.12), raw(48.8590, 2.2950, 0.12),
+            raw(48.8580, 2.2940, 0.10),
         ])
         assert result.confidence == "high"
-        assert result.locator_mass == pytest.approx(0.12)
+        assert result.locator_mass == pytest.approx(0.34)
 
     def test_a_shortlist_holding_no_mass_is_insufficient(self, engine):
         """A tidy top-k means nothing if the model committed nothing to it."""
         result = engine.fuse([
-            raw(48.8584, 2.2945, 0.002), raw(48.8590, 2.2950, 0.002),
+            raw(48.8584, 2.2945, 0.008), raw(48.8590, 2.2950, 0.008),
         ])
         assert result.confidence == "insufficient"
-        assert any("did not recognise" in n for n in result.notes)
+        assert "did not recognise" in result.confidence_reason
 
-    def test_a_weak_shortlist_is_downgraded_not_trusted(self, engine):
+    def test_a_tight_cluster_with_thin_mass_is_not_high(self, engine):
+        """The regression this whole banding rewrite exists for.
+
+        A perfectly tight, perfectly concentrated cluster used to reach
+        "high" on its own. Over 163 samples that produced calls 15,689 km
+        off target, because a confidently wrong GeoCLIP prediction looks
+        exactly like a confidently right one on dispersion alone. Mass is
+        what separates them.
+        """
         result = engine.fuse([
-            raw(48.8584, 2.2945, 0.015), raw(48.8590, 2.2950, 0.015),
+            raw(14.5995, 120.9842, 0.05), raw(14.5996, 120.9843, 0.05),
+        ])
+        assert result.dispersion_km < 1.0        # as tight as it gets
+        assert result.concentration == pytest.approx(1.0)
+        assert result.confidence != "high"
+
+    def test_the_high_band_names_what_is_missing(self, engine):
+        """A near miss should say which condition it failed."""
+        result = engine.fuse([
+            raw(48.8584, 2.2945, 0.06), raw(48.8590, 2.2950, 0.06),
         ])
         assert result.confidence in {"medium", "low"}
-        assert any("Downgraded" in n for n in result.notes)
+        assert "Short of high confidence on" in result.confidence_reason
 
     def test_scattered_candidates_are_insufficient(self, engine):
         result = engine.fuse([
@@ -229,16 +247,25 @@ class TestConfidenceBanding:
             reading("world_region", "e_asia", "East Asia", 0.9),
             reading("signage_script", "Hani", "Chinese characters", 0.9),
         ])
-        clean = engine.fuse([
-            raw(48.8584, 2.2945, 0.05), raw(48.8590, 2.2950, 0.05),
-        ])
-        contradicted = engine.fuse([
-            raw(48.8584, 2.2945, 0.05), raw(48.8590, 2.2950, 0.05),
-        ], evidence=evidence)
+        points = [raw(48.8584, 2.2945, 0.16), raw(48.8590, 2.2950, 0.16)]
+        clean = engine.fuse(list(points))
+        contradicted = engine.fuse(list(points), evidence=evidence)
         assert clean.confidence == "high"
         assert contradicted.evidence_support < 0
         assert contradicted.confidence != "high"
         assert any("contradicts" in n for n in contradicted.notes)
+
+    def test_negative_evidence_alone_blocks_high(self, engine):
+        """High requires the image to support it, not merely not object."""
+        evidence = VisualEvidence(readings=[
+            reading("world_region", "e_asia", "East Asia", 0.5),
+        ])
+        result = engine.fuse(
+            [raw(48.8584, 2.2945, 0.20), raw(48.8590, 2.2950, 0.20)],
+            evidence=evidence,
+        )
+        assert result.evidence_support < 0
+        assert result.confidence != "high"
 
     def test_no_candidates_is_insufficient_not_a_crash(self, engine):
         result = engine.fuse([])

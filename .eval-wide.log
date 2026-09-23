@@ -1,0 +1,206 @@
+Loading models (offline=True, ocr=False)…
+E:\mapify\.venv\Lib\site-packages\torch\jit\_script.py:1491: FutureWarning: `torch.jit.script` is deprecated. Please switch to `torch.compile` or `torch.export`.
+  warnings.warn(
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+WARNING:huggingface_hub.utils._http:Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+Loading weights:   0%|          | 0/590 [00:00<?, ?it/s]Loading weights:   3%|▎         | 18/590 [00:00<00:04, 115.59it/s]Loading weights:   6%|▌         | 36/590 [00:00<00:04, 112.04it/s]Loading weights:   8%|▊         | 48/590 [00:00<00:06, 86.87it/s] Loading weights:  10%|▉         | 58/590 [00:00<00:06, 79.61it/s]Loading weights:  13%|█▎        | 75/590 [00:00<00:05, 101.95it/s]Loading weights:  15%|█▍        | 87/590 [00:01<00:06, 73.97it/s] Loading weights:  16%|█▋        | 96/590 [00:01<00:09, 53.50it/s]Loading weights:  21%|██        | 122/590 [00:01<00:08, 58.03it/s]Loading weights:  23%|██▎       | 133/590 [00:01<00:07, 62.33it/s]Loading weights:  25%|██▍       | 147/590 [00:02<00:06, 72.12it/s]Loading weights:  27%|██▋       | 158/590 [00:02<00:05, 76.58it/s]Loading weights:  28%|██▊       | 168/590 [00:02<00:05, 79.50it/s]Loading weights:  30%|███       | 177/590 [00:02<00:07, 58.99it/s]Loading weights:  31%|███▏      | 185/590 [00:02<00:07, 54.70it/s]Loading weights:  33%|███▎      | 193/590 [00:02<00:06, 57.02it/s]Loading weights:  34%|███▍      | 200/590 [00:02<00:06, 57.96it/s]Loading weights:  35%|███▌      | 207/590 [00:03<00:06, 57.72it/s]Loading weights:  36%|███▋      | 215/590 [00:03<00:06, 58.59it/s]Loading weights:  38%|███▊      | 222/590 [00:03<00:07, 50.76it/s]Loading weights:  39%|███▉      | 232/590 [00:03<00:05, 60.44it/s]Loading weights:  41%|████      | 243/590 [00:03<00:04, 70.86it/s]Loading weights:  43%|████▎     | 251/590 [00:03<00:04, 71.59it/s]Loading weights:  44%|████▍     | 259/590 [00:03<00:04, 71.56it/s]Loading weights:  46%|████▌     | 272/590 [00:03<00:03, 83.36it/s]Loading weights: 100%|██████████| 590/590 [00:03<00:00, 147.63it/s]
+ready in 36s, 163 samples
+
+sample              error km  band       confidence      mass  conc  spread  predicted
+--------------------------------------------------------------------------------------
+paris-eiffel             0.0  street     high           0.131  1.00       0  Paris, France
+paris-belleville        10.6  city       medium         0.078  1.00       0  Paris, France
+london-south           385.8  country    high           0.214  0.80      90  Eindhoven, Netherlands
+london-bridge            0.0  street     high           0.169  1.00       0  London, United Kingdom
+berlin-kreuzberg       147.1  region     medium         0.042  0.79      31  Leipzig, Germany
+munich                 299.0  country    insufficient   0.021  0.87     744  Prague, Czechia
+amsterdam               56.2  region     high           0.142  0.56      44  The Hague, Netherlands
+rotterdam             5983.3  off-target insufficient   0.034  0.59    3780  Philadelphia, United States of Ameri
+madrid                2387.5  continent  low            0.022  0.38     815  Oslo, Norway
+seville                427.3  country    high           0.206  0.74      63  Madrid, Spain
+lisbon                 151.2  region     medium         0.277  0.63     790  Portimão
+rome                     0.0  street     high           0.177  1.00       0  Rome, Italy
+naples                 657.6  country    medium         0.082  1.00       0  Milan, Italy
+venice                   0.1  street     high           0.074  1.00       0  Venice, Italy
+athens                   0.0  street     high           0.372  1.00       0  Athens, Greece
+thessaloniki           327.5  country    medium         0.026  0.88      41  Pirgos, Greece
+warsaw                8234.9  off-target medium         0.026  0.59     109  Vancouver, Canada
+krakow                1086.6  continent  high           0.082  0.84     116  Tallinn, Estonia
+prague                   0.1  street     high           0.106  1.00       0  Prague, Czechia
+budapest                 0.1  street     high           0.221  1.00       0  Budapest, Hungary
+bucharest             2405.8  continent  medium         0.035  0.79     139  Santander, Spain
+sofia                    0.3  street     high           0.346  1.00       0  Sofia, Bulgaria
+belgrade               368.0  country    high           0.295  1.00       0  Zagreb, Croatia
+zagreb                5293.9  off-target medium         0.120  0.57     534  Pathankot, India
+vienna                   0.4  street     high           0.124  1.00       0  Vienna, Austria
+zurich                   0.2  street     high           0.130  1.00       0  Zürich, Switzerland
+stockholm             6777.8  off-target high           0.158  1.00       0  Narayanganj, Bangladesh
+oslo                   341.8  country    medium         0.101  0.51     173  Norrköping, Sweden
+copenhagen            6586.4  off-target insufficient   0.016  0.29    3296  Pittsburgh, United States of America
+helsinki              2946.9  off-target medium         0.063  0.75     333  Valencia, Spain
+reykjavik                4.4  city       high           0.205  1.00       0  Reykjavík, Iceland
+dublin                 735.4  country    insufficient   0.058  0.69    2549  Haarlem, Netherlands
+edinburgh                0.7  street     high           0.126  1.00       0  Edinburgh, United Kingdom
+porto                 1353.8  continent  high           0.107  0.96     137  Lausanne, Switzerland
+norway-fjord           191.7  region     high           0.413  0.53     103  Vossavangen, Norway
+swiss-alps               4.3  city       high           0.810  1.00       0  Sion, Switzerland
+moscow                 190.2  region     medium         0.121  0.70     585  Vladimir, Russia
+st-petersburg           16.3  city       medium         0.165  0.96      82  St.  Petersburg, Russia
+kyiv                   602.9  country    medium         0.200  0.56     511  Kaluga, Russia
+tokyo-shibuya           12.6  city       high           0.069  1.00       0  Tokyo, Japan
+tokyo-asakusa            0.1  street     high           0.320  1.00       0  Tokyo, Japan
+osaka                    3.0  city       high           0.102  1.00       0  Ōsaka, Japan
+kyoto                  599.2  country    medium         0.172  0.68     204  Nagasaki, Japan
+seoul                 8512.3  off-target medium         0.331  0.77     165  Athens, Greece
+busan                  962.4  continent  medium         0.057  0.34     446  Tokyo, Japan
+beijing                  0.7  street     high           0.226  1.00       0  Beijing, China
+shanghai              8849.2  off-target medium         0.027  0.61     130  Duisburg, Germany
+hong-kong                0.3  street     high           0.121  1.00       0  Hong Kong, Hong Kong
+taipei                   6.0  city       low            0.047  0.56     965  New Taipei, Taiwan
+bangkok               7922.5  off-target insufficient   0.011  0.43     939  Athens, Greece
+chiang-mai             739.0  country    medium         0.163  0.28     333  Ubon Ratchathani, Thailand
+hanoi                    0.4  street     high           0.247  1.00       0  Hanoi, Vietnam
+ho-chi-minh              0.1  street     high           0.303  1.00       0  Ho Chi Minh City, Vietnam
+phnom-penh           11420.5  off-target high           0.226  1.00       0  Marrakesh, Morocco
+singapore                0.1  street     high           0.207  1.00       0  Singapore, Singapore
+kuala-lumpur             2.0  city       high           0.170  1.00       0  Kuala Lumpur, Malaysia
+jakarta              14445.9  off-target insufficient   0.141  0.61    3880  Los Angeles, United States of Americ
+bali                    21.1  city       high           0.288  1.00       0  Denpasar, Indonesia
+manila               15110.2  off-target high           0.228  1.00       0  Havana, Cuba
+delhi                  800.9  continent  medium         0.065  0.66     561  Kathmandu, Nepal
+bengaluru                0.7  street     high           0.401  1.00       0  Bengaluru, India
+mumbai                   0.8  street     high           0.317  1.00       0  Mumbai, India
+kolkata                648.0  country    medium         0.053  0.49     702  Kathmandu, Nepal
+chennai              10405.7  off-target insufficient   0.031  0.37    7912  Banjul, Gambia
+jaipur                 217.9  country    high           0.123  0.94      71  Gurgaon, India
+kathmandu                6.8  city       high           0.499  1.00       0  Lalitpur, Nepal
+dhaka                15689.0  off-target high           0.047  0.68      78  Campinas, Brazil
+colombo               6320.7  off-target insufficient   0.033  0.37    6831  Takamatsu, Japan
+karachi                  1.4  city       high           0.877  0.98      17  Karachi, Pakistan
+lahore               10741.1  off-target insufficient   0.030  0.44    3302  Trois-Rivières, Canada
+tehran                3631.2  off-target low            0.060  0.58     479  Mysuru, India
+istanbul                 0.5  street     high           0.095  1.00       0  Istanbul, Turkey
+dubai                    7.9  city       high           0.418  1.00       0  Dubai, United Arab Emirates
+doha                    24.4  city       high           0.506  0.97       3  Doha, Qatar
+jerusalem               49.9  region     low            0.107  0.45    1945  Tel Aviv, Israel
+amman                    0.7  street     high           0.828  1.00       0  Amman, Jordan
+tbilisi                446.3  country    high           0.056  0.75     113  Baku, Azerbaijan
+yerevan                 31.3  region     high           0.671  0.97       4  Ashtarak, Armenia
+almaty                3676.8  off-target medium         0.112  0.48     785  Tiraspol, Moldova
+tashkent             11065.6  off-target high           0.192  0.75      47  Sacramento, United States of America
+ulaanbaatar           3286.7  off-target medium         0.536  0.31     886  Baykonur, Baikonur
+himalaya                18.3  city       medium         0.313  0.80     593  Ramechhap, Nepal
+cairo-giza           11783.3  off-target insufficient   0.019  0.19    6004  Gualeguay, Argentina
+cairo-city               0.0  street     high           0.543  0.77     108  Cairo, Egypt
+alexandria             170.4  region     high           0.246  0.82      30  Cairo, Egypt
+marrakesh              390.0  country    high           0.160  0.73     128  Fez, Morocco
+casablanca              86.3  region     medium         0.668  0.77     440  Rabat, Morocco
+fes                    385.1  country    high           0.240  1.00       0  Marrakesh, Morocco
+tunis                 1604.3  continent  high           0.418  0.92     135  Rabat
+algiers                  2.8  city       high           0.483  0.68     101  Algiers, Algeria
+lagos                  522.7  country    medium         0.194  0.54     278  Abuja, Nigeria
+abuja                 8232.5  off-target insufficient   0.221  0.43    1266  Higuey, Dominican Rep.
+accra                 7771.8  off-target insufficient   0.488  0.32    8107  Kondoz, Afghanistan
+dakar                 3264.2  off-target medium         0.254  1.00       0  Palma, Spain
+abidjan               1728.9  continent  medium         0.652  0.71     841  Yaoundé, Cameroon
+bamako                4678.6  off-target medium         0.491  0.56     712  Kampala, Uganda
+nairobi              12513.9  off-target low            0.030  0.51     756  Pereira, Colombia
+mombasa               5771.9  off-target low            0.083  0.39     680  Chișinău, Moldova
+kampala               5505.8  off-target insufficient   0.121  0.41    2865  Castello, Spain
+kigali               13461.6  off-target insufficient   0.099  0.40   11449  Puerto Villamil
+dar-es-salaam          319.1  country    high           0.606  0.77     116  Mombasa, Kenya
+addis-ababa           5918.0  off-target medium         0.019  0.82      55  London, United Kingdom
+khartoum              2603.2  off-target insufficient   0.012  1.00       0  Dubai, United Arab Emirates
+johannesburg          7120.0  off-target insufficient   0.028  0.48    4524  Rio de Janeiro, Brazil
+cape-town                1.3  city       medium         0.179  0.87     167  Cape Town, South Africa
+durban               10966.5  off-target low            0.123  0.80     341  Christchurch, New Zealand
+windhoek             11549.3  off-target insufficient   0.360  0.41    7244  Broken Hill, Australia
+gaborone             15353.3  off-target insufficient   0.039  0.22    6718  Albuquerque, United States of Americ
+harare                1371.0  continent  medium         0.696  0.55     243  Pietermaritzburg, South Africa
+lusaka                6038.8  off-target insufficient   0.055  0.31    3285  Dakar, Senegal
+maputo                   0.7  street     medium         0.218  0.65     506  Maputo, Mozambique
+antananarivo          2189.7  continent  low            0.426  0.33    2274  Pietermaritzburg, South Africa
+serengeti              106.0  region     high           0.304  0.89      16  Sotik, Kenya
+sahara-morocco        1739.6  continent  low            0.841  0.65    1349  Marzuq, Libya
+rio-corcovado            1.8  city       low            0.089  0.51    1173  Rio de Janeiro, Brazil
+rio-copacabana           1.9  city       high           0.542  1.00       0  Rio de Janeiro, Brazil
+sao-paulo                3.8  city       high           0.204  0.70     115  São Paulo, Brazil
+salvador             15616.7  off-target medium         0.170  0.72     203  Si Racha, Thailand
+brasilia              8440.3  off-target insufficient   0.037  0.23    1338  Tripoli, Libya
+buenos-aires         11031.2  off-target medium         0.019  0.92      35  Catania, Italy
+cordoba-ar             646.5  country    high           0.084  1.00       0  Buenos Aires, Argentina
+montevideo             214.0  country    high           0.098  0.83      91  Buenos Aires, Argentina
+santiago              1058.4  continent  insufficient   0.145  0.33    5536  Gualeguay, Argentina
+valparaiso               0.7  street     high           0.345  1.00       0  Valparaíso, Chile
+lima                  2564.6  off-target medium         0.062  0.82     867  San José, Costa Rica
+cusco                    2.0  city       medium         0.260  0.56     274  Cusco, Peru
+la-paz                 226.5  country    medium         0.220  0.80     455  Cochabamba, Bolivia
+quito                  722.9  country    low            0.528  0.53    1938  Bogota, Colombia
+bogota                4327.1  off-target high           0.070  1.00       0  São Paulo, Brazil
+medellin              9057.4  off-target insufficient   0.140  0.51    2451  Zürich, Switzerland
+cartagena            16854.5  off-target low            0.142  0.27     994  Vientiane, Laos
+caracas                  3.9  city       high           0.406  0.98      16  Caracas, Venezuela
+asuncion              4131.0  off-target insufficient   0.028  0.20    4923  Barquisimeto, Venezuela
+patagonia               53.3  region     high           0.550  0.76      48  28 de Noviembre, Chile
+amazon               16213.6  off-target insufficient   0.048  0.36    6088  Suwon, South Korea
+nyc-times-sq             0.2  street     high           0.088  1.00       0  New York, United States of America
+nyc-brooklyn            15.1  city       high           0.058  0.68      94  New York, United States of America
+chicago                  0.1  street     high           0.085  1.00       0  Chicago, United States of America
+san-francisco            1.1  city       high           0.255  1.00       0  San Francisco, United States of Amer
+los-angeles             19.7  city       low            0.041  0.46     769  Los Angeles, United States of Americ
+seattle               3113.7  off-target low            0.108  0.58    1497  New Albany, United States of America
+new-orleans              0.1  street     medium         0.235  1.00       0  New Orleans, United States of Americ
+miami                 6849.3  off-target insufficient   0.017  0.36    5252  Rosario, Argentina
+denver                1266.8  continent  insufficient   0.016  0.45    1873  Riverside, United States of America
+toronto                  0.0  street     high           0.278  1.00       0  Toronto, Canada
+montreal                67.2  region     high           0.259  1.00       0  Joliette, Canada
+vancouver                9.8  city       high           0.109  1.00       0  Vancouver, Canada
+mexico-city              9.9  city       medium         0.099  0.69     184  Mexico City, Mexico
+oaxaca                9356.4  off-target low            0.029  0.46     600  Alicante, Spain
+havana                   8.0  city       high           0.513  1.00       0  Havana, Cuba
+panama-city              2.2  city       high           0.479  1.00       0  Panama City, Panama
+guatemala              953.1  continent  medium         0.249  0.92     163  Puebla, Mexico
+grand-canyon            88.6  region     high           0.355  1.00       0  Flagstaff, United States of America
+alaska                5438.5  off-target insufficient   0.014  0.22    1096  Bridgeport, United States of America
+sydney-opera             0.1  street     high           0.165  1.00       0  Sydney, Australia
+sydney-street           14.4  city       low            0.110  0.42    1919  Sydney, Australia
+melbourne             1374.5  continent  high           0.059  0.95      36  Brisbane, Australia
+brisbane               732.8  country    high           0.107  0.92      61  Sydney, Australia
+perth                 2123.1  continent  medium         0.447  0.44     720  Adelaide, Australia
+auckland                 0.2  street     high           0.207  1.00       0  Auckland, New Zealand
+wellington            3218.7  off-target medium         0.082  0.52     342  Adelaide, Australia
+queenstown               6.0  city       medium         0.437  1.00       0  Queenstown, New Zealand
+outback                  8.2  city       medium         0.239  0.42     609  Yulara, Australia
+
+Accuracy over 163 samples (cumulative), 1.1s per image:
+  street     <=      1 km   30/163    18% #####
+  city       <=     25 km   61/163    37% ##########
+  region     <=    200 km   74/163    45% ############
+  country    <=    750 km   97/163    60% ###############
+  continent  <=   2500 km  113/163    69% ##################
+  median error 368.0 km
+
+Reliability — is the stated confidence earned?
+  stated            n       median         worst  <=200km  verdict
+  high             76       4.3 km     15,689 km     72%  OVERCONFIDENT — worst 15,689 km
+  medium           44     698.3 km     15,617 km     32%  OVERCONFIDENT — worst 15,617 km
+  low              16   2,288.6 km     16,854 km     31%  ok — promises nothing
+  insufficient     27   7,120.0 km     16,214 km      0%  ok — promises nothing
+
+By region — the headline hides the weakness
+                      n   <=25km   <=200km      median
+  Asia               43     47%      51%     49.9 km
+  Europe             39     38%      51%    191.7 km
+  Africa             32     12%      22%  2,396.4 km
+  South America      21     29%      33%    722.9 km
+  North America      19     58%      68%     15.1 km
+  Oceania             9     56%      56%     14.4 km
+
+By scene — landmarks are the easy case
+                      n   <=25km   <=200km      median
+  street            130     34%      39%    560.9 km
+  rural              12     42%      75%     70.9 km
+  landmark           11     82%      91%      0.1 km
+  coastal            10     30%      40%  1,158.1 km
+
+wrote data/eval_wide.json
