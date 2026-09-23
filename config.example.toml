@@ -1,0 +1,177 @@
+# Mapify configuration.
+#
+# Copy this file to config.toml in the same folder and edit it. Every setting
+# has a working default, so config.toml is entirely optional — it exists so you
+# can change what the application is allowed to do, not to make it run.
+#
+# The [network] section is the important one. It is the complete list of things
+# Mapify can talk to. If something is not in here, the application does not
+# contact it.
+
+# ══════════════════════════════════════════════════════════════════════════
+[network]
+# ══════════════════════════════════════════════════════════════════════════
+
+# The master switch. When true, nothing leaves this machine for any reason:
+# place names come from the bundled Natural Earth data, there are no nearby
+# features, and the globe uses only the textures already on disk.
+#
+# The image itself is analysed locally either way. This governs the naming and
+# enrichment steps, not the model.
+offline_only = false
+
+# --- Nominatim: turning a coordinate into a street address ------------------
+#
+# Run as a free public service by the OpenStreetMap Foundation. Their usage
+# policy is a condition of access, and Mapify enforces the parts it can: an
+# identifying User-Agent, a hard one-request-per-second floor shared across
+# threads, an on-disk cache, and a budget per analysis so one image cannot
+# fan out into a crawl.
+#
+# Results are ODbL-licensed data and must be attributed. See ATTRIBUTION.md.
+# https://operations.osmfoundation.org/policies/nominatim/
+nominatim_enabled = true
+nominatim_endpoint = "https://nominatim.openstreetmap.org"
+nominatim_min_interval_s = 1.1
+nominatim_max_lookups_per_analysis = 6
+
+# Point this at your own Nominatim instance if you have one; the rate limit
+# then only has to respect your own hardware.
+
+# --- Overpass: named features near the estimate -----------------------------
+#
+# One query per analysis, cached, rate-limited, abandoned quietly on failure.
+# Also ODbL.
+overpass_enabled = true
+overpass_endpoint = "https://overpass-api.de/api/interpreter"
+overpass_min_interval_s = 2.0
+overpass_timeout_s = 25.0
+overpass_radius_m = 1200
+
+# --- Identification ---------------------------------------------------------
+#
+# Sent on every outbound request. If you run a modified build, say so here:
+# operators of donated infrastructure are entitled to know who is calling.
+user_agent = "Mapify/0.1 (open-source image geolocation; local use)"
+request_timeout_s = 20.0
+
+# --- Ground detail tiles ----------------------------------------------------
+#
+# Off by default, because tiles are an outbound request per landing and the
+# OSMF tile servers are donated capacity, not a CDN.
+#
+# Switch this on and the globe loads a small grid of raster tiles around the
+# target on the final descent, giving real detail where the 8k NASA imagery
+# runs out at about 5 km per pixel. A landing fetches at most a 4x4 grid and
+# caches it.
+#
+# If you are going to use this often, point it at your own tile server.
+# https://operations.osmfoundation.org/policies/tiles/
+basemap_tiles_enabled = false
+basemap_tile_url = "https://tile.openstreetmap.org/{z}/{x}/{y}.png"
+basemap_attribution = "© OpenStreetMap contributors"
+
+
+# ══════════════════════════════════════════════════════════════════════════
+[models]
+# ══════════════════════════════════════════════════════════════════════════
+
+# "cpu" or "cuda". CUDA needs a CUDA build of PyTorch, which setup_env.ps1
+# does not install — it fetches the CPU wheels so the download stays small.
+device = "cpu"
+
+# GeoCLIP is the primary locator. Turning it off leaves only the CLIP country
+# gazetteer, which is a genuine estimate but a country-scale one.
+geoclip_enabled = true
+geoclip_top_k = 12
+
+# The CLIP backbone. GeoCLIP is built on this exact checkpoint, and the
+# evidence extractor shares the loaded copy rather than pulling a second
+# 1.7 GB of weights.
+clip_model_id = "openai/clip-vit-large-patch14"
+clip_evidence_enabled = true
+gazetteer_locator_enabled = true
+
+# --- OCR --------------------------------------------------------------------
+#
+# Optional, and not installed by default: EasyOCR pulls opencv and scipy,
+# roughly 300 MB. Install it with `pip install easyocr` and text on signs
+# becomes available as evidence — it is the strongest single clue a
+# photograph can carry, because a place name can be matched against the
+# gazetteer and checked rather than guessed.
+ocr_enabled = true
+ocr_languages = ["en"]
+
+# EasyOCR loads one recogniser per compatible language group, so a full
+# multi-script sweep is slow. Add the groups you actually expect:
+#
+# ocr_extra_groups = [["ru", "en"], ["ar", "en"], ["hi", "en"], ["ch_sim", "en"]]
+ocr_extra_groups = []
+
+# Long side the image is scaled to before the model sees it. CLIP works at
+# 224px regardless; this bounds the cost of OCR and EXIF handling.
+max_image_side = 1600
+
+
+# ══════════════════════════════════════════════════════════════════════════
+[fusion]
+# ══════════════════════════════════════════════════════════════════════════
+#
+# How much each kind of evidence may move a candidate, as a maximum log-odds
+# adjustment for fully-confident evidence. These are deliberately modest:
+# evidence re-ranks what the locator proposed, it does not overrule it.
+
+w_driving_side = 0.90     # which side of the road traffic keeps to
+w_script       = 1.10     # the writing system on signage
+w_toponym      = 1.60     # a place name read off a sign and found in the gazetteer
+w_climate      = 0.55     # vegetation, snow, terrain vs latitude
+w_plate        = 0.45     # vehicle registration plate style
+w_region_hint  = 0.50     # coarse world region, architecture, vehicle mix
+
+# No pile-up of weak agreements may exceed this in total.
+max_total_adjustment = 2.5
+
+# --- Confidence banding -----------------------------------------------------
+#
+# Three independent things have to hold before Mapify claims a location.
+
+# "concentration" is the share of retained probability in the leading
+# candidate; "spread" is the radius containing 68% of the candidate mass.
+high_concentration   = 0.45
+high_spread_km       = 160.0
+medium_concentration = 0.20
+medium_spread_km     = 900.0
+insufficient_spread_km = 2500.0
+
+# "locator mass" is how much of its full distribution the locator committed to
+# its whole shortlist. GeoCLIP softmaxes over 100,000 points, so a tidy top-k
+# holding almost none of that means it recognised nothing in particular,
+# however neat the top-k looks.
+min_locator_mass  = 0.015   # below this: insufficient, and say why
+weak_locator_mass = 0.045   # below this: downgrade one band
+
+# Net log-odds below which the visual evidence is treated as contradicting the
+# leading candidate, which also forces a downgrade.
+contradiction_threshold = -0.35
+
+candidates_returned = 5
+cluster_radius_km   = 120.0
+
+
+# ══════════════════════════════════════════════════════════════════════════
+[server]
+# ══════════════════════════════════════════════════════════════════════════
+#
+# The analysis service behind the application window. In the desktop app the
+# host and port here are ignored: it binds to loopback on a port the OS picks
+# at launch, behind a random per-session token. These matter only when running
+# `python -m mapify.server` by hand.
+host = "127.0.0.1"
+port = 8771
+
+max_upload_bytes = 33554432   # 32 MB
+
+# Debugging only. When true, every uploaded image is written to data/uploads.
+# Leave it false: the normal path holds uploads in memory and drops them when
+# the request ends.
+keep_uploads = false

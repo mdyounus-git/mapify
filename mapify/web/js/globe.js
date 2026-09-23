@@ -1180,8 +1180,10 @@ export class Globe {
     if (this.detail?.enabled) return R * 1.02;
     const kmPerTexel = this.imageryKmPerTexel || 9.8;
     const px = this.canvas.clientHeight || 700;
-    // Ground width we want in view for roughly one texel per screen pixel.
-    const spanKm = px * kmPerTexel;
+    // Roughly 2.5 screen pixels per texel. One-to-one is needlessly strict:
+    // mild magnification still reads as sharp, and it buys an approach that
+    // lands on a region rather than stopping at a continent.
+    const spanKm = (px / 2.5) * kmPerTexel;
     const halfFov = (this.camera.fov * DEG) / 2;
     const altKm = spanKm / (2 * Math.tan(halfFov));
     return R * (1 + altKm / EARTH_RADIUS_KM);
