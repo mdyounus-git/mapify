@@ -229,6 +229,66 @@
     </aside>
   </main>
 
+  <!-- ════════════════════════ first run ══════════════════════════
+       Shown once, before anything is downloaded. The number comes first
+       because it is the only part of this screen a person needs in order
+       to decide. Everything below it is there to make the decision an
+       informed one rather than a resigned one.
+  -->
+  <div id="firstrun" class="sheet" hidden role="dialog" aria-modal="true"
+       aria-labelledby="fr-title" aria-describedby="fr-lede">
+    <div class="sheet-card">
+
+      <header class="fr-head">
+        <p class="eyebrow">First launch</p>
+        <h2 id="fr-title">Mapify needs to download its model</h2>
+        <p id="fr-lede" class="fr-lede">
+          The application ships without model weights, so the first launch
+          fetches them. This happens <strong>once</strong>. Every launch after
+          it starts in a couple of seconds, and every analysis runs on this
+          machine with nothing leaving it.
+        </p>
+      </header>
+
+      <div class="fr-figure">
+        <span id="fr-size" class="fr-size">—</span>
+        <span class="fr-size-unit">to download</span>
+      </div>
+
+      <ul id="fr-components" class="fr-list"></ul>
+
+      <dl class="fr-facts">
+        <div><dt>Downloaded from</dt><dd id="fr-origin">—</dd></div>
+        <div><dt>Stored in</dt><dd id="fr-cache" class="mono wrap">—</dd></div>
+        <div><dt>Then</dt><dd id="fr-then">—</dd></div>
+      </dl>
+
+      <div id="fr-progress" class="fr-progress" hidden>
+        <div class="fr-progress-head">
+          <span id="fr-stage">Starting</span>
+          <span id="fr-rate" class="mono"></span>
+        </div>
+        <div class="track"><i id="fr-bar"></i></div>
+        <p id="fr-detail" class="fr-detail"></p>
+      </div>
+
+      <p id="fr-error" class="fr-error" hidden></p>
+
+      <footer class="fr-actions">
+        <button id="fr-defer" class="btn" type="button">Not now</button>
+        <button id="fr-go" class="btn btn-primary" type="button">
+          Download and set up
+        </button>
+      </footer>
+
+      <p class="fr-foot">
+        You can close this and use the globe without it; Mapify will offer
+        again the next time you open an image.
+        <span id="fr-foot-tail"></span>
+      </p>
+    </div>
+  </div>
+
   <!-- ═════════════════════════ status bar ═════════════════════════ -->
   <footer id="statusbar">
     <span id="engine-status" class="status"><span class="dot"></span>starting</span>

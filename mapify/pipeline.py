@@ -45,10 +45,10 @@ from .models.clip_evidence import ClipEvidenceExtractor, ClipGazetteerLocator
 from .models.geoclip_locator import GeoClipLocator
 from .models import ocr as ocr_groups
 from .models.ocr import build_ocr_engine
+from .paths import cache_dir
 
 log = logging.getLogger("mapify.pipeline")
 
-ROOT = Path(__file__).resolve().parent.parent
 
 ProgressFn = Callable[[str, str], None]
 
@@ -115,7 +115,7 @@ class AnalysisEngine:
             else None
         )
 
-        cache_path = ROOT / "data" / "cache" / "lookups.sqlite"
+        cache_path = cache_dir() / "lookups.sqlite"
         self.cache = LookupCache(cache_path)
         self.nominatim = NominatimClient(
             cfg.network.nominatim_endpoint,
@@ -135,10 +135,22 @@ class AnalysisEngine:
 
     # --------------------------------------------------------------- setup
 
-    def warmup(self) -> dict[str, Any]:
-        """Load what we can, and report honestly on what we could not."""
+    def warmup(self, progress: ProgressFn | None = None) -> dict[str, Any]:
+        """Load what we can, and report honestly on what we could not.
+
+        ``progress`` is called with a stage key and a sentence as each part
+        starts. The first launch spends ten minutes in here and the caller
+        needs to be able to say which of those minutes is which -- a download
+        that has stalled and a gallery that is still encoding look identical
+        from outside.
+        """
+        def step(stage: str, message: str) -> None:
+            if progress:
+                progress(stage, message)
+
         status: dict[str, Any] = {}
         if self.geoclip:
+            step("locator", "Loading the geolocation model")
             ok = self.geoclip.load()
             status["geoclip"] = {
                 "loaded": ok,
@@ -150,6 +162,7 @@ class AnalysisEngine:
                 self.clip.load(clip_model, processor)
                 # Encode the GPS gallery now. It is the same for every image,
                 # so paying for it here makes each analysis ~20x faster.
+                step("gallery", "Encoding the GPS gallery")
                 t0 = time.time()
                 self.geoclip.gallery_features()
                 status["geoclip"]["gallery_encode_s"] = round(time.time() - t0, 1)
@@ -157,6 +170,7 @@ class AnalysisEngine:
             status["geoclip"] = {"loaded": False, "error": "disabled in config"}
 
         if not self.clip.loaded:
+            step("evidence", "Loading the evidence encoder")
             self.clip.load()
         status["clip"] = {
             "loaded": self.clip.loaded,
@@ -167,8 +181,10 @@ class AnalysisEngine:
             "engine": getattr(self.ocr, "name", None),
             "available": bool(self.ocr and self.ocr.name != "none"),
         }
+        step("geodata", "Indexing the offline gazetteer")
         status["offline_geodata"] = self.geocoder.status()
         status["timezone_lookup"] = tz.available()
+        step("ready", "Ready")
         return status
 
     def engine_status(self) -> dict[str, Any]:

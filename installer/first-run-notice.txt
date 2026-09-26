@@ -1,0 +1,44 @@
+Mapify - before you install
+===========================
+
+WHAT THIS INSTALLS
+
+  About 1.1 GB of application, into your own user profile
+  (%LOCALAPPDATA%\Programs\Mapify). No administrator rights are used, no
+  machine-wide settings are changed, and no other account on this computer
+  is affected.
+
+WHAT IT DOES NOT INSTALL
+
+  The model weights. Mapify uses OpenAI's CLIP ViT-L/14 (MIT licence), which
+  is about 1.6 GB, and it is not redistributed here. The first time you run
+  Mapify it will tell you the size, ask, and download it only if you agree.
+  After that it is cached and never downloaded again.
+
+  Setting up also encodes a 100,000-point reference grid. That is five to
+  eight minutes of computation on a CPU, once, with no network involved.
+
+YOUR IMAGES
+
+  Images are analysed on this machine. They are never uploaded anywhere.
+
+  Naming a place - turning coordinates into "Paris, France" - sends the
+  coordinates, and only the coordinates, to OpenStreetMap's Nominatim
+  service. You can switch that off in config.toml and Mapify will name
+  places from bundled Natural Earth data instead, with no network at all.
+
+THIS INSTALLER IS NOT SIGNED
+
+  Windows SmartScreen may warn you that the publisher is unverified. That
+  warning is correct: there is no code-signing certificate behind this
+  build. Do not turn SmartScreen off. If you did not build this yourself
+  from https://github.com/mdyounus-git/mapify, consider doing so.
+
+WHAT IT IS FOR, AND WHAT IT IS NOT
+
+  Mapify estimates where a photograph was taken and states how much to
+  trust that estimate. On its own benchmark, high confidence was right
+  within 106 km every time it was used - and it was only used on 12% of
+  images. Everything else is a lead, not a location.
+
+  It is not a surveillance tool, and its output is not evidence.

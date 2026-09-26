@@ -28,10 +28,11 @@ from typing import Any
 
 from . import __version__
 from .config import ACCEPTED_EXTENSIONS, Config, load_config
+from .paths import read_root, state_dir
 
 log = logging.getLogger("mapify.desktop")
 
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = read_root()
 WEB_DIR = Path(__file__).resolve().parent / "web"
 
 IMAGE_TYPES = ("Images (*.jpg;*.jpeg;*.png;*.webp)", "All files (*.*)")
@@ -310,6 +311,14 @@ def run(argv: list[str] | None = None) -> int:
         return 1
 
     # --- open the window --------------------------------------------------
+    #
+    # Check the renderer before asking pywebview for a window. Failing here
+    # costs a registry read and produces an instruction; failing later
+    # produces a COM HRESULT from inside .NET interop.
+    if sys.platform == "win32" and webview2_runtime() is None:
+        _fatal(WEBVIEW2_MISSING)
+        return 1
+
     try:
         import webview
     except ImportError:
@@ -450,6 +459,57 @@ def _selftest() -> int:
         print(f"  {label.ljust(width)}  {result}")
     print("SELFTEST FAILED" if failed else "SELFTEST OK")
     return 1 if failed else 0
+
+
+def webview2_runtime() -> str | None:
+    """The installed Edge WebView2 runtime version, or None if absent.
+
+    WebView2 ships with Windows 11 and with current Windows 10, but it is
+    removable and it is genuinely missing on older or heavily managed
+    machines. Without this check pywebview raises a COM error from inside
+    .NET interop, which is a stack trace ending in ``0x80040154`` -- true,
+    and of no use to anybody.
+
+    The runtime registers itself under a well-known key, in both the
+    machine-wide and per-user hives, and on 64-bit Windows the machine-wide
+    one lives under WOW6432Node regardless of the runtime's own bitness.
+    """
+    if sys.platform != "win32":
+        return None
+    try:
+        import winreg
+    except ImportError:  # pragma: no cover - not Windows
+        return None
+
+    client = "{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}"
+    locations = (
+        (winreg.HKEY_LOCAL_MACHINE,
+         r"SOFTWARE\WOW6432Node\Microsoft\EdgeUpdate\Clients" + "\\" + client),
+        (winreg.HKEY_LOCAL_MACHINE,
+         r"SOFTWARE\Microsoft\EdgeUpdate\Clients" + "\\" + client),
+        (winreg.HKEY_CURRENT_USER,
+         r"SOFTWARE\Microsoft\EdgeUpdate\Clients" + "\\" + client),
+    )
+    for hive, path in locations:
+        try:
+            with winreg.OpenKey(hive, path) as key:
+                version, _ = winreg.QueryValueEx(key, "pv")
+        except OSError:
+            continue
+        if version and version != "0.0.0.0":
+            return str(version)
+    return None
+
+
+WEBVIEW2_MISSING = (
+    "Mapify needs the Microsoft Edge WebView2 Runtime, and this machine "
+    "does not have it.\n\n"
+    "It is a free Microsoft component that draws the application window. "
+    "Windows 11 includes it; some Windows 10 installations do not.\n\n"
+    "Install the Evergreen Runtime from:\n"
+    "https://developer.microsoft.com/microsoft-edge/webview2/\n\n"
+    "Then start Mapify again. Nothing else needs to be reinstalled."
+)
 
 
 def _fatal(message: str) -> None:

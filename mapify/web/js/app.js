@@ -50,6 +50,20 @@ const el = {
   sourceThumb: $("source-thumb"),
   sourceName: $("source-name"),
   sourceDims: $("source-dims"),
+  firstrun: $("firstrun"),
+  frSize: $("fr-size"),
+  frComponents: $("fr-components"),
+  frOrigin: $("fr-origin"),
+  frCache: $("fr-cache"),
+  frThen: $("fr-then"),
+  frProgress: $("fr-progress"),
+  frStage: $("fr-stage"),
+  frRate: $("fr-rate"),
+  frBar: $("fr-bar"),
+  frDetail: $("fr-detail"),
+  frError: $("fr-error"),
+  frDefer: $("fr-defer"),
+  frGo: $("fr-go"),
 };
 
 const STAGES = [
@@ -94,6 +108,8 @@ const state = {
   previewUrl: null,
   sourcePath: null,
   batch: null,          // { items, clusters, selected } while a batch exists
+  setup: null,          // first-run status, once /api/firstrun has answered
+  warming: false,       // a warmup stream is open
 };
 
 /* ─────────────────────────── formatting ─────────────────────────── */
@@ -215,11 +231,286 @@ async function boot() {
   }
   updateCredit();
 
-  // Load the models now so the first analysis is not the slow one.
+  el.frGo.addEventListener("click", runSetup);
+  el.frDefer.addEventListener("click", deferFirstRun);
+  el.firstrun.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && !state.warming) deferFirstRun();
+  });
+
+  // Ask what the first launch will cost before spending any of it. When
+  // there is nothing to fetch this warms up silently, as it always did.
+  await checkFirstRun();
+}
+
+
+/* ═══════════════════════════ first run ═══════════════════════════
+   The first launch costs about 1.6 GB and several minutes. Saying so
+   afterwards, in the status bar, is not telling someone -- it is
+   informing them of a decision already taken on their behalf.
+
+   So: state the size before anything starts, show real progress while it
+   runs, and let it be declined. A declined download is remembered, and
+   the offer is repeated only when the user tries to do something that
+   actually needs it.
+*/
+
+function fmtBytes(n) {
+  if (!n && n !== 0) return "—";
+  if (n >= 1e9) return (n / 1e9).toFixed(2) + " GB";
+  if (n >= 1e6) return Math.round(n / 1e6) + " MB";
+  if (n >= 1e3) return Math.round(n / 1e3) + " kB";
+  return n + " B";
+}
+
+function fmtDuration(seconds) {
+  if (seconds == null || !isFinite(seconds)) return "";
+  const s = Math.max(0, Math.round(seconds));
+  if (s < 60) return s + "s";
+  const m = Math.floor(s / 60);
+  if (m < 60) return m + "m " + String(s % 60).padStart(2, "0") + "s";
+  return Math.floor(m / 60) + "h " + String(m % 60).padStart(2, "0") + "m";
+}
+
+async function checkFirstRun() {
+  try {
+    state.setup = await (await fetch("/api/firstrun")).json();
+  } catch {
+    return;                       // service not up yet; boot() will carry on
+  }
+  if (state.setup.ready) {
+    warmUpQuietly();              // nothing to fetch: just load, in silence
+    return;
+  }
+  if (state.setup.deferred) {
+    setHudState("Setup deferred — open an image to finish it");
+    return;                       // they already said no; do not nag on boot
+  }
+  showFirstRun();
+}
+
+function showFirstRun() {
+  const setup = state.setup;
+  if (!setup) return;
+
+  // Three different situations reach this screen and they are not the same
+  // sentence. Weights missing is a download; weights present with no
+  // encoded gallery is a minute of local computation and no network at all.
+  // Saying "needs to download" in the second case would be a plain untruth.
+  const needsDownload = Boolean(setup.download_required);
+  document.getElementById("fr-title").textContent = needsDownload
+    ? "Mapify needs to download its model"
+    : "Mapify needs a minute to finish setting up";
+  document.getElementById("fr-lede").innerHTML = needsDownload
+    ? 'The application ships without model weights, so the first launch '
+      + 'fetches them. This happens <strong>once</strong>. Every launch after '
+      + 'it starts in a couple of seconds, and every analysis runs on this '
+      + 'machine with nothing leaving it.'
+    : 'The model is already here. What is left is a one-off computation on '
+      + 'this machine — encoding the reference grid the locator searches '
+      + 'against — which makes <strong>every</strong> later analysis about '
+      + 'twenty times faster. No network is involved.';
+  el.frGo.textContent = needsDownload ? "Download and set up" : "Set up now";
+  document.getElementById("fr-foot-tail").textContent = needsDownload
+    ? "Nothing is sent anywhere — this is a download, not an upload."
+    : "No network is involved in this step at all.";
+
+  el.frSize.textContent = needsDownload ? fmtBytes(setup.total_bytes)
+                                        : "Nothing";
+
+  el.frComponents.innerHTML = (setup.components || []).map((c) => `
+    <li>
+      <span class="fr-item-head">
+        ${esc(c.label)}
+        <span class="lic">${esc(c.licence)}</span>
+        <span class="fr-item-size">${
+          c.present ? '<span class="have">already here</span>'
+                    : esc(fmtBytes(c.bytes))
+        }</span>
+      </span>
+      ${esc(c.why)}
+    </li>`).join("");
+
+  const origins = [...new Set((setup.components || [])
+    .filter((c) => !c.present).map((c) => c.origin))];
+  el.frOrigin.textContent = origins.length ? origins.join(", ")
+                                           : "nothing — it is already here";
+  el.frCache.textContent = setup.cache_dir || "—";
+  el.frThen.textContent = setup.gallery_encode_required
+    ? `usually about ${fmtDuration(setup.gallery_encode_seconds)} of one-off `
+      + "computation, on this machine, with no network — longer if memory "
+      + "is short"
+    : "ready immediately";
+
+  el.frError.hidden = true;
+  el.frProgress.hidden = true;
+  el.firstrun.hidden = false;
+  el.frGo.focus();
+}
+
+function hideFirstRun() {
+  el.firstrun.hidden = true;
+}
+
+async function deferFirstRun() {
+  hideFirstRun();
+  try {
+    await fetch("/api/firstrun/defer", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ deferred: true }),
+    });
+  } catch { /* the marker is a convenience, not a requirement */ }
+  if (state.setup) state.setup.deferred = true;
+  setHudState("Setup deferred — open an image to finish it");
+}
+
+/** Warm up with no screen: everything is already on disk. */
+function warmUpQuietly() {
+  if (state.warming) return;
+  state.warming = true;
   fetch("/api/warmup", { method: "POST" })
     .then((r) => r.json())
     .then(() => refreshStatus())
-    .catch(() => {});
+    .catch(() => {})
+    .finally(() => { state.warming = false; });
+}
+
+/** Warm up in front of the user, narrating it. */
+async function runSetup() {
+  if (state.warming) return;
+  state.warming = true;
+  el.frGo.disabled = true;
+  el.frDefer.disabled = true;
+  el.frError.hidden = true;
+  el.frProgress.hidden = false;
+  el.frStage.textContent = "Starting";
+  el.frDetail.textContent = "";
+  el.frRate.textContent = "";
+  el.frBar.style.width = "0%";
+
+  const STAGE_TEXT = {
+    starting: "Starting",
+    locator: "Downloading and loading the geolocation model",
+    gallery: "Encoding the GPS gallery",
+    evidence: "Loading the evidence encoder",
+    geodata: "Indexing the offline gazetteer",
+    ready: "Finishing",
+  };
+
+  let indeterminate = false;
+  let galleryStarted = 0;
+  let ticker = null;
+
+  const showGalleryElapsed = () => {
+    const took = (Date.now() - galleryStarted) / 1000;
+    const total = state.setup?.gallery_encode_seconds || 90;
+    if (took <= total) {
+      el.frBar.parentElement.classList.remove("indeterminate");
+      el.frBar.style.width = ((took / total) * 100).toFixed(1) + "%";
+      el.frDetail.textContent =
+        `${fmtDuration(took)} of about ${fmtDuration(total)} — it is `
+        + "encoding 100,000 reference points. This happens once; the result "
+        + "is cached and every launch after this skips it.";
+    } else {
+      // Past the estimate, a bar pinned near the end is a lie that looks
+      // like a hang. Stop pretending to know how far through it is and
+      // say what is actually true: it is still working, for this long.
+      el.frBar.parentElement.classList.add("indeterminate");
+      el.frBar.style.width = "100%";
+      el.frDetail.textContent =
+        `${fmtDuration(took)} elapsed — longer than usual. It is still `
+        + "working. The encode is memory-hungry, so a machine that is short "
+        + "on RAM takes several minutes.";
+    }
+  };
+
+  try {
+    const resp = await fetch("/api/warmup/stream", { method: "POST" });
+    if (!resp.ok || !resp.body) throw new Error(`HTTP ${resp.status}`);
+
+    const reader = resp.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+
+    for (;;) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split("\n");
+      buffer = lines.pop() || "";
+      for (const line of lines) {
+        if (!line.trim()) continue;
+        const ev = JSON.parse(line);
+
+        if (ev.type === "stage") {
+          el.frStage.textContent = STAGE_TEXT[ev.stage] || ev.message || ev.stage;
+          if (ev.stage === "gallery") {
+            indeterminate = true;
+            galleryStarted = Date.now();
+            el.frRate.textContent = "";
+            if (ticker) clearInterval(ticker);
+            ticker = setInterval(showGalleryElapsed, 500);
+            showGalleryElapsed();
+          } else if (ev.stage !== "locator" && ev.stage !== "starting") {
+            indeterminate = true;
+            if (ticker) { clearInterval(ticker); ticker = null; }
+            el.frBar.parentElement.classList.remove("indeterminate");
+            el.frRate.textContent = "";
+            el.frDetail.textContent = "Nearly there.";
+            el.frBar.style.width = "97%";
+          }
+        } else if (ev.type === "download" && !indeterminate) {
+          const pct = Math.max(0, Math.min(1, ev.fraction || 0)) * 100;
+          el.frBar.style.width = pct.toFixed(1) + "%";
+          el.frRate.textContent = ev.bytes_per_second
+            ? fmtBytes(ev.bytes_per_second) + "/s" : "";
+          el.frDetail.textContent =
+            `${fmtBytes(ev.bytes)} of about ${fmtBytes(ev.total)}`
+            + (ev.eta_s != null ? `  ·  ${fmtDuration(ev.eta_s)} remaining` : "");
+        } else if (ev.type === "done") {
+          if (ticker) clearInterval(ticker);
+          el.frBar.parentElement.classList.remove("indeterminate");
+          el.frBar.style.width = "100%";
+          el.frStage.textContent = "Ready";
+          el.frDetail.textContent = `Set up in ${fmtDuration(ev.elapsed_s)}.`;
+          await refreshStatus();
+          setTimeout(hideFirstRun, 700);
+          if (state.setup) { state.setup.ready = true; state.setup.deferred = false; }
+          return;
+        } else if (ev.type === "failed") {
+          throw new Error(ev.error || "setup failed");
+        }
+      }
+    }
+    throw new Error("The setup stream ended without finishing.");
+  } catch (err) {
+    if (ticker) clearInterval(ticker);
+    el.frBar.parentElement.classList.remove("indeterminate");
+    el.frProgress.hidden = true;
+    el.frError.hidden = false;
+    el.frError.textContent =
+      `Setup did not finish: ${err.message}. `
+      + "The download resumes where it stopped, so trying again does not "
+      + "start over. If it keeps failing, check the connection to "
+      + `${state.setup?.components?.[0]?.origin || "huggingface.co"}.`;
+    el.frGo.textContent = "Try again";
+  } finally {
+    state.warming = false;
+    el.frGo.disabled = false;
+    el.frDefer.disabled = false;
+  }
+}
+
+/**
+ * Called before an analysis. Returns false if the models are not there and
+ * the user has to decide about that first.
+ */
+function setupBlocks() {
+  if (!state.setup || state.setup.ready) return false;
+  const e = state.status?.engine || {};
+  if (e.geoclip_loaded && e.clip_loaded) return false;
+  showFirstRun();
+  return true;
 }
 
 function onHud(lat, lon, altKm, flying, sun, imagery) {
@@ -385,6 +676,7 @@ async function cancelBatch() {
 }
 
 async function runBatch(folder) {
+  if (setupBlocks()) return;
   state.busy = true;
   state.batch = { items: [], clusters: [], selected: -1, folder: folder.folder };
   state.report = null;
@@ -687,6 +979,9 @@ async function exportHtml() {
 
 async function analyse(source) {
   if (state.busy) return;
+  // A deferred setup is not a refusal forever. This is the moment it
+  // actually matters, so this is the moment to ask again.
+  if (setupBlocks()) return;
   const name = source.name || source.file?.name || "image";
   const typeOk =
     /\.(jpe?g|png|webp)$/i.test(name) ||

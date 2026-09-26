@@ -19,6 +19,7 @@ import json
 import logging
 import secrets
 import sys
+import time
 from pathlib import Path
 from typing import Any
 
@@ -32,14 +33,15 @@ from fastapi.responses import (
 )
 from fastapi.staticfiles import StaticFiles
 
-from . import __version__
+from . import __version__, firstrun
 from .config import Config, load_config
+from .paths import read_root, state_dir
 from .pipeline import AnalysisEngine, ImageRejected
 
 log = logging.getLogger("mapify.server")
 
 WEB_DIR = Path(__file__).resolve().parent / "web"
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = read_root()
 
 COOKIE_NAME = "mapify_session"
 
@@ -191,6 +193,107 @@ def create_app(cfg: Config | None = None, token: str | None = None,
     async def warmup() -> dict[str, Any]:
         """Load the models now rather than on the first analysis."""
         return await asyncio.to_thread(engine.warmup)
+
+    @app.get("/api/firstrun")
+    async def firstrun_status() -> dict[str, Any]:
+        """What the first launch will cost, answered before it is spent.
+
+        Deliberately cheap -- it reads directory entries and imports nothing
+        heavy -- because the screen that consumes it has to appear while the
+        window is still opening, not after PyTorch has finished importing.
+        """
+        return firstrun.status()
+
+    @app.post("/api/firstrun/defer")
+    async def firstrun_defer(payload: dict[str, Any]) -> dict[str, Any]:
+        """Remember that the user said not yet, or that they changed their mind."""
+        firstrun.set_deferred(bool(payload.get("deferred", True)))
+        return {"deferred": firstrun.is_deferred()}
+
+    @app.post("/api/warmup/stream")
+    async def warmup_stream() -> StreamingResponse:
+        """Warm up, narrating what is happening while it happens.
+
+        Two sources of truth are merged here. The engine calls back as each
+        stage begins, which is the only way to tell "downloading" from
+        "encoding"; and a poll of the Hugging Face cache directory supplies
+        the byte count, which is the only part a person can judge progress by.
+        Neither alone is enough: a stage name with no number looks hung, and a
+        number with no stage stops moving for a minute when the download ends
+        and the gallery encode starts.
+        """
+        queue: asyncio.Queue[str | None] = asyncio.Queue()
+        loop = asyncio.get_running_loop()
+        state = {"stage": "starting", "message": "Starting"}
+
+        def emit(payload: dict[str, Any]) -> None:
+            loop.call_soon_threadsafe(queue.put_nowait, json.dumps(payload))
+
+        def progress(key: str, message: str) -> None:
+            state["stage"] = key
+            state["message"] = message
+            emit({"type": "stage", "stage": key, "message": message})
+
+        rate = firstrun.Rate()
+        began = time.time()
+
+        async def poll() -> None:
+            """Report bytes while the download stage is the one running."""
+            while True:
+                await asyncio.sleep(0.5)
+                if state["stage"] not in ("starting", "locator"):
+                    continue
+                seen = await asyncio.to_thread(firstrun.watch)
+                speed = rate.update(seen["bytes"], time.time())
+                remaining = max(0, seen["total"] - seen["bytes"])
+                emit({
+                    "type": "download",
+                    "bytes": seen["bytes"],
+                    "total": seen["total"],
+                    "fraction": seen["fraction"],
+                    "bytes_per_second": round(speed),
+                    "eta_s": round(remaining / speed) if speed > 1000 else None,
+                })
+
+        async def run() -> None:
+            poller = loop.create_task(poll())
+            try:
+                status = await asyncio.to_thread(engine.warmup, progress)
+                firstrun.set_deferred(False)
+                await queue.put(json.dumps({
+                    "type": "done",
+                    "status": status,
+                    "elapsed_s": round(time.time() - began, 1),
+                }))
+            except Exception as exc:  # pragma: no cover - guard
+                log.exception("warmup failed")
+                await queue.put(json.dumps({
+                    "type": "failed",
+                    "error": f"{type(exc).__name__}: {exc}",
+                    "stage": state["stage"],
+                }))
+            finally:
+                poller.cancel()
+                await queue.put(None)
+
+        task = loop.create_task(run())
+
+        async def body():
+            try:
+                while True:
+                    item = await queue.get()
+                    if item is None:
+                        break
+                    yield item + "\n"
+            finally:
+                if not task.done():
+                    task.cancel()
+
+        return StreamingResponse(
+            body(),
+            media_type="application/x-ndjson",
+            headers={"Cache-Control": "no-store", "X-Accel-Buffering": "no"},
+        )
 
     def _run(data: bytes, filename: str | None) -> Response:
         try:
@@ -447,7 +550,7 @@ def _debug_dump(data: bytes, filename: str | None) -> None:
     """
     import time
 
-    out = ROOT / "data" / "uploads"
+    out = state_dir() / "uploads"
     out.mkdir(parents=True, exist_ok=True)
     safe = "".join(c for c in (filename or "upload") if c.isalnum() or c in "._-")
     (out / f"{int(time.time())}_{safe[:80]}").write_bytes(data)

@@ -13,7 +13,9 @@ from dataclasses import dataclass, field, asdict
 from pathlib import Path
 from typing import Any
 
-ROOT = Path(__file__).resolve().parent.parent
+from .paths import config_path, read_root, state_dir
+
+ROOT = read_root()
 
 # The image formats Mapify will process. Declared here rather than in the
 # pipeline so the desktop shell can filter its file dialog without importing
@@ -159,7 +161,7 @@ def _merge(section: Any, values: dict[str, Any]) -> None:
 
 def load_config(path: str | os.PathLike[str] | None = None) -> Config:
     cfg = Config()
-    candidate = Path(path) if path else ROOT / "config.toml"
+    candidate = Path(path) if path else config_path()
     if candidate.exists():
         with candidate.open("rb") as fh:
             raw = tomllib.load(fh)

@@ -29,7 +29,7 @@ from .base import RawCandidate
 
 log = logging.getLogger("mapify.geoclip")
 
-_CACHE_DIR = Path(__file__).resolve().parent.parent.parent / "data" / "cache"
+from ..paths import cache_dir as _cache_dir
 
 CITATION = (
     "GeoCLIP: Clip-Inspired Alignment between Locations and Images for "
@@ -99,8 +99,9 @@ class GeoClipLocator:
     def gallery_features(self):
         """The encoded, L2-normalised GPS gallery.
 
-        This is the expensive half of GeoCLIP -- 57 seconds on CPU for the
-        100,000-point gallery -- and the packaged ``predict()`` recomputes it
+        This is the expensive half of GeoCLIP -- measured at 272s and 457s
+        on CPU for the 100,000-point gallery, depending on how much memory
+        the machine has free -- and the packaged ``predict()`` recomputes it
         on every single call. It depends only on the gallery, which never
         changes, so it is computed once per process and memoised to disk.
 
@@ -116,7 +117,7 @@ class GeoClipLocator:
         key = hashlib.sha256(
             gallery.cpu().numpy().tobytes()
         ).hexdigest()[:16]
-        path = _CACHE_DIR / f"geoclip_gallery_{key}.npy"
+        path = _cache_dir() / f"geoclip_gallery_{key}.npy"
 
         with self._gallery_lock:
             if self._gallery_features is not None:
@@ -136,7 +137,8 @@ class GeoClipLocator:
                     path.unlink(missing_ok=True)
 
             log.info(
-                "encoding the %d-point GPS gallery (one-off, ~1 minute on CPU)",
+                "encoding the %d-point GPS gallery "
+                "(one-off, 5-8 minutes on CPU, cached afterwards)",
                 int(gallery.shape[0]),
             )
             started = time.time()

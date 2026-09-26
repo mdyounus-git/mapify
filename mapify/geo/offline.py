@@ -22,7 +22,9 @@ from typing import Any, Iterable, Sequence
 
 from .geodesy import bearing_deg, compass_point, haversine_km
 
-DEFAULT_DATA_DIR = Path(__file__).resolve().parent.parent.parent / "data" / "naturalearth"
+from ..paths import read_root
+
+DEFAULT_DATA_DIR = read_root() / "data" / "naturalearth"
 
 COUNTRIES_LAYER = "ne_10m_admin_0_countries"
 ADMIN1_LAYER = "ne_10m_admin_1_states_provinces"

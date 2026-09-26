@@ -1,0 +1,134 @@
+"""Where Mapify reads from, and where it is allowed to write.
+
+Those are two different questions and they used to be answered in four
+different places, each of them by walking ``__file__`` upwards. That works
+perfectly while the code lives in a checkout you own, and breaks the moment
+someone installs the application somewhere sensible:
+
+  * PyInstaller unpacks the bundled data next to the executable, not three
+    directories above the module, so ``__file__``-relative reads find nothing;
+  * an application installed under ``Program Files`` cannot write to its own
+    directory at all. The SQLite lookup cache would fail to open and the 98 MB
+    GPS gallery cache would silently fail to save -- meaning a minute of
+    re-encoding on *every* launch, forever, with no error to explain it.
+
+So this module answers both questions once:
+
+    read_root()   what shipped with the application  (may be read-only)
+    state_dir()   what this user accumulates         (always writable)
+
+Running from a source checkout, ``state_dir()`` stays inside the tree. That is
+deliberate: a developer's caches belong with the checkout they came from, and
+moving them would orphan a gallery cache that took a minute to build. Once
+frozen, state moves to the user profile, which is the only place an installed
+Windows application may assume it can write.
+"""
+
+from __future__ import annotations
+
+import os
+import sys
+from pathlib import Path
+
+__all__ = [
+    "is_frozen", "read_root", "state_dir", "cache_dir", "config_path",
+    "describe",
+]
+
+_PKG = Path(__file__).resolve().parent
+
+
+def is_frozen() -> bool:
+    """True inside a PyInstaller build, false in a source checkout."""
+    return bool(getattr(sys, "frozen", False))
+
+
+def read_root() -> Path:
+    """The directory holding data that shipped with the application.
+
+    In a bundle that is PyInstaller's extraction root (``_MEIPASS``), which
+    for a onedir build is the ``_internal`` folder beside the executable. In a
+    checkout it is the repository root.
+    """
+    if is_frozen():
+        meipass = getattr(sys, "_MEIPASS", None)
+        if meipass:
+            return Path(meipass)
+        return Path(sys.executable).resolve().parent
+    return _PKG.parent
+
+
+def _user_base() -> Path:
+    """The per-user directory this platform expects applications to use."""
+    if sys.platform == "win32":
+        base = os.environ.get("LOCALAPPDATA")
+        if base:
+            return Path(base)
+        return Path.home() / "AppData" / "Local"
+    if sys.platform == "darwin":
+        return Path.home() / "Library" / "Application Support"
+    return Path(os.environ.get("XDG_DATA_HOME") or Path.home() / ".local" / "share")
+
+
+def state_dir() -> Path:
+    """Where this user's Mapify state lives. Created on demand.
+
+    Honours ``MAPIFY_STATE_DIR`` so a test, a portable install on a USB stick
+    or a locked-down machine can put it somewhere else without patching code.
+    """
+    override = os.environ.get("MAPIFY_STATE_DIR")
+    if override:
+        path = Path(override).expanduser()
+    elif is_frozen():
+        path = _user_base() / "Mapify"
+    else:
+        path = _PKG.parent / "data"
+    path.mkdir(parents=True, exist_ok=True)
+    return path
+
+
+def cache_dir() -> Path:
+    """Caches: the HTTP lookup database and the encoded GPS gallery.
+
+    Everything in here is reconstructible. Deleting it costs a minute of
+    re-encoding and some repeated Nominatim lookups, and nothing else -- which
+    is the property that makes it safe for an uninstaller to remove.
+    """
+    path = state_dir() / "cache"
+    path.mkdir(parents=True, exist_ok=True)
+    return path
+
+
+def config_path() -> Path:
+    """The user's ``config.toml``, if they have written one.
+
+    Beside the executable first, so a portable copy on a stick carries its own
+    settings; then the per-user state directory; then, running from source,
+    the checkout. The first that exists wins, and if none does the caller
+    falls back to built-in defaults.
+    """
+    if is_frozen():
+        candidates = [
+            Path(sys.executable).resolve().parent / "config.toml",
+            state_dir() / "config.toml",
+        ]
+    else:
+        candidates = [
+            _PKG.parent / "config.toml",
+            state_dir() / "config.toml",
+        ]
+    for candidate in candidates:
+        if candidate.is_file():
+            return candidate
+    return candidates[0]
+
+
+def describe() -> dict[str, str]:
+    """For the status endpoint and for bug reports: where everything is."""
+    return {
+        "frozen": str(is_frozen()),
+        "read_root": str(read_root()),
+        "state_dir": str(state_dir()),
+        "cache_dir": str(cache_dir()),
+        "config_path": str(config_path()),
+    }
