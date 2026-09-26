@@ -19,7 +19,7 @@ finished, whatever the code says.
 
 ## Status
 
-**14 of 20 phases implemented (70%).**
+**14 of 25 phases implemented (56%).**
 
 | # | Phase | State |
 |---|---|---|
@@ -43,6 +43,11 @@ finished, whatever the code says.
 | 18 | Session history | ⬜ implementable |
 | 19 | Accessibility and keyboard completeness | ⬜ implementable |
 | 20 | Installer | ✅ implemented |
+| 21 | A place name read off a sign must be able to *propose* a location | ⬜ implementable |
+| 22 | Metadata first, then everything the image itself shows | ⬜ implementable |
+| 23 | Ask for another photograph rather than guess | ⬜ implementable |
+| 24 | Get down to the street | ⬜ implementable |
+| 25 | The globe settles, and the interface stops looking generated | ⬜ implementable |
 
 ---
 
@@ -74,3 +79,21 @@ hold; on 163 it did not, and `high` confidence was being assigned to results
 15,689 km off target. The thresholds were refitted on a held-out split and the
 promise narrowed to what the evidence supports. The headline accuracy numbers
 got substantially worse in the process, and that was the right outcome.
+
+## Where 21 to 25 came from
+
+Not from the plan. From someone using it.
+
+A photograph of a medical institute, with the institute's own board legible in
+frame — name, street, town, postcode — came back as a scatter across Tamil
+Nadu and Hungary and settled on "India". Everything needed to answer it was
+printed in the picture. The tool read the text and had no way to act on it,
+because a toponym could only re-rank what the visual model had already
+guessed; it could not propose a location of its own. That is Phase 21, and it
+is the most valuable thing in this file.
+
+The rest of that session's feedback is Phases 22 to 25: investigate in a
+stated order and look at far more of the image; ask for a second photograph
+instead of guessing; get close enough to the ground that the answer can be
+recognised rather than believed; and stop the globe drifting once it has
+landed on something, in an interface that currently looks generated.
