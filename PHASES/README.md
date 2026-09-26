@@ -19,7 +19,7 @@ finished, whatever the code says.
 
 ## Status
 
-**14 of 25 phases implemented (56%).**
+**15 of 25 phases implemented (60%).**
 
 | # | Phase | State |
 |---|---|---|
@@ -43,7 +43,7 @@ finished, whatever the code says.
 | 18 | Session history | ⬜ implementable |
 | 19 | Accessibility and keyboard completeness | ⬜ implementable |
 | 20 | Installer | ✅ implemented |
-| 21 | A place name read off a sign must be able to *propose* a location | ⬜ implementable |
+| 21 | Read the address, not just the city | ✅ implemented |
 | 22 | Metadata first, then everything the image itself shows | ⬜ implementable |
 | 23 | Ask for another photograph rather than guess | ⬜ implementable |
 | 24 | Get down to the street | ⬜ implementable |
