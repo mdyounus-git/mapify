@@ -363,6 +363,7 @@ export class Globe {
     this.activeMarker = null;
     this._flight = null;
     this._idleSince = performance.now();
+    this._settled = false;
     this._userInteracting = false;
     this._disposed = false;
     this._geojson = null;
@@ -1089,6 +1090,7 @@ export class Globe {
       this.camera.lookAt(0, 0, 0);
       this.controls.update();
       this._idleSince = performance.now();
+      this._settled = true;      // arrived: the planet holds still
       this._flight = null;
       return Promise.resolve();
     }
@@ -1154,6 +1156,7 @@ export class Globe {
       this.controls.enabled = true;
       this.controls.update();
       this._idleSince = now;
+      this._settled = true;      // arrived: the planet holds still
     }
   }
 
@@ -1228,8 +1231,16 @@ export class Globe {
     if (this._flight) {
       this._stepFlight(now);
     } else {
+      // Idle drift, and only while idle means *nothing has been found*.
+      //
+      // Before an answer exists the slow turn reads as a globe waiting to
+      // be given something to do. After one, it is a moving target: the
+      // camera has just asserted "here", and continuing to slide sideways
+      // makes the user chase the thing they are trying to read. So once a
+      // result is on screen the planet comes to rest, and stays at rest
+      // until the result is cleared.
       const idleFor = now - this._idleSince;
-      if (!this._userInteracting && idleFor > 5000) {
+      if (!this._userInteracting && !this._settled && idleFor > 5000) {
         const ramp = Math.min(1, (idleFor - 5000) / 3000);
         this.camera.position.applyAxisAngle(
           new THREE.Vector3(0, 1, 0), 0.014 * dt * ramp
@@ -1295,6 +1306,18 @@ export class Globe {
         tiles: Boolean(this.detail?.enabled),
       });
     }
+  }
+
+  /**
+   * Let the planet turn again.
+   *
+   * Called when a result is cleared and a new analysis starts: there is
+   * nothing to read any more, so the slow idle turn is once again the
+   * right thing rather than a distraction.
+   */
+  resume() {
+    this._settled = false;
+    this._idleSince = performance.now();
   }
 
   setFlightMode(mode) { this.opts.flight = mode; }

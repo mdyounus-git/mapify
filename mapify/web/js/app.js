@@ -994,6 +994,9 @@ async function analyse(source) {
   state.busy = true;
   state.batch = null;
   state.sourcePath = source.path || null;
+  // A new image means the previous answer is gone, so the globe is free
+  // to turn again until this one lands.
+  state.globe?.resume();
   el.leftTitle.textContent = "Candidates";
   el.batchBar.hidden = true;
   el.openBtn.disabled = true;
