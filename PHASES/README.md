@@ -19,7 +19,7 @@ finished, whatever the code says.
 
 ## Status
 
-**12 of 20 phases implemented (60%).**
+**13 of 20 phases implemented (65%).**
 
 | # | Phase | State |
 |---|---|---|
@@ -34,7 +34,7 @@ finished, whatever the code says.
 | 09 | Packaging — Mapify.exe | ✅ implemented |
 | 10 | OCR and script-adaptive reading | ✅ implemented |
 | 11 | Batch analysis | ✅ implemented |
-| 12 | Report export | ⬜ implementable |
+| 12 | Report export | ✅ implemented |
 | 13 | A wider benchmark, and a calibration that survives it | ✅ implemented |
 | 14 | Landmark verification against OSM and Wikidata | ⬜ implementable |
 | 15 | Shadow and sun-angle latitude estimation | ⬜ implementable |

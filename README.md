@@ -165,6 +165,23 @@ seconds and minutes.
 Stop halts after the image being analysed and keeps everything already done.
 Selecting any image in the queue shows its full assessment.
 
+### Sending a result to someone else
+
+**Export** writes a single self-contained HTML file: the photograph, the
+estimate with its confidence and the reason for it, the coordinate in decimal
+and DMS, the place breakdown, a locator map drawn from Natural Earth, the EXIF
+block with its trust warnings, and the full scoring trail. Nothing in it is
+fetched from anywhere — it opens in any browser with the network off.
+
+It is deliberately not dressed as an official record. There is no letterhead,
+no case number and no CONFIDENTIAL banner, every report says *this is an
+estimate produced by a model, not a record of fact*, and the confidence band is
+followed by what that band was measured to mean rather than by an adjective.
+The OpenStreetMap attribution and the ODbL share-alike obligation travel with
+the file, because the place names in it are ODbL data.
+
+**Save report** still writes JSON, which is the right format for a machine.
+
 ### Optional: read text on signs
 
 ```bash

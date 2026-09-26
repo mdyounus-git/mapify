@@ -176,6 +176,28 @@ class NativeBridge:
             return {"error": str(exc)}
         return {"path": str(path)}
 
+    def save_html(self, content: str, suggested: str = "mapify-report.html"
+                  ) -> dict[str, Any]:
+        """Native Save-as for a standalone HTML report."""
+        import webview
+
+        window = _WINDOW["ref"]
+        if window is None:
+            return {"error": "The application window is not ready yet."}
+        target = window.create_file_dialog(
+            webview.SAVE_DIALOG,
+            save_filename=suggested,
+            file_types=("Web page (*.html)", "All files (*.*)"),
+        )
+        if not target:
+            return {"cancelled": True}
+        path = Path(target if isinstance(target, str) else target[0])
+        try:
+            path.write_text(content, encoding="utf-8")
+        except OSError as exc:
+            return {"error": str(exc)}
+        return {"path": str(path)}
+
     def reveal(self, path: str) -> dict[str, Any]:
         """Show a saved file in Explorer."""
         p = Path(path)

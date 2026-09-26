@@ -390,6 +390,40 @@ def create_app(cfg: Config | None = None, token: str | None = None,
         runner.cancel()
         return {"cancelled": True}
 
+    @app.post("/api/report/html")
+    async def report_html(payload: dict[str, Any]) -> Response:
+        """Render an analysis as a standalone HTML document.
+
+        The source image is read from the path the native dialog approved, so
+        it can be inlined without the client shipping the bytes back.
+        """
+        from .report import build_batch, build_single
+
+        report = payload.get("report")
+        if not isinstance(report, dict):
+            raise HTTPException(status_code=400, detail="No report given.")
+
+        if report.get("type") == "complete" or "clusters" in report:
+            html = build_batch(report, engine.attribution_lines())
+        else:
+            image_bytes = None
+            mime = "image/jpeg"
+            path = payload.get("path")
+            if path and bridge is not None:
+                resolved = str(Path(str(path)).resolve())
+                if resolved in bridge.approved_paths:
+                    try:
+                        image_bytes = Path(resolved).read_bytes()
+                        suffix = Path(resolved).suffix.lower()
+                        mime = {
+                            ".png": "image/png", ".webp": "image/webp",
+                        }.get(suffix, "image/jpeg")
+                    except OSError:
+                        image_bytes = None
+            html = build_single(report, image_bytes, mime)
+
+        return Response(content=html, media_type="text/html; charset=utf-8")
+
     @app.get("/api/attribution")
     async def attribution() -> dict[str, Any]:
         path = ROOT / "ATTRIBUTION.md"

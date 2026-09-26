@@ -16,6 +16,7 @@ const el = {
   folderBtn: $("folder-btn"),
   cancelBtn: $("cancel-btn"),
   saveBtn: $("save-btn"),
+  exportBtn: $("export-btn"),
   leftTitle: $("left-title"),
   batchBar: $("batch-bar"),
   batchBarFill: $("batch-bar-fill"),
@@ -91,6 +92,7 @@ const state = {
   status: null,
   native: null,
   previewUrl: null,
+  sourcePath: null,
   batch: null,          // { items, clusters, selected } while a batch exists
 };
 
@@ -172,6 +174,7 @@ async function boot() {
   el.folderBtn.addEventListener("click", openFolder);
   el.cancelBtn.addEventListener("click", cancelBatch);
   el.saveBtn.addEventListener("click", saveReport);
+  el.exportBtn.addEventListener("click", exportHtml);
   el.fileInput.addEventListener("change", () => {
     const file = el.fileInput.files?.[0];
     if (file) analyse({ file });
@@ -388,6 +391,7 @@ async function runBatch(folder) {
   el.openBtn.disabled = true;
   el.folderBtn.disabled = true;
   el.saveBtn.disabled = true;
+  el.exportBtn.disabled = true;
   el.cancelBtn.hidden = false;
   el.cancelBtn.disabled = false;
   el.leftTitle.textContent = "Batch";
@@ -491,6 +495,7 @@ function finishBatch(summary) {
   el.verdict.textContent = summary.cancelled ? "stopped" : "done";
   el.verdict.className = `chip ${summary.cancelled ? "low" : "high"}`;
   el.saveBtn.disabled = false;
+  el.exportBtn.disabled = false;
   state.report = summary;          // Save report exports the whole batch
   setHudState(summary.cancelled
     ? `Stopped — ${summary.analysed} of ${summary.total} analysed`
@@ -632,6 +637,52 @@ function renderBatchSummary(summary) {
        assessment. Save report exports the whole batch.</p>`;
 }
 
+/**
+ * Export the current result as a standalone HTML document.
+ *
+ * Rendered by the service rather than here, so the source image can be
+ * inlined from the path the native dialog approved, and so the layout has
+ * one implementation rather than two.
+ */
+async function exportHtml() {
+  if (!state.report) return;
+  el.exportBtn.disabled = true;
+  try {
+    const resp = await fetch("/api/report/html", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        report: state.report,
+        path: state.sourcePath || null,
+      }),
+    });
+    if (!resp.ok) {
+      let detail = `HTTP ${resp.status}`;
+      try { detail = (await resp.json()).detail || detail; } catch {}
+      throw new Error(detail);
+    }
+    const html = await resp.text();
+    const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-");
+    const suggested = `mapify-${stamp}.html`;
+
+    if (!nativeApi()) {
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(new Blob([html], { type: "text/html" }));
+      a.download = suggested;
+      a.click();
+      URL.revokeObjectURL(a.href);
+      return;
+    }
+    const res = await state.native.save_html(html, suggested);
+    if (res?.error) fail("Could not save", res.error);
+    else if (res?.path) setHudState(`Report saved — ${res.path}`);
+  } catch (err) {
+    fail("Could not export", err.message || String(err));
+  } finally {
+    el.exportBtn.disabled = false;
+  }
+}
+
 /* ─────────────────────────── analysis ─────────────────────────── */
 
 async function analyse(source) {
@@ -647,11 +698,13 @@ async function analyse(source) {
 
   state.busy = true;
   state.batch = null;
+  state.sourcePath = source.path || null;
   el.leftTitle.textContent = "Candidates";
   el.batchBar.hidden = true;
   el.openBtn.disabled = true;
   el.folderBtn.disabled = true;
   el.saveBtn.disabled = true;
+  el.exportBtn.disabled = true;
   el.report.innerHTML = "";
   el.candidateList.innerHTML = "";
   el.candidateCount.textContent = "—";
@@ -689,6 +742,7 @@ async function analyse(source) {
     state.report = report;
     render(report);
     el.saveBtn.disabled = false;
+    el.exportBtn.disabled = false;
   } catch (err) {
     fail("Analysis failed", err.message || String(err));
   } finally {
