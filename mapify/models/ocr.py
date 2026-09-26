@@ -23,6 +23,7 @@ from typing import Any
 from PIL.Image import Image as PILImage
 
 from .base import OcrLine, OcrResult
+from ..paths import ocr_model_dir
 
 log = logging.getLogger("mapify.ocr")
 
@@ -130,11 +131,16 @@ class EasyOcrEngine:
             try:
                 import easyocr
 
-                reader = easyocr.Reader(
-                    list(langs),
-                    gpu=(self.device != "cpu"),
-                    verbose=False,
-                )
+                # EasyOCR defaults to ~/.EasyOCR, which puts 565 MB of
+                # detection and recognition weights on the system drive
+                # regardless of where the application was installed. It
+                # keeps its models wherever the rest of ours are.
+                kwargs = {"gpu": self.device != "cpu", "verbose": False}
+                store = ocr_model_dir()
+                if store is not None:
+                    kwargs["model_storage_directory"] = str(store)
+                    kwargs["user_network_directory"] = str(store)
+                reader = easyocr.Reader(list(langs), **kwargs)
                 self._readers[langs] = reader
                 log.info("EasyOCR reader ready for %s", "+".join(langs))
                 return reader

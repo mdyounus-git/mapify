@@ -222,6 +222,21 @@ if (-not (Test-Path -LiteralPath $targetClip) -and
     Copy-Item -LiteralPath $clipDir -Destination $modelsHub -Recurse -Force
 }
 
+# EasyOCR keeps its detection and recognition weights in ~/.EasyOCR by
+# default -- another 565 MB on the system drive. Same treatment.
+$easySource = Join-Path $env:USERPROFILE '.EasyOCR'
+$easyTarget = Join-Path $ModelsDir 'easyocr'
+if ((Test-Path -LiteralPath $easySource) -and
+    -not (Test-Path -LiteralPath (Join-Path $easyTarget 'model'))) {
+    $easyMb = [math]::Round((Get-ChildItem -LiteralPath $easySource -Recurse -File `
+                             -ErrorAction SilentlyContinue |
+                             Measure-Object -Property Length -Sum).Sum / 1MB)
+    Write-Step "Copying $easyMb MB of OCR models"
+    New-Item -ItemType Directory -Force -Path $easyTarget | Out-Null
+    Copy-Item -Path (Join-Path $easySource '*') -Destination $easyTarget `
+              -Recurse -Force
+}
+
 $InstalledExe = Join-Path $InstallDir 'Mapify.exe'
 $InstalledSize = (Get-ChildItem -LiteralPath $InstallDir -Recurse -File |
                   Measure-Object -Property Length -Sum).Sum

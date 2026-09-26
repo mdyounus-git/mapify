@@ -32,7 +32,8 @@ from pathlib import Path
 
 __all__ = [
     "is_frozen", "read_root", "state_dir", "cache_dir", "config_path",
-    "install_dir", "models_dir", "apply_model_cache_env", "describe",
+    "install_dir", "models_dir", "ocr_model_dir",
+    "apply_model_cache_env", "describe",
 ]
 
 _PKG = Path(__file__).resolve().parent
@@ -142,6 +143,31 @@ def models_dir() -> Path:
     return path
 
 
+def ocr_model_dir() -> Path | None:
+    """Where EasyOCR should keep its weights, or None to leave it alone.
+
+    EasyOCR defaults to ``~/.EasyOCR``: 565 MB of detection and
+    recognition models on the system drive, whatever drive the
+    application was installed on. A frozen build keeps them with
+    everything else it owns.
+
+    A source checkout is left alone -- the developer's copy is already
+    downloaded and moving it would just download it again.
+    """
+    override = os.environ.get("MAPIFY_OCR_MODELS_DIR")
+    if override:
+        path = Path(override).expanduser()
+    elif is_frozen():
+        path = models_dir() / "easyocr"
+    else:
+        return None
+    try:
+        path.mkdir(parents=True, exist_ok=True)
+    except OSError:
+        return None
+    return path
+
+
 def apply_model_cache_env() -> Path | None:
     """Point Hugging Face at our models directory, for a frozen build.
 
@@ -216,5 +242,6 @@ def describe() -> dict[str, str]:
         "state_dir": str(state_dir()),
         "cache_dir": str(cache_dir()),
         "models_dir": str(models_dir()),
+        "ocr_model_dir": str(ocr_model_dir() or ""),
         "config_path": str(config_path()),
     }
