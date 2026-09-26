@@ -125,8 +125,8 @@ python scripts/tune_confidence.py    # refit and validate the thresholds
 
 ### As an application
 
-Build it, then install it for your user. No administrator, nothing outside
-your profile:
+Build it, then install it for your user. No administrator, and nothing on the
+system drive:
 
 ```bash
 .venv\Scripts\python build_exe.py
@@ -136,12 +136,25 @@ your profile:
 powershell -ExecutionPolicy Bypass -File installer\install.ps1 -Desktop
 ```
 
-That puts the program in `%LOCALAPPDATA%\Programs\Mapify`, its caches in
-`%LOCALAPPDATA%\Mapify`, a shortcut in the Start menu, and one entry under
-`HKCU` so it appears in **Settings > Apps** like anything else.
-`installer\uninstall.ps1` removes exactly those four things, and asks before
-deleting the model weights, because they are 1.6 GB and the Hugging Face cache
-is shared with other tools.
+Everything Mapify owns goes under **one root, on the same drive as the
+project** — an `app` folder beside it, unless you pass `-Root`:
+
+```
+<project>\app\           the program
+<project>\app\data\      caches, config.toml, mapify.log
+<project>\app\models\    the 1.6 GB of weights, and the OCR models
+```
+
+That matters more than it sounds. Left to their defaults, the Hugging Face
+cache and EasyOCR's weights put about 2.2 GB in two hidden places under
+`C:\Users\you`, on top of a gigabyte of program — unhelpful on any machine
+whose C: drive is the small one, and hard to find when you want it back.
+
+The installer also adds a Start menu shortcut and one `HKCU` registry entry so
+Mapify appears in **Settings → Apps** like anything else.
+`installer\uninstall.ps1` removes exactly those, reading the install location
+from the registry rather than assuming it. It leaves the *shared* Hugging Face
+cache alone unless you pass `-PurgeModels`, because other tools use it.
 
 `installer\mapify.iss` builds a single `Setup.exe` with
 [Inno Setup](https://jrsoftware.org/) if you would rather hand someone that.
