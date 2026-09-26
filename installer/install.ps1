@@ -40,6 +40,7 @@
 [CmdletBinding()]
 param(
     [string] $Source,
+    [string] $Root,
     [switch] $Desktop,
     [switch] $Force
 )
@@ -53,8 +54,15 @@ $ProjectRoot = Split-Path -Parent $ScriptDir
 
 if (-not $Source) { $Source = Join-Path $ProjectRoot 'dist\Mapify' }
 
-$InstallDir  = Join-Path $env:LOCALAPPDATA 'Programs\Mapify'
-$DataDir     = Join-Path $env:LOCALAPPDATA 'Mapify'
+# Everything Mapify owns under one root, on the project's own drive: the
+# program, its caches, its settings, its log, and the 1.6 GB of weights it
+# downloads. An installation that scatters a gigabyte across C: and hides
+# the rest in a profile directory is one nobody can find, move or delete.
+if (-not $Root) { $Root = Join-Path $ProjectRoot 'app' }
+
+$InstallDir  = $Root
+$DataDir     = Join-Path $Root 'data'
+$ModelsDir   = Join-Path $Root 'models'
 $StartMenu   = Join-Path $env:APPDATA 'Microsoft\Windows\Start Menu\Programs'
 $UninstKey   = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\Mapify'
 
@@ -122,19 +130,26 @@ Write-Note "from          $Source"
 Write-Note "size          $SourceMb MB"
 Write-Note "install to    $InstallDir"
 Write-Note "data in       $DataDir"
+Write-Note "models in     $ModelsDir"
 Write-Host ''
 
-# The 1.6 GB of model weights are not ours and are not here. Say where they
-# will go before an install implies otherwise.
+# The 1.6 GB of model weights are not ours and are not in this build. Say
+# where they will go before an install implies otherwise.
 $hfCache = if ($env:HF_HUB_CACHE) { $env:HF_HUB_CACHE }
            elseif ($env:HF_HOME)  { Join-Path $env:HF_HOME 'hub' }
            else { Join-Path $env:USERPROFILE '.cache\huggingface\hub' }
-$clipDir = Join-Path $hfCache 'models--openai--clip-vit-large-patch14'
-if (Test-Path -LiteralPath $clipDir) {
-    Write-Note 'model weights already downloaded - first run will be quick'
+$clipDir    = Join-Path $hfCache 'models--openai--clip-vit-large-patch14'
+$modelsHub  = Join-Path $ModelsDir 'hub'
+$targetClip = Join-Path $modelsHub 'models--openai--clip-vit-large-patch14'
+
+if (Test-Path -LiteralPath $targetClip) {
+    Write-Note 'model weights already in place'
+} elseif (Test-Path -LiteralPath $clipDir) {
+    Write-Note 'model weights found in the shared cache and will be copied,'
+    Write-Note 'so this installation does not depend on anything outside it'
 } else {
     Write-Note 'first run will download about 1.6 GB of model weights into'
-    Write-Note "  $hfCache"
+    Write-Note "  $ModelsDir"
 }
 Write-Host ''
 
@@ -192,6 +207,19 @@ if ($gallery.Count -gt 0) {
 } else {
     Write-Note 'no encoded gallery to copy - the first run will spend'
     Write-Note '  five to eight minutes building it, once'
+}
+
+# The weights are the biggest thing Mapify is responsible for, and the
+# installed application now looks for them beside itself. Copied rather
+# than moved: the Hugging Face cache is shared and other tools may be
+# using the same files.
+if (-not (Test-Path -LiteralPath $targetClip) -and
+    (Test-Path -LiteralPath $clipDir)) {
+    $clipMb = [math]::Round((Get-ChildItem -LiteralPath $clipDir -Recurse -File |
+                             Measure-Object -Property Length -Sum).Sum / 1MB)
+    Write-Step "Copying $clipMb MB of model weights (saves re-downloading them)"
+    New-Item -ItemType Directory -Force -Path $modelsHub | Out-Null
+    Copy-Item -LiteralPath $clipDir -Destination $modelsHub -Recurse -Force
 }
 
 $InstalledExe = Join-Path $InstallDir 'Mapify.exe'
@@ -260,6 +288,7 @@ Write-Ok 'Installed.'
 Write-Host ''
 Write-Note "program     $InstallDir"
 Write-Note "data        $DataDir"
+Write-Note "models      $ModelsDir"
 Write-Note 'start menu  Mapify'
 if ($Desktop) { Write-Note 'desktop     Mapify' }
 Write-Note 'uninstall   Settings > Apps > Mapify'

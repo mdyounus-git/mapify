@@ -774,6 +774,77 @@ button {
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 
+/* ═══════════════════════ the finding ═══════════════════════
+   One thing on the screen is the answer. Everything else supports it,
+   and until now nothing said so: the place name sat in a 336px rail at
+   the same size and weight as the DMS coordinate and the timezone.
+*/
+
+#finding {
+  position: absolute; left: 20px; bottom: 54px; z-index: 12;
+  max-width: min(460px, calc(100% - 40px));
+  pointer-events: none;
+  animation: finding-in .42s cubic-bezier(.16,.84,.34,1);
+}
+#finding[hidden] { display: none; }
+@keyframes finding-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: none; }
+}
+
+.finding-card {
+  pointer-events: auto;
+  padding: 15px 19px 16px;
+  background: linear-gradient(180deg,
+              rgba(14, 19, 27, .93), rgba(8, 11, 16, .95));
+  border: 1px solid var(--line-2);
+  border-left: 3px solid var(--accent);
+  border-radius: var(--r-md);
+  box-shadow: var(--shadow-3);
+  backdrop-filter: blur(10px) saturate(1.1);
+}
+.finding-card.indeterminate { border-left-color: var(--risk); }
+.finding-card.read { border-left-color: var(--exif); }
+
+.finding-eyebrow {
+  margin: 0 0 5px;
+  font-size: 10px; font-weight: 650; letter-spacing: .09em;
+  text-transform: uppercase; color: var(--ink-4);
+}
+/* Where the answer came from. A location read off a sign and a location
+   inferred from scenery are different kinds of claim and fail in
+   different ways, so they do not get to look the same. */
+.finding-eyebrow .origin.read      { color: var(--exif); }
+.finding-eyebrow .origin.estimated { color: var(--accent); }
+.finding-eyebrow .origin.none      { color: var(--risk); }
+
+#finding-place {
+  margin: 0 0 9px;
+  font-family: var(--ui-display);
+  font-size: 23px; font-weight: 600; line-height: 1.16;
+  letter-spacing: -.015em; color: var(--ink-1);
+}
+
+.finding-meta {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  margin: 0; font-size: 11.5px; color: var(--ink-3);
+}
+.finding-meta .mono {
+  font-family: var(--mono); font-size: 11px; color: var(--ink-2);
+}
+
+.finding-why {
+  margin: 9px 0 0; padding-top: 9px;
+  border-top: 1px solid var(--line-1);
+  font-size: 11.5px; line-height: 1.5; color: var(--ink-3);
+}
+.finding-why:empty { display: none; }
+
+@media (max-width: 980px) {
+  #finding { left: 12px; right: 12px; bottom: 44px; max-width: none; }
+  #finding-place { font-size: 19px; }
+}
+
 /* ═══════════════════════════ first run ═══════════════════════════
    A sheet over the whole window, not a toast in the corner. It is asking
    for a decision about 1.6 GB of somebody's connection, and a decision

@@ -50,6 +50,14 @@ const el = {
   sourceThumb: $("source-thumb"),
   sourceName: $("source-name"),
   sourceDims: $("source-dims"),
+  finding: $("finding"),
+  findingCard: null,      // resolved after the DOM is parsed
+  findingOrigin: $("finding-origin"),
+  findingPlace: $("finding-place"),
+  findingChip: $("finding-chip"),
+  findingCoord: $("finding-coord"),
+  findingSpread: $("finding-spread"),
+  findingWhy: $("finding-why"),
   firstrun: $("firstrun"),
   frSize: $("fr-size"),
   frComponents: $("fr-components"),
@@ -513,6 +521,87 @@ function setupBlocks() {
   return true;
 }
 
+/* ════════════════════════ the finding ════════════════════════
+   The one thing on screen that is the answer, placed next to the globe
+   it is an answer about rather than buried in a rail of detail.
+*/
+
+function hideFinding() {
+  el.finding.hidden = true;
+}
+
+function showFinding(report) {
+  const pred = report.prediction || {};
+  const est = pred.estimated;
+  const card = el.finding.querySelector(".finding-card");
+  card.classList.remove("indeterminate", "read");
+
+  if (!pred.determinate || !est) {
+    el.findingOrigin.className = "origin none";
+    el.findingOrigin.textContent = "No location determined";
+    el.findingPlace.textContent = "Not placed";
+    el.findingChip.className = `chip ${pred.confidence || ""}`;
+    el.findingChip.textContent =
+      CONFIDENCE[pred.confidence] || pred.confidence || "—";
+    el.findingCoord.textContent = "";
+    el.findingSpread.textContent = "";
+    el.findingWhy.textContent = pred.confidence_reason || "";
+    card.classList.add("indeterminate");
+    el.finding.hidden = false;
+    return;
+  }
+
+  // Was this read off the image, or inferred from what the image looks
+  // like? They are different kinds of claim and fail in different ways --
+  // a photograph of a poster carries a real address that is not where the
+  // picture was taken -- so the card says which, before it says where.
+  const leader = (report.candidates || [])[0] || {};
+  const wasRead = String(leader.provenance || "").includes("text");
+  const readPlace = (report.read_places || [])[0];
+
+  el.findingOrigin.className = `origin ${wasRead ? "read" : "estimated"}`;
+  el.findingOrigin.textContent = wasRead
+    ? "Read from the image"
+    : "Estimated from the image";
+  if (wasRead) card.classList.add("read");
+
+  const place = est.place || {};
+  el.findingPlace.textContent =
+    [place.city, place.region, place.country].filter(Boolean).join(", ") ||
+    place.display_name || "Unnamed location";
+
+  el.findingChip.className = `chip ${esc(pred.confidence)}`;
+  el.findingChip.title = CONFIDENCE_MEASURED[pred.confidence] || "";
+  el.findingChip.textContent =
+    CONFIDENCE[pred.confidence] || pred.confidence;
+
+  el.findingCoord.textContent =
+    `${est.latitude.toFixed(5)}, ${est.longitude.toFixed(5)}`;
+
+  // Two different questions, and they used to be answered with one
+  // number. "How precise is this coordinate" is the size of the thing
+  // that was matched. "How sure are we it is the right place" is the
+  // spread of the candidates. Printing the second as a tolerance beside
+  // a five-decimal coordinate said something false about both.
+  const precision = pred.precision_km;
+  el.findingSpread.textContent = precision != null
+    ? `±${fmtKm(precision)}`
+    : (pred.uncertainty_km ? `±${fmtKm(pred.uncertainty_km)}` : "");
+  el.findingSpread.title = precision != null
+    ? `The matched feature is about ${fmtKm(precision * 2)} across. `
+      + `Separately, the candidates span ${fmtKm(pred.uncertainty_km)} — `
+      + `that is how sure this is the right place, not how precise the `
+      + `coordinate is.`
+    : "How far apart the candidates are.";
+
+  el.findingWhy.textContent = wasRead && readPlace
+    ? `Matched "${readPlace.display_name.split(",")[0]}" in OpenStreetMap `
+      + `from text in the image.`
+    : "";
+
+  el.finding.hidden = false;
+}
+
 function onHud(lat, lon, altKm, flying, sun, imagery) {
   el.hudCoords.textContent = fmtLatLon(lat, lon);
   el.hudAlt.textContent = fmtKm(altKm);
@@ -678,6 +767,7 @@ async function cancelBatch() {
 async function runBatch(folder) {
   if (setupBlocks()) return;
   state.busy = true;
+  hideFinding();
   state.batch = { items: [], clusters: [], selected: -1, folder: folder.folder };
   state.report = null;
   el.openBtn.disabled = true;
@@ -997,6 +1087,7 @@ async function analyse(source) {
   // A new image means the previous answer is gone, so the globe is free
   // to turn again until this one lands.
   state.globe?.resume();
+  hideFinding();
   el.leftTitle.textContent = "Candidates";
   el.batchBar.hidden = true;
   el.openBtn.disabled = true;
@@ -1125,6 +1216,7 @@ function fail(title, detail) {
   el.verdict.className = "chip error";
   el.report.innerHTML =
     `<div class="note risk"><div><strong>${esc(title)}</strong><br>${esc(detail)}</div></div>`;
+  hideFinding();
   setHudState("Idle");
 }
 
@@ -1134,6 +1226,7 @@ function render(report) {
   const pred = report.prediction || {};
   renderCandidates(report);
   renderReport(report);
+  showFinding(report);
 
   el.verdict.textContent = pred.confidence || "—";
   el.verdict.className = `chip ${pred.confidence || "bare"}`;

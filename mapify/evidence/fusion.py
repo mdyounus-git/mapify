@@ -138,6 +138,13 @@ class FusionResult:
     # believed. Kept on the result so the report can show what was read and
     # what it was matched against, rather than only where it landed.
     read_places: list[Any] = field(default_factory=list)
+    # How precise the *coordinate* is, which is a different question from
+    # how confident we are that it is the right place. A matched building
+    # is a coordinate good to a few hundred metres even when the model
+    # disagrees by a thousand kilometres; printing the model's scatter as
+    # a tolerance beside a five-decimal coordinate says something false
+    # about both. None means "no better answer than uncertainty_km".
+    precision_km: float | None = None
     # Diagnostics the confidence band is actually built from. Reported so the
     # banding can be argued with rather than taken on faith.
     locator_mass: float = 0.0       # share of the locator's full distribution
@@ -741,10 +748,18 @@ class FusionEngine:
                 "image. Check the OCR output before relying on it."
             )
 
+        precision_km = None
+        if read_leader and read_leader.get("corroborated"):
+            # Half the matched feature's own extent, floored at 50 m: a
+            # hospital campus is not a point, and a point is not honest.
+            extent = float(read_leader.get("extent_km") or 0.0)
+            precision_km = max(0.05, extent / 2.0)
+
         return FusionResult(
             candidates=candidates,
             toponyms=toponyms,
             read_places=list(read_places or []),
+            precision_km=precision_km,
             confidence=confidence,
             confidence_reason=reason,
             uncertainty_km=uncertainty,

@@ -28,7 +28,7 @@ from typing import Any
 
 from . import __version__
 from .config import ACCEPTED_EXTENSIONS, Config, load_config
-from .paths import read_root, state_dir
+from .paths import apply_model_cache_env, read_root, state_dir
 
 log = logging.getLogger("mapify.desktop")
 
@@ -260,6 +260,12 @@ def run(argv: list[str] | None = None) -> int:
                     help="import and construct everything, then exit "
                          "(used by build_exe.py to prove a build works)")
     args = ap.parse_args(argv)
+
+    # Before anything else that might import huggingface_hub: an installed
+    # build keeps its weights beside itself, not on the system drive.
+    cache_root = apply_model_cache_env()
+    if cache_root:
+        log.info("model cache: %s", cache_root)
 
     if args.selftest:
         return _selftest()

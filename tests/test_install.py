@@ -63,6 +63,22 @@ class TestWritablePaths:
         """Read and write roots answer different questions and may differ."""
         assert (paths.read_root() / "mapify").is_dir()
 
+    def test_models_go_beside_the_state_not_onto_the_system_drive(self):
+        """The 1.6 GB download is the biggest thing Mapify is responsible
+        for, and it belongs wherever the person put the application."""
+        assert paths.models_dir().parent == paths.state_dir().parent
+
+    def test_a_source_checkout_does_not_hijack_a_shared_model_cache(self):
+        """Relocating someone's existing 1.6 GB because they ran a script
+        would be rude, so the redirect is for frozen builds only."""
+        assert paths.apply_model_cache_env() is None
+        assert paths.is_frozen() is False
+
+    def test_an_explicit_hf_home_is_never_overridden(self, monkeypatch):
+        """That is someone stating where their cache lives."""
+        monkeypatch.setenv("HF_HOME", r"D:\somewhere\else")
+        assert paths.apply_model_cache_env() is None
+
     def test_describe_names_every_location(self):
         described = paths.describe()
         for key in ("frozen", "read_root", "state_dir", "cache_dir",
@@ -335,12 +351,44 @@ class TestInstallerScripts:
                 f"install.ps1:{number} writes to HKLM: {line.strip()}"
             )
 
-    def test_it_installs_inside_the_user_profile(self):
+    def test_it_installs_beside_the_project_not_on_the_system_drive(self):
+        """Everything Mapify owns under one root, on the project's drive.
+
+        A gigabyte of program on C:, 1.6 GB of weights in a hidden profile
+        directory and a cache somewhere else again is an installation
+        nobody can find, move or delete. The default root is derived from
+        where the project is, so a project on E: installs to E:.
+        """
         script = self._installer("install.ps1")
-        assert "Programs\\Mapify" in script
+        assert "$Root = Join-Path $ProjectRoot" in script
+        assert "$InstallDir  = $Root" in script
+        assert "$DataDir     = Join-Path $Root" in script
+        assert "$ModelsDir   = Join-Path $Root" in script
         assert "ProgramFiles" not in script, (
             "installing to Program Files would need administrator"
         )
+
+    def test_the_uninstaller_finds_a_non_default_location(self):
+        """It can be installed anywhere, so the path cannot be hardcoded."""
+        script = self._installer("uninstall.ps1")
+        assert "InstallLocation" in script, (
+            "the uninstaller must read where the installer actually put it"
+        )
+
+    def test_keeping_data_happens_before_the_program_is_removed(self):
+        """Data lives inside the installation, so order is the whole thing.
+
+        Removing the install directory first would delete the data that
+        -KeepData exists to preserve, and the flag would be a lie.
+        """
+        script = self._installer("uninstall.ps1")
+        rescue = script.index("rescue anything being kept")
+        remove = script.index("# -------------------------------------------------------------- the program")
+        assert rescue < remove, "-KeepData runs after the deletion it protects against"
+
+    def test_an_older_install_under_the_profile_is_cleaned_up_too(self):
+        script = self._installer("uninstall.ps1")
+        assert "LegacyData" in script
 
     def test_every_registry_key_it_writes_is_removed_again(self):
         """An uninstaller that leaves keys behind is not an uninstaller."""

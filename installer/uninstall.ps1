@@ -43,8 +43,30 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
-$InstallDir = Join-Path $env:LOCALAPPDATA 'Programs\Mapify'
-$DataDir    = Join-Path $env:LOCALAPPDATA 'Mapify'
+# Where Mapify actually went, rather than where it used to go by default.
+# An installation can sit on any drive, so the location is read from the
+# registry entry the installer wrote; failing that, from the fact that this
+# script is copied into the installation it removes.
+$UninstKeyPath = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\Mapify'
+$InstallDir = $null
+try {
+    $InstallDir = (Get-ItemProperty -Path $UninstKeyPath -Name InstallLocation `
+                                    -ErrorAction Stop).InstallLocation
+} catch { }
+if (-not $InstallDir -or -not (Test-Path -LiteralPath $InstallDir)) {
+    $here = Split-Path -Parent $MyInvocation.MyCommand.Path
+    if (Test-Path -LiteralPath (Join-Path $here 'Mapify.exe')) {
+        $InstallDir = $here
+    } else {
+        $InstallDir = Join-Path $env:LOCALAPPDATA 'Programs\Mapify'
+    }
+}
+
+# Data and models live inside the installation now. An older install kept
+# them under the user profile, so that location is cleaned up too.
+$DataDir    = Join-Path $InstallDir 'data'
+$ModelsDir  = Join-Path $InstallDir 'models'
+$LegacyData = Join-Path $env:LOCALAPPDATA 'Mapify'
 $StartMenu  = Join-Path $env:APPDATA 'Microsoft\Windows\Start Menu\Programs\Mapify.lnk'
 $DesktopLnk = Join-Path ([Environment]::GetFolderPath('Desktop')) 'Mapify.lnk'
 $UninstKey  = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\Mapify'
@@ -68,11 +90,41 @@ if ($running) {
 
 if (-not $Quiet) {
     Write-Note "program   $InstallDir"
-    if (-not $KeepData) { Write-Note "data      $DataDir" }
+    if (-not $KeepData) {
+        Write-Note "data      $DataDir"
+        if (Test-Path -LiteralPath $ModelsDir) {
+            $mb = [math]::Round((Get-ChildItem -LiteralPath $ModelsDir -Recurse -File `
+                                 -ErrorAction SilentlyContinue |
+                                 Measure-Object -Property Length -Sum).Sum / 1MB)
+            Write-Note "models    $ModelsDir  ($mb MB)"
+        }
+    }
     Write-Host ''
     $answer = Read-Host '  Remove Mapify? [y/N]'
     if ($answer -notmatch '^[Yy]') { Write-Host '  Cancelled.'; Write-Host ''; exit 0 }
     Write-Host ''
+}
+
+# ----------------------------------------------- rescue anything being kept
+#
+# Data and models live inside the installation, so they have to be moved
+# out before the installation goes. Doing it the other way round would
+# make -KeepData a lie.
+
+$KeptRoot = $null
+if ($KeepData) {
+    $KeptRoot = Join-Path (Split-Path -Parent $InstallDir) 'mapify-kept'
+    New-Item -ItemType Directory -Force -Path $KeptRoot | Out-Null
+    foreach ($dir in @($DataDir, $ModelsDir)) {
+        if (Test-Path -LiteralPath $dir) {
+            $dest = Join-Path $KeptRoot (Split-Path -Leaf $dir)
+            if (Test-Path -LiteralPath $dest) {
+                Remove-Item -LiteralPath $dest -Recurse -Force -ErrorAction SilentlyContinue
+            }
+            Move-Item -LiteralPath $dir -Destination $dest -Force
+            Write-Kept $dest
+        }
+    }
 }
 
 # -------------------------------------------------------------- the program
@@ -120,20 +172,27 @@ if (Test-Path -LiteralPath $UninstKey) {
     Write-Gone 'Apps & features entry'
 }
 
-# --------------------------------------------------------------- user state
+# --------------------------------------------------- an older install's data
+#
+# Mapify used to keep its state under the user profile. Anyone upgrading
+# from that layout has a stale copy there, and leaving it behind would be
+# exactly the kind of litter an uninstaller exists to avoid.
 
-if (Test-Path -LiteralPath $DataDir) {
+if (Test-Path -LiteralPath $LegacyData) {
     if ($KeepData) {
-        Write-Kept "$DataDir  (caches and settings)"
+        Write-Kept "$LegacyData  (from an earlier install)"
     } else {
-        $size = (Get-ChildItem -LiteralPath $DataDir -Recurse -File -ErrorAction SilentlyContinue |
-                 Measure-Object -Property Length -Sum).Sum
-        Remove-Item -LiteralPath $DataDir -Recurse -Force -ErrorAction SilentlyContinue
-        Write-Gone ("$DataDir  ({0} MB of caches)" -f [math]::Round($size / 1MB))
+        Remove-Item -LiteralPath $LegacyData -Recurse -Force `
+                    -ErrorAction SilentlyContinue
+        Write-Gone "$LegacyData  (from an earlier install)"
     }
 }
 
 # ------------------------------------------------------------ model weights
+#
+# Mapify's own copy lived inside the installation and has already gone with
+# it (or been moved aside by -KeepData). What is left to consider is the
+# *shared* Hugging Face cache, which belongs to whatever else uses it.
 
 $hfCache = if ($env:HF_HUB_CACHE) { $env:HF_HUB_CACHE }
            elseif ($env:HF_HOME)  { Join-Path $env:HF_HOME 'hub' }

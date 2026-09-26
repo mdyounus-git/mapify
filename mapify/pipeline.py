@@ -560,6 +560,8 @@ class AnalysisEngine:
                 "probability": round(top.probability, 4),
                 "place": self._describe(top),
                 "uncertainty_km": round(fused.uncertainty_km, 1),
+                "precision_km": (round(fused.precision_km, 2)
+                                 if fused.precision_km is not None else None),
                 "provenance": top.provenance,
             }
 
@@ -605,6 +607,8 @@ class AnalysisEngine:
             "confidence_reason": fused.confidence_reason,
             "diagnostics": fused.diagnostics(),
             "uncertainty_km": round(fused.uncertainty_km, 1),
+            "precision_km": (round(fused.precision_km, 2)
+                             if fused.precision_km is not None else None),
             "centroid": (
                 [round(fused.centroid[0], 6), round(fused.centroid[1], 6)]
                 if fused.centroid else None
