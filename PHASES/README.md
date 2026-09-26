@@ -19,7 +19,7 @@ finished, whatever the code says.
 
 ## Status
 
-**13 of 20 phases implemented (65%).**
+**14 of 20 phases implemented (70%).**
 
 | # | Phase | State |
 |---|---|---|
@@ -42,7 +42,7 @@ finished, whatever the code says.
 | 17 | GPU support | ⬜ implementable |
 | 18 | Session history | ⬜ implementable |
 | 19 | Accessibility and keyboard completeness | ⬜ implementable |
-| 20 | Installer | ⬜ implementable |
+| 20 | Installer | ✅ implemented |
 
 ---
 

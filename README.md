@@ -123,7 +123,40 @@ python scripts/tune_confidence.py    # refit and validate the thresholds
 
 ## Install
 
-You need Windows 10 or 11 and Python 3.11–3.13. Everything else is fetched by
+### As an application
+
+Build it, then install it for your user. No administrator, nothing outside
+your profile:
+
+```bash
+.venv\Scripts\python build_exe.py
+```
+
+```bash
+powershell -ExecutionPolicy Bypass -File installer\install.ps1 -Desktop
+```
+
+That puts the program in `%LOCALAPPDATA%\Programs\Mapify`, its caches in
+`%LOCALAPPDATA%\Mapify`, a shortcut in the Start menu, and one entry under
+`HKCU` so it appears in **Settings > Apps** like anything else.
+`installer\uninstall.ps1` removes exactly those four things, and asks before
+deleting the model weights, because they are 1.6 GB and the Hugging Face cache
+is shared with other tools.
+
+`installer\mapify.iss` builds a single `Setup.exe` with
+[Inno Setup](https://jrsoftware.org/) if you would rather hand someone that.
+
+Neither is code-signed, so SmartScreen will warn that the publisher is
+unverified. **That warning is correct.** Do not turn SmartScreen off -- build
+it yourself from source, which is what these commands do.
+
+Mapify draws its window with the Microsoft Edge WebView2 Runtime. Windows 11
+has it; some Windows 10 installations do not, and both the installer and the
+application say so with a link rather than failing with a COM error.
+
+### From source
+
+You need Windows 10 or 11 and Python 3.11-3.13. Everything else is fetched by
 the setup script.
 
 ```bash
@@ -142,13 +175,26 @@ Then:
 .\Mapify.bat
 ```
 
-**First launch downloads about 1.7 GB of model weights** from Hugging Face —
-GeoCLIP and the CLIP ViT-L/14 backbone it runs on. After that the application
-works with no network at all.
+### The first launch
 
-The first warm-up also encodes GeoCLIP's 100,000-point GPS gallery, which takes
-a few minutes on CPU. It is cached to disk, so it happens once, ever. Analyses
-after that take **about three seconds each**.
+Mapify ships without model weights, and the first launch says so before it
+spends anything. A screen states the size (**about 1.6 GB**, OpenAI CLIP
+ViT-L/14, MIT), where it comes from, where it will be stored and what happens
+afterwards -- and you can decline it. A refusal is remembered, and you are
+asked again when you open an image rather than on every launch.
+
+GeoCLIP's own weights are 44 MB and are bundled, so they are not part of that
+download. The obvious assumption is that the geolocation model is the big one.
+It is not.
+
+Setting up then encodes GeoCLIP's 100,000-point GPS gallery. That is local
+computation with no network at all, and it is slow: **272 seconds measured on
+one machine, 457 on one with 0.6 GB of RAM free**. It is cached to disk, so it
+happens once ever, and `install.ps1` copies an existing cache into a new
+installation so you never pay it twice. Analyses after that take **about three
+seconds each**.
+
+After all of it, the application works with no network at all.
 
 If something goes wrong, `Mapify-console.bat` runs the same application with a
 visible console and a log.
