@@ -39,6 +39,7 @@ from .geo.geodesy import haversine_km
 from .geo.landmarks import OverpassClient
 from .geo.nominatim import NominatimClient
 from .geo.offline import get_geocoder
+from .geo import readplace
 from .models.base import OcrResult, RawCandidate, VisualEvidence
 from .models.clip_backend import ClipBackend
 from .models.clip_evidence import ClipEvidenceExtractor, ClipGazetteerLocator
@@ -70,6 +71,7 @@ class AnalysisReport:
     # Which extra OCR recogniser was loaded for this image, if any.
     ocr_reader_hint: str | None = None
     toponyms: list[dict[str, Any]] = field(default_factory=list)
+    read_places: list[dict[str, Any]] = field(default_factory=list)
     engine: dict[str, Any] = field(default_factory=dict)
     warnings: list[str] = field(default_factory=list)
     attribution: list[str] = field(default_factory=list)
@@ -86,6 +88,7 @@ class AnalysisReport:
             "evidence": self.evidence,
             "ocr": {**self.ocr, "reader_hint": self.ocr_reader_hint},
             "toponyms": self.toponyms,
+            "read_places": self.read_places,
             "engine": self.engine,
             "warnings": self.warnings,
             "attribution": self.attribution,
@@ -376,11 +379,38 @@ class AnalysisEngine:
             if script_reading:
                 report.ocr["scripts"] = script_reading.as_dict()
 
+            # ---- what the text actually says ------------------------------
+            #
+            # The gazetteer bundled with Mapify knows 7,300 settlements. A
+            # signboard carrying a name, a street and a postcode matches
+            # almost none of it, which is how a photograph of a building
+            # with its own address written on it came back as "India".
+            #
+            # OpenStreetMap knows the building. Ask it -- once, within the
+            # same budget and rate limit as everything else, and only when
+            # there is text worth asking about.
+            read_places: list[Any] = []
+            if (
+                ocr_result.lines
+                and online_enrichment
+                and not self.cfg.network.offline_only
+                and self.cfg.network.nominatim_enabled
+            ):
+                step("readplace", "Looking up the address on the sign")
+                read_places = readplace.resolve(ocr_result, self.nominatim)
+                report.read_places = [p.as_dict() for p in read_places]
+
+            extra_pool = list(extra or [])
+            if read_places:
+                ceiling = max((c.score for c in raw), default=0.05)
+                extra_pool.extend(readplace.to_candidates(read_places, ceiling))
+
             # ---- fusion ---------------------------------------------------
             step("fuse", "Weighing the evidence")
             fused = self.fusion.fuse(
                 raw, evidence=evidence, ocr=ocr_result,
-                script_reading=script_reading, extra_candidates=extra,
+                script_reading=script_reading, extra_candidates=extra_pool,
+                read_places=read_places,
             )
             report.toponyms = [t.as_dict() for t in fused.toponyms]
 

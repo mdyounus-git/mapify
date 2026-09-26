@@ -25,6 +25,7 @@ from typing import Any
 import httpx
 
 from .cache import LookupCache, RateLimiter
+from .geodesy import haversine_km
 
 ATTRIBUTION = "Data (c) OpenStreetMap contributors, ODbL 1.0"
 
@@ -52,8 +53,82 @@ class ReverseResult:
         return {k: v for k, v in vars(self).items()}
 
 
+@dataclass
+class SearchResult:
+    """A place Nominatim found for a string of text read off a sign.
+
+    ``importance`` is Nominatim's own 0-1 estimate of how prominent the place
+    is. ``place_rank`` is how specific it is: roughly 30 for a building, 26
+    for a street, 16 for a town, 4 for a country. Both matter here, and for
+    different reasons -- prominence says how likely this is the place someone
+    meant, specificity says how much precision the answer actually carries.
+    """
+
+    display_name: str
+    latitude: float
+    longitude: float
+    osm_type: str | None = None
+    osm_id: int | None = None
+    place_rank: int | None = None
+    category: str | None = None
+    kind: str | None = None
+    importance: float = 0.0
+    bounding_box: tuple[float, float, float, float] | None = None
+    address: dict[str, str] = field(default_factory=dict)
+    query: str = ""
+    attribution: str = ATTRIBUTION
+    from_cache: bool = False
+
+    # Roughly how large the matched thing is, from its bounding box. A
+    # country-sized match dressed up as a precise answer is the failure mode
+    # this exists to make visible.
+    @property
+    def extent_km(self) -> float:
+        if not self.bounding_box:
+            return 0.0
+        south, north, west, east = self.bounding_box
+        return max(
+            haversine_km(south, west, north, west),
+            haversine_km(south, west, south, east),
+        )
+
+    @property
+    def specificity(self) -> str:
+        """What kind of thing was matched, in words a person can read."""
+        rank = self.place_rank or 0
+        if rank >= 30:
+            return "building"
+        if rank >= 26:
+            return "street"
+        if rank >= 19:
+            return "neighbourhood"
+        if rank >= 13:
+            return "settlement"
+        if rank >= 8:
+            return "region"
+        return "country"
+
+    def as_dict(self) -> dict[str, Any]:
+        return {
+            "display_name": self.display_name,
+            "latitude": round(self.latitude, 6),
+            "longitude": round(self.longitude, 6),
+            "osm_type": self.osm_type,
+            "osm_id": self.osm_id,
+            "place_rank": self.place_rank,
+            "category": self.category,
+            "kind": self.kind,
+            "importance": round(self.importance, 4),
+            "specificity": self.specificity,
+            "extent_km": round(self.extent_km, 2),
+            "query": self.query,
+            "attribution": self.attribution,
+            "from_cache": self.from_cache,
+        }
+
+
 class NominatimClient:
-    """Rate-limited, cached reverse geocoder."""
+    """Rate-limited, cached geocoder: coordinates to places, and back."""
 
     # Keys Nominatim may use for the settlement, most specific first.
     _CITY_KEYS = (
@@ -144,6 +219,196 @@ class NominatimClient:
             return None
         self.cache.put(key, payload)
         return self._parse(payload)
+
+    def search(self, query: str, limit: int = 3,
+               countrycodes: str | None = None) -> list[SearchResult]:
+        """Find the places a piece of read text might name.
+
+        This is the other half of the geocoder and the one that makes a
+        photographed address usable: Natural Earth knows 7,300 settlements,
+        and OSM knows every named building, street and hamlet on earth.
+
+        It is the same service, under the same policy, so it goes through the
+        same rate limiter, the same cache and the same per-analysis budget as
+        every reverse lookup. The budget is what stops one photograph of a
+        noticeboard turning into a dozen queries.
+        """
+        query = " ".join(query.split())
+        if len(query) < 3:
+            return []
+
+        key = LookupCache.key_for(
+            "nominatim-search", q=query.casefold(), limit=limit,
+            cc=countrycodes or "",
+        )
+        cached = self.cache.get(key)
+        if cached is not None:
+            out = self._parse_search(cached, query)
+            for item in out:
+                item.from_cache = True
+            return out
+
+        if self._spent >= self.max_lookups:
+            self.last_error = (
+                f"per-analysis lookup budget of {self.max_lookups} reached"
+            )
+            return []
+
+        params = {
+            "q": query,
+            "format": "jsonv2",
+            "limit": str(max(1, min(10, limit))),
+            "addressdetails": "1",
+            "accept-language": "en",
+        }
+        if countrycodes:
+            params["countrycodes"] = countrycodes
+        headers = {"User-Agent": self.user_agent, "Accept": "application/json"}
+
+        self.limiter.acquire()
+        self._spent += 1
+        try:
+            resp = httpx.get(
+                f"{self.endpoint}/search",
+                params=params,
+                headers=headers,
+                timeout=self.timeout_s,
+                follow_redirects=True,
+            )
+        except httpx.HTTPError as exc:
+            self.last_error = f"{type(exc).__name__}: {exc}"
+            return []
+        if resp.status_code != 200:
+            self.last_error = f"HTTP {resp.status_code}"
+            return []
+        try:
+            payload = resp.json()
+        except json.JSONDecodeError:
+            self.last_error = "response was not JSON"
+            return []
+        if not isinstance(payload, list):
+            self.last_error = "search response was not a list"
+            return []
+        self.cache.put(key, payload)
+        return self._parse_search(payload, query)
+
+    def search_structured(self, fields: dict[str, str],
+                          limit: int = 3) -> list[SearchResult]:
+        """Search field by field rather than as free text.
+
+        Nominatim's free-text search requires every term to match, which
+        makes it brittle against a signboard: one slogan or one misread
+        word and it returns nothing. The structured form matches each field
+        against one kind of thing, so `city=Kelambakkam` finds the town
+        whatever else is written on the board.
+
+        It cannot find a building, which is why it is the fallback and not
+        the first attempt -- but it reliably answers the question the user
+        actually asked, which is roughly where the photograph was taken.
+        """
+        allowed = ("amenity", "street", "city", "county", "state",
+                   "country", "postalcode")
+        clean = {
+            k: " ".join(str(v).split())
+            for k, v in fields.items()
+            if k in allowed and str(v).strip()
+        }
+        if not clean:
+            return []
+
+        label = ", ".join(f"{k}={v}" for k, v in sorted(clean.items()))
+        key = LookupCache.key_for("nominatim-structured", **clean, limit=limit)
+        cached = self.cache.get(key)
+        if cached is not None:
+            out = self._parse_search(cached, label)
+            for item in out:
+                item.from_cache = True
+            return out
+
+        if self._spent >= self.max_lookups:
+            self.last_error = (
+                f"per-analysis lookup budget of {self.max_lookups} reached"
+            )
+            return []
+
+        params = {
+            **clean,
+            "format": "jsonv2",
+            "limit": str(max(1, min(10, limit))),
+            "addressdetails": "1",
+            "accept-language": "en",
+        }
+        headers = {"User-Agent": self.user_agent, "Accept": "application/json"}
+        self.limiter.acquire()
+        self._spent += 1
+        try:
+            resp = httpx.get(
+                f"{self.endpoint}/search",
+                params=params,
+                headers=headers,
+                timeout=self.timeout_s,
+                follow_redirects=True,
+            )
+        except httpx.HTTPError as exc:
+            self.last_error = f"{type(exc).__name__}: {exc}"
+            return []
+        if resp.status_code != 200:
+            self.last_error = f"HTTP {resp.status_code}"
+            return []
+        try:
+            payload = resp.json()
+        except json.JSONDecodeError:
+            self.last_error = "response was not JSON"
+            return []
+        if not isinstance(payload, list):
+            self.last_error = "search response was not a list"
+            return []
+        self.cache.put(key, payload)
+        return self._parse_search(payload, label)
+
+    @staticmethod
+    def _parse_search(payload: Any, query: str) -> list[SearchResult]:
+        out: list[SearchResult] = []
+        if not isinstance(payload, list):
+            return out
+        for row in payload:
+            if not isinstance(row, dict):
+                continue
+            try:
+                lat = float(row["lat"])
+                lon = float(row["lon"])
+            except (KeyError, TypeError, ValueError):
+                continue
+            if not (-90.0 <= lat <= 90.0 and -180.0 <= lon <= 180.0):
+                continue
+            box = None
+            raw_box = row.get("boundingbox")
+            if isinstance(raw_box, (list, tuple)) and len(raw_box) == 4:
+                try:
+                    box = (float(raw_box[0]), float(raw_box[1]),
+                           float(raw_box[2]), float(raw_box[3]))
+                except (TypeError, ValueError):
+                    box = None
+            address = row.get("address")
+            out.append(
+                SearchResult(
+                    display_name=str(row.get("display_name") or "")[:400],
+                    latitude=lat,
+                    longitude=lon,
+                    osm_type=row.get("osm_type"),
+                    osm_id=row.get("osm_id") if isinstance(row.get("osm_id"), int)
+                           else None,
+                    place_rank=row.get("place_rank")
+                               if isinstance(row.get("place_rank"), int) else None,
+                    category=row.get("category") or row.get("class"),
+                    kind=row.get("type"),
+                    importance=float(row.get("importance") or 0.0),
+                    bounding_box=box,
+                    address=address if isinstance(address, dict) else {},
+                    query=query,
+                )
+            )
+        return out
 
     @classmethod
     def _parse(cls, payload: dict[str, Any]) -> ReverseResult | None:

@@ -134,6 +134,10 @@ class FusionResult:
     uncertainty_km: float
     centroid: tuple[float, float] | None
     notes: list[str] = field(default_factory=list)
+    # Places resolved from text read in the image, in the order they were
+    # believed. Kept on the result so the report can show what was read and
+    # what it was matched against, rather than only where it landed.
+    read_places: list[Any] = field(default_factory=list)
     # Diagnostics the confidence band is actually built from. Reported so the
     # banding can be argued with rather than taken on faith.
     locator_mass: float = 0.0       # share of the locator's full distribution
@@ -509,6 +513,7 @@ class FusionEngine:
         ocr: OcrResult | None = None,
         script_reading: ScriptReading | None = None,
         extra_candidates: list[RawCandidate] | None = None,
+        read_places: list[Any] | None = None,
     ) -> FusionResult:
         cfg = self.cfg
         notes: list[str] = []
@@ -549,13 +554,57 @@ class FusionEngine:
 
         candidates = cluster(pool, cfg.cluster_radius_km)
 
+        # Clustering averages its members, which is right for a handful of
+        # fuzzy gallery points in one city and wrong for a street address.
+        # A geocoded building is a *point*; blending it with a model guess
+        # 20 km away moves the answer off the building for no gain. On the
+        # board that prompted this, that averaging alone cost 2.9 km.
+        #
+        # So where a cluster contains a corroborated read address, the
+        # cluster reports the address's own coordinate.
+        if read_places:
+            precise = [
+                p for p in read_places
+                if p.corroborated
+                and p.result.specificity in ("building", "street")
+            ]
+            for cand in candidates:
+                if "read-address" not in cand.sources or not precise:
+                    continue
+                # The best-corroborated match within the cluster, not the
+                # one that happens to sit nearest the averaged centroid: a
+                # hospital and its blood bank are both in range, and the
+                # ranking already knows which is the better read.
+                in_range = [
+                    p for p in precise
+                    if haversine_km(cand.latitude, cand.longitude,
+                                    p.result.latitude,
+                                    p.result.longitude) <= cfg.cluster_radius_km
+                ]
+                if not in_range:
+                    continue
+                nearest = max(in_range, key=lambda p: p.rank)
+                moved = haversine_km(
+                    cand.latitude, cand.longitude,
+                    nearest.result.latitude, nearest.result.longitude,
+                )
+                if moved <= cfg.cluster_radius_km:
+                    cand.latitude = nearest.result.latitude
+                    cand.longitude = nearest.result.longitude
+                    # The spread is still real -- the model's own points are
+                    # that far away -- and must not be quietly reset.
+                    cand.spread_km = max(cand.spread_km, moved)
+
         # Reverse geocode before scoring: most adjustments need the country.
         for cand in candidates[: max(cfg.candidates_returned * 3, 12)]:
             cand.location = self.geocoder.locate(
                 cand.latitude, cand.longitude, place_limit=4
             )
-            if "ocr-toponym" in cand.sources:
-                cand.provenance = "text" if len(cand.sources) == 1 else "model+text"
+            text_sources = {"ocr-toponym", "read-address"}
+            if text_sources & set(cand.sources):
+                cand.provenance = (
+                    "text" if set(cand.sources) <= text_sources else "model+text"
+                )
 
         # Apply every evidence channel.
         for cand in candidates:
@@ -593,7 +642,15 @@ class FusionEngine:
         # how much of that sits in the winning cluster. With one cluster the
         # normalised probability is trivially 1.0, so it cannot carry the
         # confidence call on its own.
-        locator_mass = sum(max(c.score, 0.0) for c in pool if c.source != "ocr-toponym")
+        # Mass means "how much of its distribution the *visual locator*
+        # committed". Candidates we injected from read text are not the
+        # locator's opinion and must not inflate it -- otherwise reading a
+        # sign would raise confidence in the image evidence, which is
+        # exactly backwards.
+        _injected = {"ocr-toponym", "read-address"}
+        locator_mass = sum(
+            max(c.score, 0.0) for c in pool if c.source not in _injected
+        )
         post_total = sum(max(c.score, 0.0) for c in candidates)
         concentration = (
             max(candidates[0].score, 0.0) / post_total if post_total > 0 else 0.0
@@ -616,8 +673,60 @@ class FusionEngine:
             uncertainty = max(uncertainty, candidates[0].spread_km)
 
         support = sum(a.delta for a in candidates[0].adjustments)
+
+        # Did an address read off the image win, and if so, does the visual
+        # estimate agree with it? Both questions matter to the band.
+        read_leader = None
+        disagreement_km = None
+        if read_places and "read-address" in candidates[0].sources:
+            leader = candidates[0]
+            nearest = min(
+                read_places,
+                key=lambda p: haversine_km(
+                    leader.latitude, leader.longitude,
+                    p.result.latitude, p.result.longitude,
+                ),
+            )
+            read_leader = nearest.as_dict()
+            model_points = [
+                (c.latitude, c.longitude, max(c.score, 0.0))
+                for c in candidates if "read-address" not in c.sources
+            ]
+            if model_points:
+                model_centroid = weighted_centroid(model_points)
+                if model_centroid:
+                    gap = haversine_km(
+                        leader.latitude, leader.longitude, *model_centroid
+                    )
+                    # A gap only counts as disagreement if it is bigger than
+                    # the model's own scatter. When GeoCLIP has spread its
+                    # candidates over a thousand kilometres it has not
+                    # contradicted anything -- it simply has no opinion, and
+                    # reporting that as a conflict would frighten someone
+                    # away from a correct answer.
+                    model_spread = containment_radius_km(
+                        model_points, model_centroid, mass=0.68
+                    )
+                    # Only a genuine conflict counts. A model that has
+                    # scattered its candidates across a region has not
+                    # contradicted anything -- it has no opinion -- and
+                    # calling that a conflict would push someone away from
+                    # a correct answer. Different countries always count.
+                    leader_cc = leader.iso_a2
+                    model_cc = None
+                    for c in candidates:
+                        if "read-address" not in c.sources:
+                            model_cc = c.iso_a2
+                            break
+                    different_country = bool(
+                        leader_cc and model_cc and leader_cc != model_cc
+                    )
+                    if different_country or gap > max(500.0, 3.0 * model_spread):
+                        disagreement_km = gap
+
         confidence, reason, extra_notes = self._band(
-            candidates, uncertainty, locator_mass, concentration, support
+            candidates, uncertainty, locator_mass, concentration, support,
+            read_leader=read_leader, disagreement_km=disagreement_km,
         )
         notes.extend(extra_notes)
 
@@ -635,6 +744,7 @@ class FusionEngine:
         return FusionResult(
             candidates=candidates,
             toponyms=toponyms,
+            read_places=list(read_places or []),
             confidence=confidence,
             confidence_reason=reason,
             uncertainty_km=uncertainty,
@@ -655,6 +765,8 @@ class FusionEngine:
         locator_mass: float,
         concentration: float,
         evidence_support: float,
+        read_leader: dict[str, Any] | None = None,
+        disagreement_km: float | None = None,
     ) -> tuple[str, str, list[str]]:
         """Decide how much to claim.
 
@@ -756,5 +868,41 @@ class FusionEngine:
                 " Text read from the image independently corroborates it: "
                 + corroborated[0].detail + "."
             )
+
+        # 6. The leading candidate came from an address read in the image
+        #    and matched in OpenStreetMap. That is positional evidence of a
+        #    different kind from anything else here: not a guess about what
+        #    the scenery resembles, but a name that OSM can point at.
+        #
+        #    It is allowed to lift the band to "medium" and no further. Not
+        #    because a read address is weak -- it is usually the best thing
+        #    in the frame -- but because there is no benchmark for it yet.
+        #    Phase 13 is the precedent: the high band is the one promise
+        #    this tool makes, and it is not given out on reasoning alone.
+        #    When a signboard benchmark exists this rule gets revisited with
+        #    numbers behind it.
+        if read_leader is not None:
+            place = read_leader
+            where = place.get("display_name", "").split(",")[0]
+            if band in {"low", "insufficient"}:
+                band = "medium"
+            reason = (
+                f"The address in the image reads as {where!r}, which "
+                f"OpenStreetMap places as a {place.get('specificity')} at "
+                f"this coordinate. " + reason
+            )
+            notes.append(
+                "This location was read from text in the image, not inferred "
+                "from what the image looks like. It is capped at medium "
+                "confidence because that path has not been benchmarked yet."
+            )
+            if disagreement_km:
+                notes.append(
+                    f"The visual estimate is {disagreement_km:.0f} km from "
+                    f"the address that was read. That is worth a look: a "
+                    f"photograph of a poster, a brochure or a vehicle "
+                    f"livery carries an address that is not where the "
+                    f"picture was taken."
+                )
 
         return band, reason, notes

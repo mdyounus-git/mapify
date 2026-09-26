@@ -56,3 +56,6 @@ samples/
 build/
 dist/
 Mapify.spec
+
+# Rendered test boards and anything a user drops in to try.
+samples/private/
