@@ -80,6 +80,7 @@ const STAGES = [
   ["locate", "Estimate coordinates"],
   ["evidence", "Read visual clues"],
   ["ocr", "Read signage text"],
+  ["readplace", "Look up the address"],
   ["fuse", "Weigh the evidence"],
   ["enrich", "Name the location"],
 ];
@@ -1398,30 +1399,26 @@ function renderReport(report) {
   const est = pred.estimated;
   const out = [];
 
-  /* headline ---------------------------------------------------------- */
+  /* The place name, the confidence and the coordinate are on the globe
+     now, in the finding card, at a size that says they are the answer.
+     Repeating them here at body-text weight was most of why the screen
+     had nothing to look at first: everything was said twice, and the
+     second telling was the same size as the timezone.
+
+     So the rail's job is the detail behind the answer, and it starts
+     with what the band was measured to mean -- the one part of the
+     headline that needs more room than a tooltip. ------------------- */
   if (!pred.determinate || !est) {
-    out.push(block("Assessment", `
+    out.push(block("Why nothing was named", `
       <div class="verdict indeterminate">
-        <p class="place">No location determined</p>
-        <p class="place-sub">${esc(CONFIDENCE[pred.confidence] || pred.confidence)}</p>
         <p class="measured">${esc(
           CONFIDENCE_MEASURED[pred.confidence] || "")}</p>
         <div class="note risk"><div>${esc(pred.confidence_reason || "")}</div></div>
       </div>`));
   } else {
     const place = est.place || {};
-    const name =
-      [place.city, place.region, place.country].filter(Boolean).join(", ") ||
-      place.display_name || "Unnamed location";
-    out.push(block("Estimated location", `
+    out.push(block("The location in detail", `
       <div class="verdict determinate">
-        <p class="place">${esc(name)}</p>
-        <p class="place-sub">
-          <span class="chip ${esc(pred.confidence)}" title="${esc(
-            CONFIDENCE_MEASURED[pred.confidence] || "")}">${esc(
-            CONFIDENCE[pred.confidence] || pred.confidence)}</span>
-          <span>±${esc(fmtKm(pred.uncertainty_km))}</span>
-        </p>
         <p class="measured">${esc(
           CONFIDENCE_MEASURED[pred.confidence] || "")}</p>
         <div class="coord-pair">
