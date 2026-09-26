@@ -264,11 +264,7 @@ def run(argv: list[str] | None = None) -> int:
     if args.selftest:
         return _selftest()
 
-    logging.basicConfig(
-        level=getattr(logging, args.log_level.upper(), logging.WARNING),
-        format="%(asctime)s  %(levelname)-7s %(name)s  %(message)s",
-        datefmt="%H:%M:%S",
-    )
+    _configure_logging(args.log_level)
 
     # pywebview introspects the native window when its logger is verbose,
     # which on the WebView2 backend means touching COM from the wrong thread.
@@ -299,6 +295,17 @@ def run(argv: list[str] | None = None) -> int:
             port=port,
             log_level=args.log_level,
             access_log=False,
+            # Do NOT let uvicorn run its own dictConfig. Its default
+            # formatter decides whether to colour output by calling
+            # sys.stdout.isatty(), and a --windowed PyInstaller build has
+            # no console at all: sys.stdout is None, that call raises
+            # inside logging.config, and the whole application dies at
+            # startup with "Unable to configure formatter 'default'".
+            #
+            # We have already configured logging ourselves, above, so
+            # uvicorn doing it again was never wanted. None means "leave
+            # the root logger alone", which is exactly right.
+            log_config=None,
             # The window closes the process; no graceful-shutdown dance.
             timeout_graceful_shutdown=1,
         )
@@ -446,6 +453,52 @@ def _selftest() -> int:
         AnalysisEngine(cfg)
         return "engine constructed"
 
+    def _headless_startup() -> str:
+        """Start the service the way a windowed build starts it.
+
+        This check exists because a build passed every other line in this
+        function and then could not open at all. A --windowed PyInstaller
+        executable has no console, so sys.stdout is None; uvicorn's default
+        log config builds a formatter that calls sys.stdout.isatty(), and
+        the application died at startup with "Unable to configure formatter
+        'default'" before any of our own error handling could run.
+
+        Imports resolving is not the same as the program starting. So:
+        blind stdout and stderr, then do what run() does -- configure
+        logging, build the app, build the uvicorn Config -- and put them
+        back.
+        """
+        import uvicorn
+
+        from .server import create_app
+
+        saved_out, saved_err = sys.stdout, sys.stderr
+        saved_handlers = logging.getLogger().handlers[:]
+        try:
+            sys.stdout = None  # type: ignore[assignment]
+            sys.stderr = None  # type: ignore[assignment]
+            _configure_logging("warning")
+            cfg = load_config()
+            cfg.network.offline_only = True
+            app = create_app(cfg, token="selftest")
+            uvicorn.Config(
+                app, host="127.0.0.1", port=0,
+                log_level="warning", access_log=False, log_config=None,
+            )
+        finally:
+            sys.stdout, sys.stderr = saved_out, saved_err
+            logging.getLogger().handlers = saved_handlers
+        return "starts with no console"
+
+    def _state_is_writable() -> str:
+        """An installed application must be able to write somewhere."""
+        from .paths import cache_dir, state_dir
+
+        probe = cache_dir() / ".selftest"
+        probe.write_bytes(b"ok")
+        probe.unlink(missing_ok=True)
+        return str(state_dir())
+
     check("torch", _torch)
     check("model stack", _models)
     check("pywebview", _webview)
@@ -453,6 +506,8 @@ def _selftest() -> int:
     check("natural earth", _geodata)
     check("country table", _countries)
     check("pipeline", _pipeline)
+    check("headless startup", _headless_startup)
+    check("writable state", _state_is_writable)
 
     width = max(len(label) for label, _ in checks)
     for label, result in checks:
@@ -510,6 +565,44 @@ WEBVIEW2_MISSING = (
     "https://developer.microsoft.com/microsoft-edge/webview2/\n\n"
     "Then start Mapify again. Nothing else needs to be reinstalled."
 )
+
+
+def _configure_logging(level_name: str) -> Path | None:
+    """Set up logging, and give a windowed build somewhere to write it.
+
+    An installed Mapify has no console. Anything it logs goes nowhere, which
+    is tolerable until something fails at startup and there is nothing to
+    look at but a dialog box. So when there is no stdout, logs go to a file
+    in the user's state directory and the path is returned for the crash
+    dialog to name.
+    """
+    level = getattr(logging, level_name.upper(), logging.WARNING)
+    fmt = logging.Formatter(
+        "%(asctime)s  %(levelname)-7s %(name)s  %(message)s", "%H:%M:%S"
+    )
+    root = logging.getLogger()
+    root.setLevel(level)
+
+    log_path: Path | None = None
+    if sys.stdout is not None:
+        handler: logging.Handler = logging.StreamHandler(sys.stdout)
+    else:
+        try:
+            log_path = state_dir() / "mapify.log"
+            # Truncated each launch on purpose: this is for diagnosing the
+            # run that just failed, not an audit trail, and an unbounded
+            # log file in somebody's profile is litter.
+            handler = logging.FileHandler(log_path, mode="w", encoding="utf-8")
+        except OSError:
+            handler = logging.NullHandler()
+            log_path = None
+    handler.setFormatter(fmt)
+    root.handlers = [handler]
+
+    # pywebview introspects the native window when its logger is verbose,
+    # which on the WebView2 backend means touching COM from the wrong thread.
+    logging.getLogger("pywebview").setLevel(logging.WARNING)
+    return log_path
 
 
 def _fatal(message: str) -> None:

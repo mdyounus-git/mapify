@@ -233,6 +233,80 @@ class TestWebView2Preflight:
         assert desktop.webview2_runtime() is None
 
 
+class TestItStartsWithNoConsole:
+    """A windowed build has no stdout, and that killed one at startup.
+
+    The packaged application died before drawing anything, with "Unable to
+    configure formatter 'default'". Underneath: uvicorn's default log config
+    builds a formatter whose `__init__` calls `sys.stdout.isatty()` to decide
+    about colour, and a `--windowed` PyInstaller executable has no console, so
+    `sys.stdout` is None.
+
+    Every import resolved. The build's own self-test passed. Neither of those
+    is the same as the program starting, which is what these check.
+    """
+
+    def test_uvicorn_is_not_allowed_to_configure_logging(self):
+        """The one-line fix, asserted where it cannot be quietly undone."""
+        import inspect
+
+        from mapify import desktop
+
+        source = inspect.getsource(desktop.run)
+        assert "log_config=None" in source, (
+            "uvicorn will run its own dictConfig and die without a console"
+        )
+
+    def test_uvicorns_default_config_really_does_fail_without_stdout(self):
+        """Proof the fix is not cargo cult: reproduce the crash it prevents."""
+        import logging.config
+
+        import uvicorn.config
+
+        saved = sys.stdout
+        try:
+            sys.stdout = None  # type: ignore[assignment]
+            with pytest.raises(ValueError):
+                logging.config.dictConfig(uvicorn.config.LOGGING_CONFIG)
+        finally:
+            sys.stdout = saved
+
+    def test_logging_configures_with_no_stdout_at_all(self, relocated):
+        """Our own setup must survive what uvicorn's did not."""
+        import logging
+
+        from mapify import desktop
+
+        saved_out, saved_err = sys.stdout, sys.stderr
+        saved_handlers = logging.getLogger().handlers[:]
+        try:
+            sys.stdout = None  # type: ignore[assignment]
+            sys.stderr = None  # type: ignore[assignment]
+            log_path = desktop._configure_logging("warning")
+            logging.getLogger("mapify.test").warning("into the file")
+            for handler in logging.getLogger().handlers:
+                handler.flush()
+        finally:
+            sys.stdout, sys.stderr = saved_out, saved_err
+            for handler in logging.getLogger().handlers:
+                handler.close()
+            logging.getLogger().handlers = saved_handlers
+
+        assert log_path is not None, "no console and no log file is no diagnosis"
+        assert log_path.exists()
+        assert "into the file" in log_path.read_text(encoding="utf-8")
+
+    def test_the_selftest_covers_startup_not_just_imports(self):
+        """The gap that let the broken build ship."""
+        import inspect
+
+        from mapify import desktop
+
+        source = inspect.getsource(desktop._selftest)
+        assert "headless startup" in source
+        assert "writable state" in source
+
+
 class TestInstallerScripts:
     """The installer is shell script, but its promises are testable."""
 
