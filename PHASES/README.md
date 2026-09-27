@@ -19,7 +19,7 @@ finished, whatever the code says.
 
 ## Status
 
-**17 of 25 phases implemented (68%).**
+**18 of 26 phases implemented (69%).**
 
 | # | Phase | State |
 |---|---|---|
@@ -47,7 +47,8 @@ finished, whatever the code says.
 | 22 | Metadata first, then everything the image itself shows | ✅ implemented |
 | 23 | Ask for another photograph rather than guess | ✅ implemented |
 | 24 | Get down to the street | ⬜ implementable |
-| 25 | The globe settles, and the interface stops looking generated | ⬜ implementable |
+| 25 | The globe settles, and the interface stops looking generated | ◨ part done |
+| 26 | The locator was being read wrong | ✅ implemented |
 
 ---
 
