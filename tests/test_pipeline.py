@@ -251,6 +251,60 @@ class TestExifIsNotTheEstimate:
         assert "exif" in est["provenance"]
         assert est["precision_km"] < 0.1
 
+    def test_an_address_read_off_the_image_can_reject_the_tag(self, engine):
+        """Where Phase 21 and Phase 22 meet, tested without a network.
+
+        A weak locator cannot reject a tag, and should not. But a *read
+        address* is different in kind: the place is printed in the
+        photograph and OpenStreetMap resolved it. That is enough to say
+        which of the two is wrong even when the visual model is vague,
+        and it is the case a faked tag is most likely to be caught by.
+        """
+        from mapify.evidence.fusion import Candidate, FusionResult
+
+        top = Candidate(
+            latitude=12.7972, longitude=80.2176,
+            prior_score=0.3, score=0.3,
+            sources=["read-address"], provenance="text",
+        )
+        fused = FusionResult(
+            candidates=[top], toponyms=[], confidence="medium",
+            confidence_reason="", uncertainty_km=5.0, centroid=None,
+            locator_mass=0.04,          # far too weak to adjudicate alone
+        )
+
+        class Tag:
+            latitude, longitude = 47.4979, 19.0402      # Budapest
+        class Exif:
+            gps = Tag()
+
+        verdict = engine._judge_exif(fused, Exif(), top)
+        assert verdict["verdict"] == "rejected"
+        assert verdict["distance_km"] > 6000
+        assert "read from the image" in verdict["note"]
+
+    def test_the_same_weak_locator_alone_would_not_have_rejected_it(self, engine):
+        """The control for the test above: it is the read address doing it."""
+        from mapify.evidence.fusion import Candidate, FusionResult
+
+        top = Candidate(
+            latitude=12.7972, longitude=80.2176,
+            prior_score=0.3, score=0.3,
+            sources=["geoclip"], provenance="model",
+        )
+        fused = FusionResult(
+            candidates=[top], toponyms=[], confidence="medium",
+            confidence_reason="", uncertainty_km=5.0, centroid=None,
+            locator_mass=0.04,
+        )
+
+        class Tag:
+            latitude, longitude = 47.4979, 19.0402
+        class Exif:
+            gps = Tag()
+
+        assert engine._judge_exif(fused, Exif(), top)["verdict"] == "unresolved"
+
     def test_no_tag_produces_no_verdict_at_all(self, engine):
         """An absent GPS tag is not a finding and must not read as one."""
         data = make_jpeg()
