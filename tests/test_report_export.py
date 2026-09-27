@@ -148,8 +148,8 @@ class TestUncertaintyIsNotBuried:
 
     def test_the_band_carries_what_it_was_measured_to_mean(self):
         for band, phrase in (
-            ("high", "all 20 high-confidence calls"),
-            ("insufficient", "only 16% within 1500 km"),
+            ("high", "all 26 high-confidence calls"),
+            ("insufficient", "only 31% within 1500 km"),
         ):
             r = confident_report() if band == "high" else uncertain_report()
             html = build_single(r, None)

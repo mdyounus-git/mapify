@@ -104,13 +104,13 @@ const CONFIDENCE = {
 // hover so the wording on screen can be checked against the evidence for it
 // rather than taken on trust. See PHASES/Implemented Phases/PHASE-13.
 const CONFIDENCE_MEASURED = {
-  high: "Measured over 163 samples: all 20 high-confidence calls landed "
-      + "within 106 km of the true location.",
-  medium: "Measured over 163 samples: 89% of medium calls landed within "
+  high: "Measured over 163 samples: all 26 high-confidence calls landed "
+      + "within 47 km of the true location.",
+  medium: "Measured over 163 samples: 88% of medium calls landed within "
         + "1500 km, median 16 km. A region to check, not a location.",
-  low: "Measured over 163 samples: 63% within 1500 km, median 658 km. "
+  low: "Measured over 163 samples: 63% within 1500 km, median 728 km. "
      + "A lead, nothing more.",
-  insufficient: "Measured over 163 samples: only 16% within 1500 km. "
+  insufficient: "Measured over 163 samples: only 31% within 1500 km. "
               + "The evidence does not support naming a location.",
 };
 

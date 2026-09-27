@@ -54,20 +54,20 @@ BAND_WORD = {
 # on its own invites the reader to supply their own definition.
 BAND_MEASURED = {
     "high": (
-        "Measured over a 163-sample benchmark: all 20 high-confidence calls "
-        "landed within 106 km of the true location."
+        "Measured over a 163-sample benchmark: all 26 high-confidence calls "
+        "landed within 47 km of the true location."
     ),
     "medium": (
-        "Measured over a 163-sample benchmark: 89% of medium-confidence calls "
+        "Measured over a 163-sample benchmark: 88% of medium-confidence calls "
         "landed within 1500 km, median 16 km. A region to check, not a "
         "location."
     ),
     "low": (
         "Measured over a 163-sample benchmark: 63% within 1500 km, median "
-        "658 km. A lead, nothing more."
+        "728 km. A lead, nothing more."
     ),
     "insufficient": (
-        "Measured over a 163-sample benchmark: only 16% within 1500 km. The "
+        "Measured over a 163-sample benchmark: only 31% within 1500 km. The "
         "evidence does not support naming a location."
     ),
 }

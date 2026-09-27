@@ -52,13 +52,13 @@ model is known to be weak.
 
 | Band | Threshold | Hit rate |
 |---|---|---|
-| Street | ≤ 1 km | 30/163 — 18% |
-| City | ≤ 25 km | 61/163 — 37% |
-| Region | ≤ 200 km | 74/163 — 45% |
-| Country | ≤ 750 km | 97/163 — 60% |
-| Continent | ≤ 2500 km | 113/163 — 69% |
+| Street | ≤ 1 km | 28/163 — 17% |
+| City | ≤ 25 km | 64/163 — 39% |
+| Region | ≤ 200 km | 77/163 — 47% |
+| Country | ≤ 750 km | 95/163 — 58% |
+| Continent | ≤ 2500 km | 121/163 — 74% |
 
-Median error **368 km**.
+Median error **317 km**.
 
 That is a much weaker result than an earlier eleven-sample set suggested
 (45% street-level, median 1.8 km). The eleven samples were mostly landmarks in
@@ -70,16 +70,16 @@ actually does.
 
 | Stated confidence | n | Median | Worst | ≤200 km | ≤1500 km |
 |---|---|---|---|---|---|
-| **high** | 20 | **1.2 km** | **106 km** | **100%** | 100% |
-| medium | 54 | 15.5 km | 15,110 km | 63% | 89% |
-| low | 51 | 658 km | 16,854 km | 37% | 63% |
-| insufficient | 38 | 6,985 km | 16,214 km | 3% | 16% |
+| **high** | 26 | **0.8 km** | **47 km** | **100%** | 100% |
+| medium | 24 | 16.1 km | 15,110 km | 71% | 88% |
+| low | 78 | 728 km | 16,854 km | 35% | 63% |
+| insufficient | 35 | 4,449 km | 17,003 km | 20% | 31% |
 
-**When Mapify says high confidence, all 20 such calls landed within 106 km.**
+**When Mapify says high confidence, all 26 such calls landed within 47 km.**
 The bands fall monotonically from there, so they carry real information.
 
 Only `high` makes a promise. `medium` is reported with its measured rate —
-89% within 1500 km — because threshold fitting showed that is its ceiling on
+88% within 1500 km — because threshold fitting showed that is its ceiling on
 this data, and promising a distance it cannot keep would be the exact failure
 this project exists to avoid.
 
