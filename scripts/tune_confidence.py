@@ -104,6 +104,11 @@ def acceptable(s: dict) -> bool:
 
 
 def main() -> int:
+    for stream in (sys.stdout, sys.stderr):
+        try:
+            stream.reconfigure(encoding="utf-8", errors="replace")
+        except (AttributeError, ValueError):   # pragma: no cover
+            pass
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--json", default=str(ROOT / "data" / "eval_wide.json"))
     args = ap.parse_args()

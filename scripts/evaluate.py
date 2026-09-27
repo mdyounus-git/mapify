@@ -140,6 +140,17 @@ def reliability(rows: list[dict]) -> None:
 
 
 def main() -> int:
+    # A benchmark over place names worldwide will print Ōtsu, Košice and
+    # Malmö, and Windows hands Python a cp1252 stdout by default. The run
+    # then dies partway with a UnicodeEncodeError -- after eight minutes
+    # of analysis, having written no JSON. Reconfigure rather than ask
+    # everyone to remember PYTHONIOENCODING.
+    for stream in (sys.stdout, sys.stderr):
+        try:
+            stream.reconfigure(encoding="utf-8", errors="replace")
+        except (AttributeError, ValueError):      # pragma: no cover
+            pass
+
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--offline", action="store_true",
                     help="no outbound requests (faster, Natural Earth naming)")
