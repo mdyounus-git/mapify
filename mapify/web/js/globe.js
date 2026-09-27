@@ -53,6 +53,10 @@ const MOON_RADIUS = 0.273;
 const MOON_DISTANCE = 5.0;
 const CLOUD_R = 1.0035;
 const EARTH_RADIUS_KM = 6371.0088;
+// Standard gravitational parameter of the Earth, km^3/s^2. Gives each
+// orbit its true period, which is the one thing about these satellites
+// that is not invented.
+const EARTH_MU = 398600.4418;
 const DEG = Math.PI / 180;
 
 /* ─────────────────────────── math helpers ─────────────────────────── */
@@ -616,6 +620,9 @@ export class Globe {
     this.moon = this._buildMoon();
     this.scene.add(this.moon);
 
+    this.satellites = this._buildSatellites();
+    this.scene.add(this.satGroup);
+
     this.detail = this.opts.tileUrl
       ? new DetailPatch(this.root, {
           tileUrl: this.opts.tileUrl,
@@ -878,6 +885,124 @@ export class Globe {
   }
 
   /* ----------------------------------------------------- decorations */
+
+  /**
+   * Objects in orbit, in the regimes things are actually put into.
+   *
+   * These are **not tracked objects**. Mapify has no satellite catalogue
+   * and makes no claim to know where anything is; drawing named
+   * spacecraft would imply a capability this tool does not have, in a
+   * tool whose whole argument is about not overclaiming. What is real is
+   * the *structure*: the altitudes are the ones used, the inclinations
+   * are the ones flown, and every period comes out of Kepler's third law
+   * rather than out of taste.
+   *
+   * Which means they move at the speed the real ones do. A low pass is
+   * about ninety minutes, so they drift rather than race. That is
+   * consistent with the Sun and the Moon here, which are also real-time
+   * and also barely move while you watch.
+   */
+  _buildSatellites() {
+    // altitudeKm, inclination, how many, and what that shell is for.
+    const SHELLS = [
+      { altitudeKm: 420, inclination: 51.6, count: 5, kind: "low Earth orbit" },
+      { altitudeKm: 550, inclination: 53.0, count: 7, kind: "low Earth orbit" },
+      { altitudeKm: 780, inclination: 98.2, count: 4, kind: "sun-synchronous" },
+      { altitudeKm: 20200, inclination: 55.0, count: 3, kind: "navigation" },
+      { altitudeKm: 35786, inclination: 0.2, count: 3, kind: "geostationary" },
+    ];
+
+    this.satGroup = new THREE.Group();
+    const sats = [];
+
+    const ringMat = new THREE.LineBasicMaterial({
+      color: 0x4f7fa8, transparent: true, opacity: 0.0, depthWrite: false,
+    });
+    this.satRingMaterial = ringMat;
+
+    this.satDotMaterial = new THREE.PointsMaterial({
+      size: 0.045,
+      sizeAttenuation: true,
+      color: 0xbfe4ff,
+      transparent: true,
+      opacity: 0.0,
+      depthWrite: false,
+      map: this._dotSprite(),
+      blending: THREE.AdditiveBlending,
+    });
+
+    const positions = [];
+    for (const shell of SHELLS) {
+      const a = EARTH_RADIUS_KM + shell.altitudeKm;        // semi-major axis
+      const periodS = 2 * Math.PI * Math.sqrt((a * a * a) / EARTH_MU);
+      const radius = R * (a / EARTH_RADIUS_KM);
+      const inc = shell.inclination * DEG;
+
+      // One drawn ring per shell rather than per satellite: the shells are
+      // what a person reads, and twenty-two rings is a bird's nest.
+      const nodes = shell.count > 3 ? 2 : 1;
+      for (let n = 0; n < nodes; n++) {
+        const raan = (n / nodes) * Math.PI * 2 + shell.altitudeKm;
+        this.satGroup.add(this._orbitRing(radius, inc, raan, ringMat));
+      }
+
+      for (let i = 0; i < shell.count; i++) {
+        const raan = ((i % nodes) / nodes) * Math.PI * 2 + shell.altitudeKm;
+        sats.push({
+          radius,
+          inc,
+          raan,
+          // Spread around the ring, offset so shells do not line up.
+          anomaly: (i / shell.count) * Math.PI * 2 + shell.altitudeKm,
+          rate: (Math.PI * 2) / periodS,     // radians per second, real
+          kind: shell.kind,
+        });
+        positions.push(0, 0, 0);
+      }
+    }
+
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute(
+      "position", new THREE.BufferAttribute(new Float32Array(positions), 3)
+    );
+    this.satPoints = new THREE.Points(geo, this.satDotMaterial);
+    this.satPoints.frustumCulled = false;
+    this.satGroup.add(this.satPoints);
+    return sats;
+  }
+
+  /** One orbit, as a circle tilted by inclination and turned to its node. */
+  _orbitRing(radius, inclination, raan, material) {
+    const SEGMENTS = 192;
+    const pts = [];
+    for (let i = 0; i <= SEGMENTS; i++) {
+      const t = (i / SEGMENTS) * Math.PI * 2;
+      pts.push(this._orbitPoint(radius, inclination, raan, t));
+    }
+    const geo = new THREE.BufferGeometry().setFromPoints(pts);
+    return new THREE.Line(geo, material);
+  }
+
+  /**
+   * A point on a circular orbit.
+   *
+   * Circular, not elliptical. Almost everything in these regimes is very
+   * nearly circular, and an eccentricity nobody can see is complexity
+   * nobody benefits from.
+   */
+  _orbitPoint(radius, inclination, raan, anomaly) {
+    // In the orbital plane, then tilted by inclination, then rotated to
+    // the ascending node. Y is the rotation axis in this scene.
+    const x = Math.cos(anomaly) * radius;
+    const z = Math.sin(anomaly) * radius;
+    const y = z * Math.sin(inclination);
+    const z2 = z * Math.cos(inclination);
+    return new THREE.Vector3(
+      x * Math.cos(raan) - z2 * Math.sin(raan),
+      y,
+      x * Math.sin(raan) + z2 * Math.cos(raan)
+    );
+  }
 
   /**
    * The Moon.
@@ -1514,6 +1639,7 @@ export class Globe {
 
     const d = this.camera.position.length();
     this._updateMoon(now, d);
+    this._updateSatellites(dt, d);
 
     if (this.clouds.visible) this.clouds.rotation.y += dt * 0.0045;
     for (const line of this.overlay.children) {
@@ -1556,6 +1682,38 @@ export class Globe {
         tiles: Boolean(this.detail?.enabled),
       });
     }
+  }
+
+  /**
+   * Advance every orbit by dt, at its own real rate.
+   *
+   * Faded out close in, where they would be a swarm of dots between the
+   * camera and the thing it is looking at, and faded out again far out,
+   * where the inner shells collapse into a smear around the limb.
+   */
+  _updateSatellites(dt, cameraDistance) {
+    if (!this.satellites || !this.satPoints) return;
+
+    const want =
+      THREE.MathUtils.clamp((cameraDistance - 1.9) / 1.1, 0, 1) *
+      (1 - THREE.MathUtils.clamp((cameraDistance - 9.0) / 6.0, 0, 1));
+    const have = this.satDotMaterial.opacity;
+    const eased = have + (want - have) * 0.08;
+    this.satDotMaterial.opacity = eased;
+    this.satRingMaterial.opacity = eased * 0.16;
+    this.satGroup.visible = eased > 0.01;
+    if (!this.satGroup.visible) return;
+
+    const array = this.satPoints.geometry.attributes.position.array;
+    for (let i = 0; i < this.satellites.length; i++) {
+      const sat = this.satellites[i];
+      sat.anomaly += sat.rate * dt;
+      const p = this._orbitPoint(sat.radius, sat.inc, sat.raan, sat.anomaly);
+      array[i * 3] = p.x;
+      array[i * 3 + 1] = p.y;
+      array[i * 3 + 2] = p.z;
+    }
+    this.satPoints.geometry.attributes.position.needsUpdate = true;
   }
 
   /**

@@ -773,6 +773,11 @@ function updateCredit() {
   if (t?.basemap_tiles_enabled && t.basemap_attribution) {
     parts.push("Ground detail: " + t.basemap_attribution);
   }
+  // Said out loud, in a tool about not overclaiming. Drawing objects in
+  // orbit around the Earth in a reconnaissance application invites the
+  // reading that it knows where they are. It does not: the altitudes,
+  // inclinations and periods are the real ones, the objects are not.
+  parts.push("Orbits: representative regimes at true periods — not tracked objects.");
   el.credit.textContent = parts.join("   ");
 }
 
