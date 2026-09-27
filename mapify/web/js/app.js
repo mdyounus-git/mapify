@@ -59,6 +59,13 @@ const el = {
   findingCoord: $("finding-coord"),
   findingSpread: $("finding-spread"),
   findingWhy: $("finding-why"),
+  askMore: $("ask-more"),
+  askLede: $("ask-lede"),
+  askQuestion: $("ask-question"),
+  askList: $("ask-list"),
+  askCount: $("ask-count"),
+  askAdd: $("ask-add"),
+  askDecline: $("ask-decline"),
   firstrun: $("firstrun"),
   frSize: $("fr-size"),
   frComponents: $("fr-components"),
@@ -127,6 +134,7 @@ const state = {
   previewUrl: null,
   sourcePath: null,
   home: null,           // where the globe opens, from the system timezone
+  session: null,        // { counted, observations } while collecting images
   batch: null,          // { items, clusters, selected } while a batch exists
   setup: null,          // first-run status, once /api/firstrun has answered
   warming: false,       // a warmup stream is open
@@ -252,6 +260,8 @@ async function boot() {
   }
   updateCredit();
 
+  el.askAdd.addEventListener("click", addToSession);
+  el.askDecline.addEventListener("click", declineMore);
   el.frGo.addEventListener("click", runSetup);
   el.frDefer.addEventListener("click", deferFirstRun);
   el.firstrun.addEventListener("keydown", (e) => {
@@ -661,6 +671,98 @@ async function goHome() {
   } catch {
     /* A camera angle is not worth failing a launch over. */
   }
+}
+
+/* ══════════════════ more than one photograph ══════════════════
+   A single image that will not place itself is not the end of the
+   conversation. The person holding the phone usually has another
+   picture of the same place, and a second angle is *independent*
+   evidence in a way that no amount of further analysis of the first
+   one can be.
+*/
+
+function hideAsk() { el.askMore.hidden = true; }
+
+function showAsk(ask) {
+  el.askLede.textContent = ask.lede || "";
+  el.askQuestion.textContent = ask.question || "";
+  el.askList.innerHTML = (ask.helps_most || [])
+    .map((h) => `<li>${esc(h)}</li>`).join("");
+  el.askCount.textContent = ask.counted > 1
+    ? `${ask.counted} photographs combined so far.` : "";
+  el.askDecline.textContent = ask.counted > 1
+    ? "That is all of them" : "That is the only picture";
+  hideFinding();
+  el.askMore.hidden = false;
+}
+
+/** Pick another photograph of the same place and fold it in. */
+async function addToSession() {
+  const native = nativeApi();
+  if (!native) {
+    fail("Not available here",
+         "Adding more photographs needs the desktop app.");
+    return;
+  }
+  let chosen;
+  try {
+    chosen = await native.open_image();
+  } catch {
+    return;
+  }
+  if (!chosen || !chosen.path) return;
+
+  hideAsk();
+  state.busy = true;
+  el.openBtn.disabled = true;
+  setHudState("Combining with the previous photographs…");
+  showProgress(true);
+  try {
+    const resp = await fetch("/api/session/add", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ path: chosen.path }),
+    });
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    const out = await resp.json();
+    state.session = out;
+
+    // render() draws the rails, the finding card and the fly-to.
+    if (out.combined) {
+      state.report = out.combined;
+      render(out.combined);
+      el.saveBtn.disabled = false;
+      el.exportBtn.disabled = false;
+    }
+    if (out.observation && !out.observation.counted) {
+      // Said plainly rather than silently: the user chose that file and
+      // is entitled to know it did not count, and why.
+      el.report.insertAdjacentHTML("afterbegin",
+        '<div class="note warn"><div><strong>That looked like the same '
+        + 'picture.</strong> It is too similar to one already added to '
+        + 'count as separate evidence, so it was left out rather than '
+        + 'counted twice.</div></div>');
+    }
+    if (out.ask) showAsk(out.ask);
+    setHudState(out.combined ? "Result displayed" : "Idle");
+  } catch (err) {
+    fail("Could not add that photograph", String(err.message || err));
+  } finally {
+    showProgress(false);
+    state.busy = false;
+    el.openBtn.disabled = false;
+  }
+}
+
+/** The user has no more pictures. Give what there is, as possibilities. */
+async function declineMore() {
+  hideAsk();
+  try {
+    await fetch("/api/session/end", { method: "POST" });
+  } catch { /* ending a session is a courtesy, not a requirement */ }
+  state.session = null;
+  if (state.report) showFinding(state.report);
+  setHudState("Showing the possibilities");
 }
 
 function onHud(lat, lon, altKm, flying, sun, imagery) {
@@ -1170,6 +1272,13 @@ async function analyse(source) {
   // to turn again until this one lands.
   state.globe?.resume();
   hideFinding();
+  hideAsk();
+  state.session = null;
+  // Every single-image analysis is also the first observation of a
+  // place session, in case it turns out not to be enough on its own.
+  if (source.path) {
+    fetch("/api/session/start", { method: "POST" }).catch(() => {});
+  }
   el.leftTitle.textContent = "Candidates";
   el.batchBar.hidden = true;
   el.openBtn.disabled = true;
@@ -1214,6 +1323,27 @@ async function analyse(source) {
     render(report);
     el.saveBtn.disabled = false;
     el.exportBtn.disabled = false;
+
+    // A result that will not place itself is not the end of it. Only
+    // offered in the desktop app, where there is a file dialog to add
+    // another photograph with, and only for a file we know the path of.
+    const band = report.prediction?.confidence;
+    if ((band === "insufficient" || band === "low")
+        && source.path && nativeApi()) {
+      showAsk({
+        lede: band === "insufficient"
+          ? "Nothing in this photograph places it."
+          : "This photograph narrows it down but will not place it.",
+        question: "Do you have another picture of the same place?",
+        helps_most: [
+          "a sign, a shopfront or a street name plate — anything with words on it",
+          "a wider view showing the street, with traffic or parked cars in it",
+          "the horizon, or whatever the tallest thing around is",
+          "the ground and the buildings together, rather than one close up",
+        ],
+        counted: 1,
+      });
+    }
   } catch (err) {
     fail("Analysis failed", err.message || String(err));
   } finally {

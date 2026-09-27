@@ -132,7 +132,8 @@ class PlaceSession:
             progress: Any = None) -> Observation:
         """Analyse one more photograph of the same place."""
         report = self.engine.analyse(
-            data, filename, progress, online_enrichment=False
+            data, filename, progress, keep_distribution=True,
+            online_enrichment=False,
         )
         obs = Observation(
             index=len(self.observations),
@@ -193,6 +194,16 @@ class PlaceSession:
                  for o in usable]
         if not any(pools):
             return None
+        # The locator's full opinion, where we have it. Without this the
+        # product rule degenerates: two images rarely shortlist the same
+        # gallery points, so every place would be "absent" from all but
+        # one image and the answer would go to whichever image was most
+        # confident rather than to the place they agree on. Measured: on
+        # 24 photographs cut in half, shortlists-only beat the better
+        # half 1 time in 24.
+        dists = [getattr(o.report, "gallery_distribution", None)
+                 for o in usable]
+        locator = getattr(self.engine, "geoclip", None)
 
         # Cluster everything every image proposed, so the same place
         # suggested by three images is one candidate rather than three.
@@ -203,8 +214,14 @@ class PlaceSession:
         for cand in clusters:
             total = 0.0
             supporters = 0
-            for pool in pools:
-                mass = _mass_near(pool, cand.latitude, cand.longitude)
+            for index, pool in enumerate(pools):
+                dist = dists[index]
+                if dist is not None and locator is not None:
+                    mass = locator.mass_near(
+                        dist, cand.latitude, cand.longitude, MATCH_RADIUS_KM
+                    )
+                else:
+                    mass = _mass_near(pool, cand.latitude, cand.longitude)
                 if mass > ABSENT_MASS:
                     supporters += 1
                 total += math.log(max(mass, ABSENT_MASS))

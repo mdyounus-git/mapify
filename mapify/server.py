@@ -470,6 +470,63 @@ def create_app(cfg: Config | None = None, token: str | None = None,
     # One batch at a time. The engine is a single CPU-bound pipeline; running
     # two concurrently would halve the speed of both and make the progress
     # meaningless.
+    # --------------------------------------------------- place sessions
+    #
+    # One at a time, and held in the process rather than handed to the
+    # client. The session holds decoded image embeddings and candidate
+    # pools -- megabytes per photograph -- and round-tripping that
+    # through the browser to make the service stateless would cost more
+    # than the statelessness is worth for a single-user desktop tool.
+    session_state: dict[str, Any] = {"session": None}
+
+    @app.post("/api/session/start")
+    async def session_start() -> dict[str, Any]:
+        """Begin collecting photographs the user says are of one place."""
+        from .session import PlaceSession
+
+        session_state["session"] = PlaceSession(engine)
+        return {"started": True, "counted": 0}
+
+    @app.post("/api/session/add")
+    async def session_add(payload: dict[str, Any]) -> dict[str, Any]:
+        """Add one more photograph, and re-combine everything so far."""
+        from .session import PlaceSession
+
+        current = session_state.get("session")
+        if current is None:
+            current = session_state["session"] = PlaceSession(engine)
+
+        data, name = _read_approved(payload.get("path", ""))
+        _check_size(cfg, len(data))
+
+        obs = await asyncio.to_thread(current.add, data, name)
+        combined = await asyncio.to_thread(current.combine)
+
+        out: dict[str, Any] = {
+            "observation": obs.as_dict(),
+            "observations": [o.as_dict() for o in current.observations],
+            "counted": len(current.counted()),
+            "combined": None,
+        }
+        if combined is not None:
+            # The combination is enriched like any other result: it is
+            # the answer now, and an answer without a place name is half
+            # an answer.
+            report = engine.report_for_fusion(combined, name)
+            out["combined"] = report
+            confidence = (report.get("prediction") or {}).get("confidence")
+            if current.should_ask_for_more(confidence or "insufficient"):
+                out["ask"] = current.ask(confidence or "insufficient")
+        return out
+
+    @app.post("/api/session/end")
+    async def session_end() -> dict[str, Any]:
+        """The user has no more photographs. Give what there is."""
+        current = session_state.get("session")
+        session_state["session"] = None
+        return {"ended": True,
+                "counted": len(current.counted()) if current else 0}
+
     batch_state: dict[str, Any] = {"runner": None}
 
     @app.post("/api/batch/stream")

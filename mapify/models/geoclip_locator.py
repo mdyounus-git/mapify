@@ -190,6 +190,72 @@ class GeoClipLocator:
             for i in range(len(scores))
         ]
 
+    def distribution(self, image: PILImage) -> np.ndarray | None:
+        """This image's probability over the whole GPS gallery.
+
+        ``locate`` computes exactly this and then throws all but the top
+        twelve away, which is right for a single analysis and wrong for
+        combining several. Two photographs of one place rarely propose
+        the same twelve gallery points, so a shortlist cannot answer
+        "what does image A think of the place image B suggested?" -- and
+        without that answer, combining them degenerates into picking
+        whichever image was more confident, whether or not it was right.
+
+        100,000 float32 is 400 KB, which is why this is not kept by
+        default. A session asks for it; a batch of five hundred images
+        would not thank us for it.
+        """
+        if not self.load():
+            return None
+        torch = self._torch
+        model = self._model
+        try:
+            pixel_values = model.image_encoder.preprocess_image(
+                image.convert("RGB")
+            ).to(self.device)
+            with torch.no_grad():
+                feats = model.image_encoder(pixel_values)
+                feats = torch.nn.functional.normalize(feats, dim=1)
+                logits = model.logit_scale.exp() * (
+                    feats @ self.gallery_features().t()
+                )
+                probs = logits.softmax(dim=-1)[0]
+            return probs.cpu().numpy().astype(np.float32)
+        except Exception as exc:          # pragma: no cover - guard
+            log.warning("gallery distribution unavailable: %s", exc)
+            return None
+
+    def gallery_coords(self) -> np.ndarray | None:
+        """The gallery's coordinates, as a plain array, cached."""
+        if getattr(self, "_gallery_coords", None) is not None:
+            return self._gallery_coords
+        if not self.load():
+            return None
+        self._gallery_coords = self._model.gps_gallery.cpu().numpy()
+        return self._gallery_coords
+
+    def mass_near(self, probs: np.ndarray, lat: float, lon: float,
+                  radius_km: float) -> float:
+        """How much probability this image put within reach of a point.
+
+        Great-circle distance over the whole gallery, vectorised. The
+        distribution is computed once per image and reused for every
+        query, so this is one pass over 100,000 floats -- microseconds,
+        not the matmul it looks like.
+        """
+        coords = self.gallery_coords()
+        if coords is None or probs is None:
+            return 0.0
+        lat0 = np.radians(lat)
+        lon0 = np.radians(lon)
+        lats = np.radians(coords[:, 0])
+        lons = np.radians(coords[:, 1])
+        sin_dlat = np.sin((lats - lat0) / 2.0)
+        sin_dlon = np.sin((lons - lon0) / 2.0)
+        a = sin_dlat ** 2 + np.cos(lat0) * np.cos(lats) * sin_dlon ** 2
+        dist = 2.0 * 6371.0088 * np.arcsin(np.sqrt(np.clip(a, 0.0, 1.0)))
+        return float(probs[dist <= radius_km].sum())
+
     def locate_with_embedding(
         self, image: PILImage, top_k: int = 12
     ) -> tuple[list[RawCandidate], np.ndarray | None]:

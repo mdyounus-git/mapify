@@ -60,13 +60,29 @@ class FakeFusion:
         )
 
 
+class FakeLocator:
+    """A locator with an opinion about every coordinate, not just its top few.
+
+    Keyed by rounded latitude, which is enough to express "image A thinks
+    nothing of the place image B proposed" -- the case the shortlist
+    could not represent and that this whole mechanism turns on.
+    """
+
+    def __init__(self, opinions: dict[int, float] | None = None):
+        self.opinions = opinions or {}
+
+    def mass_near(self, probs, lat, lon, radius_km):
+        return float((probs or {}).get(round(lat), 0.0))
+
+
 class FakeEngine:
-    def __init__(self):
+    def __init__(self, locator=None):
         self.fusion = FakeFusion()
         self.queue: list[FakeReport] = []
+        self.geoclip = locator
 
     def analyse(self, data, filename=None, progress=None,
-                online_enrichment=True):
+                keep_distribution=False, online_enrichment=True):
         return self.queue.pop(0)
 
 
@@ -157,6 +173,65 @@ class TestAgreementIsRewarded:
                   for c in engine.fusion.seen["raw"]}
         assert by_lat[49] == "session:2of3"
         assert by_lat[36] == "session:1of3"
+
+
+class TestTheFullDistributionMatters:
+    """Why the shortlist alone was not enough.
+
+    Two photographs of one place rarely propose the same gallery points.
+    With only a shortlist, every candidate is "absent" from all but the
+    image that proposed it, and the product rule stops comparing places
+    and starts comparing confidences -- the answer goes to whichever
+    image was surest, right or wrong.
+
+    Measured on 24 photographs cut in half: shortlists alone beat the
+    better half 1 time in 24.
+    """
+
+    def test_a_confident_wrong_image_cannot_outvote_a_quiet_agreement(self):
+        # Image A is very sure about Tokyo and says nothing of Paris in
+        # its shortlist -- but its full distribution does put some mass
+        # there. Image B is mildly sure about Paris.
+        locator = FakeLocator()
+        engine = FakeEngine(locator)
+        engine.queue = [
+            FakeReport(raw=[tokyo(0.85)]),
+            FakeReport(raw=[paris(0.20)]),
+        ]
+        engine.queue[0].gallery_distribution = {36: 0.85, 49: 0.10}
+        engine.queue[1].gallery_distribution = {36: 0.001, 49: 0.20}
+
+        session = PlaceSession(engine)
+        session.add(b"a", "a.jpg")
+        session.add(b"b", "b.jpg")
+        session.combine()
+
+        scores = {round(c.latitude): c.score
+                  for c in engine.fusion.seen["raw"]}
+        assert scores[49] > scores[36], (
+            "Paris is the only place both images allow, and still lost "
+            f"to Tokyo: {scores}"
+        )
+
+    def test_it_falls_back_to_the_shortlist_when_there_is_no_distribution(self):
+        engine = FakeEngine(None)
+        engine.queue = [
+            FakeReport(raw=[paris(0.3)]),
+            FakeReport(raw=[paris(0.3, 0.01)]),
+        ]
+        session = PlaceSession(engine)
+        session.add(b"a", "a.jpg")
+        session.add(b"b", "b.jpg")
+        assert session.combine() is not None
+
+    def test_the_session_asks_for_the_distribution(self):
+        """It is 400 KB an image and off by default, so it must be asked
+        for explicitly or the mechanism silently reverts."""
+        import inspect
+
+        from mapify import session as mod
+
+        assert "keep_distribution=True" in inspect.getsource(mod.PlaceSession.add)
 
 
 class TestDuplicatesAreNotEvidence:

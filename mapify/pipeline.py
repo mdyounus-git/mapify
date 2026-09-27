@@ -84,6 +84,10 @@ class AnalysisReport:
     ocr_result: Any = field(default=None, repr=False)
     script_reading: Any = field(default=None, repr=False)
     read_place_objs: list[Any] = field(default_factory=list, repr=False)
+    # The locator's opinion of every gallery point, 400 KB, kept only
+    # when a caller asks -- a session needs it, a 500-image batch would
+    # be 200 MB of it.
+    gallery_distribution: Any = field(default=None, repr=False)
     engine: dict[str, Any] = field(default_factory=dict)
     warnings: list[str] = field(default_factory=list)
     attribution: list[str] = field(default_factory=list)
@@ -280,6 +284,7 @@ class AnalysisEngine:
 
     def analyse(self, data: bytes, filename: str | None = None,
                 progress: ProgressFn | None = None,
+                keep_distribution: bool = False,
                 online_enrichment: bool = True) -> AnalysisReport:
         """Analyse one image.
 
@@ -430,6 +435,9 @@ class AnalysisEngine:
             step("enrich", "Naming the location")
             self._enrich(fused, report, online=online_enrichment)
 
+            if keep_distribution and self.geoclip:
+                report.gallery_distribution = self.geoclip.distribution(image)
+
             report.raw_candidates = list(raw) + list(extra_pool)
             report.embedding = embedding
             report.visual_evidence = evidence
@@ -500,6 +508,31 @@ class AnalysisEngine:
         return None
 
     # ---------------------------------------------------------- enrichment
+
+    def report_for_fusion(self, fused: FusionResult, label: str | None = None,
+                          online: bool = True) -> dict[str, Any]:
+        """Dress a fusion result as a report, for results with no one image.
+
+        A combined session answer has no single source photograph, no EXIF
+        of its own and no OCR of its own -- it is a conclusion drawn from
+        several analyses that each already have those. But it still needs
+        naming, candidates and a prediction, and the interface should not
+        have to know it is looking at a different shape from every other
+        result.
+        """
+        report = AnalysisReport(ok=False, elapsed_s=0.0)
+        report.image = {"filename": label}
+        self._enrich(fused, report, online=online)
+        report.candidates = [c.as_dict() for c in fused.candidates]
+        report.prediction = self._build_prediction(fused, ExifReport())
+        report.toponyms = [t.as_dict() for t in fused.toponyms]
+        report.read_places = [
+            p.as_dict() for p in (fused.read_places or [])
+        ]
+        report.engine = self.engine_status()
+        report.attribution = self.attribution_lines()
+        report.ok = True
+        return report.as_dict()
 
     def _enrich(self, fused: FusionResult, report: AnalysisReport,
                 online: bool = True) -> None:
