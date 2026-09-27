@@ -106,6 +106,15 @@ const CONFIDENCE_MEASURED = {
               + "The evidence does not support naming a location.",
 };
 
+// What the tool decided to do about a GPS tag, rather than what it
+// measured. "They are 9,714 km apart" leaves the decision with the reader
+// at the point where the tool knows more than they do.
+const EXIF_VERDICT = {
+  corroborated: "Corroborated by the image — used as the coordinate",
+  rejected: "Rejected — the image says otherwise",
+  unresolved: "Unresolved — neither can be trusted",
+};
+
 const state = {
   globe: null,
   report: null,
@@ -1456,11 +1465,35 @@ function renderReport(report) {
   const gps = pred.embedded_gps;
   if (gps) {
     const agree = pred.exif_vs_estimate;
+    const verdictClass = {
+      corroborated: "ok", rejected: "warn", unresolved: "risk",
+    }[agree?.verdict] || "exif";
     const place = gps.place || {};
-    out.push(block("Embedded GPS — a claim, not proof", `
-      <div class="note exif"><div><strong>The file carries a GPS tag.</strong>
-        That is what the writer recorded, not what the picture shows, and it is
-        trivially editable.</div></div>
+    const heading = {
+      corroborated: "Embedded GPS — corroborated by the image",
+      rejected: "Embedded GPS — rejected",
+      unresolved: "Embedded GPS — unresolved",
+    }[agree?.verdict] || "Embedded GPS — a claim, not proof";
+    const lede = {
+      corroborated:
+        "<strong>The file carries a GPS tag, and the picture agrees with "
+        + "it.</strong> The tag is the more precise of the two, so it is the "
+        + "coordinate reported above.",
+      rejected:
+        "<strong>The file carries a GPS tag and it was rejected.</strong> "
+        + "The picture points somewhere else and the image evidence is strong "
+        + "enough to say which is wrong. It is still shown, because it is a "
+        + "fact about the file even when it is not a fact about the place.",
+      unresolved:
+        "<strong>The tag disagrees with the picture and neither can be "
+        + "trusted.</strong> The image evidence is too weak to adjudicate.",
+    }[agree?.verdict]
+      || "<strong>The file carries a GPS tag.</strong> That is what the "
+       + "writer recorded, not what the picture shows, and it is trivially "
+       + "editable.";
+
+    out.push(block(heading, `
+      <div class="note ${verdictClass}"><div>${lede}</div></div>
       <dl class="rows">
         <div class="row"><dt>Latitude</dt><dd class="mono">${
           gps.latitude.toFixed(6)}</dd></div>
@@ -1475,7 +1508,8 @@ function renderReport(report) {
       </dl>
       ${agree ? `
         <div class="note ${agree.consistent ? "ok" : "risk"}" style="margin-top:8px">
-          <div><strong>${agree.consistent ? "Consistent" : "Disagreement"}</strong>
+          <div><strong>${esc(EXIF_VERDICT[agree.verdict] ||
+            (agree.consistent ? "Consistent" : "Disagreement"))}</strong>
           — ${esc(fmtKm(agree.distance_km))} from the image estimate.<br>
           ${esc(agree.note)}</div></div>` : ""}
       ${(gps.trust_warnings || [])

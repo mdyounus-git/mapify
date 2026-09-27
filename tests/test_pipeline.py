@@ -197,22 +197,67 @@ class TestExifIsNotTheEstimate:
         # The tag must not have moved the estimate.
         assert est["latitude"] == pytest.approx(48.8584, abs=0.01)
 
-    def test_disagreement_is_called_out(self, engine):
-        data = make_jpeg(exif=gps_exif(35.6762, 139.6503))
-        with_locator(engine, [(48.8584, 2.2945, 0.1)])
+    def test_a_weak_estimate_cannot_reject_the_tag(self, engine):
+        """Disagreement is not adjudication.
+
+        A locator holding a tenth of its distribution has not earned the
+        right to call a GPS tag a lie. Three outcomes exist precisely so
+        that "they disagree and I cannot tell which is wrong" can be said
+        out loud instead of being rounded to one side or the other.
+        """
+        data = make_jpeg(exif=gps_exif(35.6762, 139.6503))     # Tokyo
+        with_locator(engine, [(48.8584, 2.2945, 0.1)])         # weakly Paris
         report = engine.analyse(data, "x.jpg")
         agree = report.prediction["exif_vs_estimate"]
         assert agree["consistent"] is False
+        assert agree["verdict"] == "unresolved"
         assert agree["distance_km"] > 9000
-        assert "easier of the two to fake" in agree["note"]
+        assert "too weak to say which is wrong" in agree["note"]
+        # And the tag must not have moved the estimate.
+        assert report.prediction["estimated"]["latitude"] == pytest.approx(
+            48.8584, abs=0.01
+        )
 
-    def test_agreement_is_called_out_too(self, engine):
-        data = make_jpeg(exif=gps_exif(48.8584, 2.2945))
-        with_locator(engine, [(48.8584, 2.2945, 0.1)])
+    def test_a_strong_estimate_rejects_the_tag_in_those_words(self, engine):
+        data = make_jpeg(exif=gps_exif(35.6762, 139.6503))     # Tokyo
+        with_locator(engine, [(48.8584, 2.2945, 0.9)])         # firmly Paris
         report = engine.analyse(data, "x.jpg")
         agree = report.prediction["exif_vs_estimate"]
+        assert agree["verdict"] == "rejected"
+        assert "rejected" in agree["note"]
+        # Rejected is not deleted: it is still a fact about the file.
+        assert report.prediction["embedded_gps"] is not None
+        assert report.prediction["estimated"]["latitude"] == pytest.approx(
+            48.8584, abs=0.01
+        )
+
+    def test_a_corroborated_tag_becomes_the_coordinate(self, engine):
+        """Two independent things pointing at one place.
+
+        The tag is metres where the model is kilometres, so once the image
+        has independently agreed with it, using it is strictly better than
+        reporting a fuzzier number beside it. The provenance says so.
+        """
+        data = make_jpeg(exif=gps_exif(48.8584, 2.2945))
+        with_locator(engine, [(48.86, 2.30, 0.9)])
+        report = engine.analyse(data, "x.jpg")
+        agree = report.prediction["exif_vs_estimate"]
+        est = report.prediction["estimated"]
+
+        assert agree["verdict"] == "corroborated"
         assert agree["consistent"] is True
-        assert agree["distance_km"] < 1
+        assert est["latitude"] == pytest.approx(48.8584, abs=1e-4)
+        assert est["longitude"] == pytest.approx(2.2945, abs=1e-4)
+        assert "exif" in est["provenance"]
+        assert est["precision_km"] < 0.1
+
+    def test_no_tag_produces_no_verdict_at_all(self, engine):
+        """An absent GPS tag is not a finding and must not read as one."""
+        data = make_jpeg()
+        with_locator(engine, [(48.8584, 2.2945, 0.9)])
+        report = engine.analyse(data, "x.jpg")
+        assert report.prediction["embedded_gps"] is None
+        assert report.prediction["exif_vs_estimate"] is None
 
     def test_no_gps_means_no_embedded_block(self, engine, plain_jpeg):
         with_locator(engine, [(48.8584, 2.2945, 0.1)])

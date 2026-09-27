@@ -584,23 +584,26 @@ class AnalysisEngine:
                 "trust_warnings": exif.trust_warnings,
             }
             if top is not None:
-                d = haversine_km(
-                    top.latitude, top.longitude,
-                    exif.gps.latitude, exif.gps.longitude,
-                )
-                agreement = {
-                    "distance_km": round(d, 1),
-                    "consistent": d <= max(fused.uncertainty_km * 1.5, 150.0),
-                    "note": (
-                        "The embedded GPS tag and the image content point to "
-                        "the same area."
-                        if d <= max(fused.uncertainty_km * 1.5, 150.0)
-                        else
-                        "The embedded GPS tag disagrees with what the image "
-                        "looks like. One of them is wrong, and the tag is the "
-                        "easier of the two to fake."
-                    ),
-                }
+                agreement = self._judge_exif(fused, exif, top)
+
+                # A tag the image independently agrees with is the best
+                # coordinate available: a GPS fix is metres where a model
+                # estimate is kilometres. Adopt it, and say plainly that
+                # this is the tag being *used* rather than the model
+                # suddenly becoming precise.
+                if agreement["verdict"] == "corroborated" and estimated:
+                    estimated["latitude"] = round(exif.gps.latitude, 6)
+                    estimated["longitude"] = round(exif.gps.longitude, 6)
+                    estimated["provenance"] = (
+                        "exif" if top.provenance == "model"
+                        else f"{top.provenance}+exif"
+                    )
+                    # A consumer handset fix is good to roughly this,
+                    # and claiming better from a tag would be silly.
+                    estimated["precision_km"] = 0.02
+                    estimated["place"] = self._describe_point(
+                        exif.gps.latitude, exif.gps.longitude
+                    )
 
         return {
             "confidence": fused.confidence,
@@ -619,6 +622,100 @@ class AnalysisEngine:
             "notes": fused.notes,
             "determinate": fused.confidence != "insufficient" and top is not None,
         }
+
+    # ------------------------------------------------------- exif verdict
+
+    # How far apart the tag and the image estimate may be before they are
+    # in conflict. The floor exists because an estimate with a thousand
+    # kilometres of spread agrees with almost anything, and calling that
+    # corroboration would make the tag self-certifying.
+    EXIF_AGREE_FLOOR_KM = 150.0
+
+    def _judge_exif(self, fused: FusionResult, exif: ExifReport,
+                    top: Candidate) -> dict[str, Any]:
+        """Decide what to do about the GPS tag, rather than measure it.
+
+        The old version reported a distance and a boolean, which leaves the
+        decision to the reader at exactly the point where the tool knows
+        more than they do. Metadata is the easiest part of a file to edit,
+        so a tag is a claim to be tested against the picture -- and the
+        test has three outcomes, not two:
+
+          corroborated  the image independently agrees. The tag is then
+                        the better coordinate and gets used.
+          rejected      they disagree *and* the image evidence is strong
+                        enough to say which is wrong.
+          unresolved    they disagree and the image evidence is too weak
+                        to adjudicate. Neither is trusted, and saying so
+                        is the honest answer.
+        """
+        d = haversine_km(
+            top.latitude, top.longitude,
+            exif.gps.latitude, exif.gps.longitude,
+        )
+        tolerance = max(fused.uncertainty_km * 1.5, self.EXIF_AGREE_FLOOR_KM)
+
+        if d <= tolerance:
+            return {
+                "distance_km": round(d, 1),
+                "consistent": True,
+                "verdict": "corroborated",
+                "note": (
+                    f"The tag and the image agree to within {d:.0f} km. Two "
+                    f"independent things pointing at one place is the "
+                    f"strongest result this tool produces, and the tag is "
+                    f"the more precise of the two, so it is the coordinate "
+                    f"reported above."
+                ),
+            }
+
+        # They disagree. Is there enough in the picture to say which is wrong?
+        read_leader = "read-address" in top.sources
+        strong = (
+            read_leader
+            or fused.locator_mass >= self.cfg.fusion.high_locator_mass
+        )
+
+        if strong:
+            why = (
+                "an address read from the image itself resolves elsewhere"
+                if read_leader else
+                f"the locator committed {fused.locator_mass:.0%} of its "
+                f"distribution to a different part of the world"
+            )
+            return {
+                "distance_km": round(d, 1),
+                "consistent": False,
+                "verdict": "rejected",
+                "note": (
+                    f"The tag is {d:,.0f} km from what the picture shows, and "
+                    f"{why}. The tag is rejected: it is the easier of the two "
+                    f"to fake, and nothing in the image supports it. It is "
+                    f"still reported below, because it is a fact about the "
+                    f"file even when it is not a fact about the place."
+                ),
+            }
+
+        return {
+            "distance_km": round(d, 1),
+            "consistent": False,
+            "verdict": "unresolved",
+            "note": (
+                f"The tag is {d:,.0f} km from the estimate, and the image "
+                f"evidence is too weak to say which is wrong. Neither is "
+                f"trusted. If the tag matters, it needs corroborating from "
+                f"outside this tool."
+            ),
+        }
+
+    def _describe_point(self, lat: float, lon: float) -> dict[str, Any]:
+        """Name a bare coordinate, for a GPS tag we have decided to adopt."""
+        loc = self.geocoder.locate(lat, lon, place_limit=3)
+        stand_in = Candidate(
+            latitude=lat, longitude=lon, prior_score=1.0, score=1.0,
+            location=loc, provenance="exif",
+        )
+        return self._describe(stand_in)
 
     def _describe(self, cand: Candidate) -> dict[str, Any]:
         """Best available naming, saying which source each field came from."""

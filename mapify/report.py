@@ -386,13 +386,40 @@ def build_single(report: dict[str, Any], image_bytes: bytes | None = None,
             (gplace.get("admin1") or {}).get("name"),
             (gplace.get("country") or {}).get("name"),
         ) if x)
-        parts.append("<h2>Embedded GPS &mdash; a claim, not proof</h2>")
-        parts.append(
-            '<div class="note exif"><strong>The file carries a GPS tag.</strong> '
-            "That is what the writer of the file recorded, not what the picture "
-            "shows, and it is trivially editable. It is reported here "
-            "separately and was kept out of the estimate above.</div>"
+        verdict = agree.get("verdict")
+        headline = {
+            "corroborated": "Embedded GPS &mdash; corroborated by the image",
+            "rejected": "Embedded GPS &mdash; rejected",
+            "unresolved": "Embedded GPS &mdash; unresolved",
+        }.get(verdict, "Embedded GPS &mdash; a claim, not proof")
+        lede = {
+            "corroborated":
+                "<strong>The file carries a GPS tag, and the picture agrees "
+                "with it.</strong> Two independent things pointing at one "
+                "place is the strongest result this tool produces. The tag "
+                "is the more precise of the two and is the coordinate "
+                "reported above.",
+            "rejected":
+                "<strong>The file carries a GPS tag and it was rejected.</strong> "
+                "The picture points somewhere else, and the image evidence is "
+                "strong enough to say which is wrong. A tag is the easiest "
+                "part of a file to edit. It is reported here because it is a "
+                "fact about the file even when it is not a fact about the "
+                "place.",
+            "unresolved":
+                "<strong>The file carries a GPS tag that disagrees with the "
+                "picture, and neither can be trusted.</strong> The image "
+                "evidence is too weak to adjudicate. If the tag matters it "
+                "needs corroborating from outside this tool.",
+        }.get(
+            verdict,
+            "<strong>The file carries a GPS tag.</strong> That is what the "
+            "writer of the file recorded, not what the picture shows, and it "
+            "is trivially editable. It is reported here separately and was "
+            "kept out of the estimate above.",
         )
+        parts.append(f"<h2>{headline}</h2>")
+        parts.append(f'<div class="note exif">{lede}</div>')
         parts.append(_rows([
             ("Latitude", f"{gps['latitude']:.6f}"),
             ("Longitude", f"{gps['longitude']:.6f}"),
