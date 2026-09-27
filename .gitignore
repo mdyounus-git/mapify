@@ -69,3 +69,7 @@ app/
 
 # Reports the application exported. Somebody's output, not the project's.
 exports/
+
+# Benchmark output. Reproducible from scripts/evaluate.py, and a JSON row
+# per sample times a run per experiment adds up fast.
+bench/

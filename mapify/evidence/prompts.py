@@ -473,6 +473,42 @@ SETTING = Group(
     ),
 )
 
+# --------------------------------------------------------------------------
+# What is deliberately not in this file
+# --------------------------------------------------------------------------
+#
+# **Faces.** Nothing here asks CLIP anything about the people in a
+# photograph beyond what they are wearing for the weather, and even that
+# was tried and removed (see below). Guessing where someone is from by
+# looking at them is unreliable, and it is the same inference that powers
+# the worst applications of this class of tool. This project will not do
+# it, and the absence is a decision rather than an oversight.
+#
+# **More groups.** Four were written and measured on the 163-sample
+# benchmark in Phase 22: road-sign convention, roof form, street furniture
+# and dress. Every one of them was inert or harmful.
+#
+#     group             median km    better    worse
+#     baseline              341.8         -        -
+#     sign convention       341.8         0        0     never fired at all
+#     roof form             368.0         0        1
+#     street furniture      368.0         0        1
+#     dress                 341.8         1        1
+#     all four              385.1         1        3
+#
+# The reason is worth keeping, because it applies to the next four
+# somebody thinks of. These groups are not independent evidence: they are
+# more opinions from the same image encoder about the same embedding, and
+# the fusion combines them in log space as though they were independent.
+# Stacking correlated opinions does not sharpen the estimate, it amplifies
+# whatever that one encoder already got wrong. They also almost never
+# cleared their confidence thresholds -- 159 of 163 samples were untouched
+# by all four together.
+#
+# The way to a better estimate is evidence from somewhere *else*: text
+# actually read off the image (Phase 21), or a second locator trained
+# differently (Phase 16). Not a thirteenth prompt group.
+
 ALL_GROUPS: tuple[Group, ...] = (
     TRAFFIC, SCRIPT, REGION, ARCHITECTURE, BIOME, SNOW, ROAD, UTILITY,
     PLATE, VEHICLES, TERRAIN, SETTING,

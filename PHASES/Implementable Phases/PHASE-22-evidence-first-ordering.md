@@ -126,8 +126,57 @@ Then reduced to two stub tests with no network: the read-address case rejects,
 and the identical case without it stays `unresolved`, so the second is the
 control for the first.
 
-## Still open: step 4
+## Step 4 was tried, measured, and reverted
 
-Everything under *What step 4 needs* above. None of it has been started, and
-the rule stands — each new evidence group has to be measured on the 163-sample
-benchmark before it is kept.
+Four of the groups listed above were written and measured: road-sign
+convention, roof form and material, street furniture, and dress. Each option
+in each group carried a real geographic constraint, because an option that
+constrains nothing is observed and then ignored by the fusion.
+
+Measured on the 163-sample benchmark, offline, each group alone and then all
+four together:
+
+```
+run               median km   <=25km   <=200km   better   worse
+baseline              341.8       62        75        -       -
+sign convention       341.8       62        75        0       0
+roof form             368.0       62        74        0       1
+street furniture      368.0       61        74        0       1
+dress                 341.8       62        75        1       1
+all four              385.1       61        73        1       3
+```
+
+Not one improved anything. The sign group never once cleared its threshold —
+zero samples moved. Two made the median worse. Dress was a wash. Together
+they moved four samples out of 163, and were net negative.
+
+**All four were deleted**, which is what the rule at the top of this file
+says to do, and the table is now a comment in `prompts.py` so the next person
+to have these ideas can see that they were had.
+
+### Why, which matters more than the result
+
+They are not independent evidence. They are more opinions from the same image
+encoder about the same embedding, and the fusion combines evidence in log
+space *as though it were independent*. Stacking correlated opinions does not
+sharpen an estimate; it amplifies whatever that one encoder already had
+wrong. That explains the shape of the result exactly — almost no movement,
+and what movement there was went the wrong way.
+
+It also means the premise of step 4, "look at more things in the image", is
+wrong as stated, at least while "look" means another CLIP prompt group. The
+twelve existing groups already extract most of what one zero-shot pass over
+one embedding can give.
+
+**The route to a better estimate is evidence from somewhere else.** Text
+actually read off the image, which is Phase 21, and which was worth 0.00 km
+on a legible board. A second locator trained differently, which is Phase 16.
+A physical measurement such as shadow angle, which is Phase 15. Those are
+independent in a way a thirteenth prompt group can never be.
+
+## Still open
+
+Step 4 as originally conceived is closed, as a negative result. What is left
+of it worth doing is the part that is *not* another prompt group: reading
+plate formats, phone numbers and postcodes out of the OCR text rather than
+guessing them from pixels.
