@@ -35,7 +35,7 @@ from fastapi.staticfiles import StaticFiles
 
 from . import __version__, firstrun
 from .config import Config, load_config
-from .paths import read_root, state_dir
+from .paths import apply_model_cache_env, read_root, state_dir
 from .pipeline import AnalysisEngine, ImageRejected
 
 log = logging.getLogger("mapify.server")
@@ -193,6 +193,67 @@ def create_app(cfg: Config | None = None, token: str | None = None,
     async def warmup() -> dict[str, Any]:
         """Load the models now rather than on the first analysis."""
         return await asyncio.to_thread(engine.warmup)
+
+    @app.post("/api/home")
+    async def home_view(payload: dict[str, Any]) -> dict[str, Any]:
+        """Roughly where the user is, from their clock. Nothing else.
+
+        The globe opens somewhere, and opening it over the user's own part
+        of the world -- correctly lit for the actual time -- is better than
+        opening it over the mid-Atlantic. The question is how to know where
+        that is without asking for something we have no business having.
+
+        Not IP geolocation: that sends the user's address to a third party
+        to learn something we only want for a camera angle.
+        Not the browser's geolocation API: that is a permission prompt for
+        a decoration, and a precise fix for a use that needs none.
+
+        The system timezone is already on the machine, needs no permission
+        and leaves no network trace. Its name carries a city -- Kolkata,
+        Nairobi, Sao_Paulo -- and the bundled gazetteer knows where that
+        city is. When the name is not a place, or is not in the gazetteer,
+        the UTC offset still gives a longitude to a few degrees.
+
+        This is the timezone's namesake city, not the user. Anyone in
+        Chennai gets Kolkata, and that is the correct amount of precision
+        for pointing a camera at a planet.
+        """
+        tz_name = str(payload.get("timezone") or "").strip()
+        try:
+            offset_minutes = float(payload.get("utc_offset_minutes") or 0.0)
+        except (TypeError, ValueError):
+            offset_minutes = 0.0
+
+        # Longitude from the offset: 15 degrees an hour, always available.
+        lon = max(-180.0, min(180.0, offset_minutes / 60.0 * 15.0))
+        lat = 22.0                      # a mid-northern default
+        source = "utc-offset"
+        label = None
+
+        city = tz_name.rsplit("/", 1)[-1].replace("_", " ").strip()
+        if city and city.lower() not in {"utc", "gmt", "unknown"}:
+            try:
+                matches = engine.geocoder.find_place(city, limit=1)
+            except Exception:                       # pragma: no cover
+                matches = []
+            if matches:
+                hit = matches[0]
+                lat, lon = hit.latitude, hit.longitude
+                source = "timezone-city"
+                label = hit.name
+
+        return {
+            "latitude": round(lat, 4),
+            "longitude": round(lon, 4),
+            "source": source,
+            "timezone": tz_name or None,
+            "city": label,
+            "note": (
+                "Derived from this computer's timezone. It is the "
+                "timezone's namesake city, not your location, and nothing "
+                "left the machine to work it out."
+            ),
+        }
 
     @app.get("/api/firstrun")
     async def firstrun_status() -> dict[str, Any]:
@@ -574,6 +635,13 @@ def main(argv: list[str] | None = None) -> int:
     over SSH. The normal way to use Mapify is the application window --
     ``python -m mapify``, or Mapify.exe once built.
     """
+    # Same as the desktop entry point, and for the same reason: this must
+    # happen before anything imports huggingface_hub, which reads these
+    # variables once at import time. Both ways of starting Mapify have to
+    # look for the weights in the same place, or one of them re-downloads
+    # 1.6 GB the other already has.
+    apply_model_cache_env()
+
     ap = argparse.ArgumentParser(
         prog="mapify-service",
         description="Run the Mapify analysis service without the app window.",

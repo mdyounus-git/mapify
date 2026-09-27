@@ -127,20 +127,44 @@ def state_dir() -> Path:
 
 
 def models_dir() -> Path:
-    """Where downloaded model weights go.
+    """Where downloaded model weights live, or will.
 
-    Beside the executable, for the same reason as the state directory: a
+    Beside the application, for the same reason as the state directory: a
     1.6 GB download is the largest thing Mapify is responsible for, and it
-    should live wherever the person put the application rather than
-    defaulting onto the system drive.
+    belongs wherever the person put the application rather than defaulting
+    onto the system drive.
+
+    But an existing copy beats a tidy one. A source checkout and an
+    installation built from it sit next to each other and need the same
+    weights, and downloading them twice to keep two directories symmetrical
+    would be 1.6 GB of nothing. So a few known locations are checked for a
+    copy that is already there, and only if none has one does the default
+    get created.
     """
     override = os.environ.get("MAPIFY_MODELS_DIR")
     if override:
         path = Path(override).expanduser()
-    else:
-        path = state_dir().parent / "models"
-    path.mkdir(parents=True, exist_ok=True)
-    return path
+        path.mkdir(parents=True, exist_ok=True)
+        return path
+
+    primary = state_dir().parent / "models"
+    candidates = [
+        primary,
+        # A checkout looking at the installation built beside it, which is
+        # where install.ps1 puts things by default.
+        read_root() / "app" / "models",
+        # An installation looking at the checkout it came from.
+        read_root() / "models",
+    ]
+    for candidate in candidates:
+        try:
+            if (candidate / "hub" / _CLIP_CACHE_DIR / "snapshots").is_dir():
+                return candidate
+        except OSError:
+            continue
+
+    primary.mkdir(parents=True, exist_ok=True)
+    return primary
 
 
 def ocr_model_dir() -> Path | None:
@@ -168,23 +192,54 @@ def ocr_model_dir() -> Path | None:
     return path
 
 
+# The repository directory name Hugging Face gives the model Mapify needs.
+# ``firstrun.COMPONENTS`` is the source of truth for which model that is;
+# this duplicates the name because paths.py sits underneath firstrun and
+# must not import it. A test asserts the two agree.
+_CLIP_CACHE_DIR = "models--openai--clip-vit-large-patch14"
+
+
+def _default_hf_cache_has_weights() -> bool:
+    """Does the machine-wide Hugging Face cache already hold *our* model?
+
+    Asked only in a source checkout, and only to decide whether leaving
+    that cache alone would cost the developer a re-download.
+
+    It has to name the model rather than ask whether the cache is
+    non-empty: the cache is shared, and another tool's weights sitting in
+    it say nothing about whether ours are there. Answering "yes" on the
+    strength of somebody else's models is how you end up fetching 1.6 GB
+    you already have a copy of two directories away.
+    """
+    base = os.environ.get("XDG_CACHE_HOME")
+    hub = (Path(base) if base else Path.home() / ".cache") / "huggingface" / "hub"
+    try:
+        return (hub / _CLIP_CACHE_DIR / "snapshots").is_dir()
+    except OSError:
+        return False
+
+
 def apply_model_cache_env() -> Path | None:
     """Point Hugging Face at our models directory, for a frozen build.
 
     Must run **before** anything imports ``huggingface_hub``, which reads
     these variables once at import time. Called first thing in ``run()``.
 
-    Only for a frozen build. In a source checkout the developer's existing
-    cache is almost certainly already populated, and silently relocating a
-    1.6 GB download because they ran a script would be rude.
+    A frozen build always does this. A source checkout does it only when
+    the default cache does not already hold the weights -- because the
+    developer's copy is usually already there, and silently relocating a
+    1.6 GB download because somebody ran a script would be rude. When it
+    is *not* there, falling back to the project's own models directory is
+    strictly better than fetching the whole thing again: an installed
+    Mapify beside the checkout has already downloaded it.
 
     An explicit ``HF_HOME`` or ``HF_HUB_CACHE`` in the environment always
     wins -- that is someone stating where their cache lives, and it is not
     ours to override.
     """
-    if not is_frozen():
-        return None
     if os.environ.get("HF_HOME") or os.environ.get("HF_HUB_CACHE"):
+        return None
+    if not is_frozen() and _default_hf_cache_has_weights():
         return None
     try:
         target = models_dir()

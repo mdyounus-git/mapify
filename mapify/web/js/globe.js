@@ -31,6 +31,26 @@ import { DetailPatch, zoomForAltitude } from "./detail.js";
 
 const R = 1.0;                    // globe radius in scene units
 const ATMO_R = 1.13;             // atmosphere shell, in units of R
+
+// The Moon, in units of R. The radius is the true ratio. The distance is
+// not: the real 60.3 R puts it outside a 45-degree frustum aimed at the
+// Earth from every altitude this camera reaches, so it would be visible
+// from about 3% of viewpoints and the feature would read as broken.
+//
+// 5 R was chosen by measuring, not by taste. Sweeping the camera over every
+// orientation at each altitude:
+//
+//     distance    at 3.7R (default)   at 8R    at 17R (zoomed out)
+//     5 R                5%            25%           98%
+//     13.5 R             3%             7%           17%
+//
+// which is exactly the behaviour wanted: absent while you are working, and
+// there when you pull back to look at the whole system. At 5 R the true
+// radius ratio also happens to look right -- the Moon reads as about a
+// third of the Earth's width from a distance -- so the compression is the
+// single thing being faked, and its direction and phase stay real.
+const MOON_RADIUS = 0.273;
+const MOON_DISTANCE = 5.0;
 const CLOUD_R = 1.0035;
 const EARTH_RADIUS_KM = 6371.0088;
 const DEG = Math.PI / 180;
@@ -93,6 +113,95 @@ export function subsolarPoint(date = new Date()) {
   lon = ((lon + 540) % 360) - 180;
 
   return { lat: declination / DEG, lon };
+}
+
+/**
+ * Where the Moon is, in the same Earth-centred frame as everything else.
+ *
+ * A cut-down ELP2000: the five largest periodic terms in longitude and the
+ * largest in latitude. Good to roughly a tenth of a degree, which is far
+ * better than this needs -- what matters is that the Moon is on the correct
+ * side of the Earth, at the correct angle to the Sun, so its phase is the
+ * phase outside the window tonight.
+ *
+ * Returns a unit direction and the true distance in Earth radii. The scene
+ * does not use that distance; see MOON_DISTANCE.
+ */
+export function moonPosition(date = new Date()) {
+  const jd = date.getTime() / 86400000 + 2440587.5;
+  const T = (jd - 2451545.0) / 36525;
+
+  // Mean elements, in degrees.
+  const Lp = 218.316 + 481267.8813 * T;          // mean longitude
+  const M  = 357.529 + 35999.0503 * T;           // sun's mean anomaly
+  const Mp = 134.963 + 477198.8676 * T;          // moon's mean anomaly
+  const D  = 297.850 + 445267.1115 * T;          // mean elongation
+  const F  = 93.272 + 483202.0175 * T;           // argument of latitude
+
+  const r = Math.PI / 180;
+  const lon = Lp
+    + 6.289 * Math.sin(Mp * r)
+    - 1.274 * Math.sin((2 * D - Mp) * r)
+    + 0.658 * Math.sin(2 * D * r)
+    - 0.186 * Math.sin(M * r)
+    - 0.059 * Math.sin((2 * Mp - 2 * D) * r);
+  const lat = 5.128 * Math.sin(F * r)
+    + 0.281 * Math.sin((Mp + F) * r)
+    - 0.278 * Math.sin((F - Mp) * r);
+  const distanceKm = 385000 - 20905 * Math.cos(Mp * r);
+
+  // Ecliptic to equatorial.
+  const obl = 23.439 * r;
+  const lr = lon * r;
+  const br = lat * r;
+  const x = Math.cos(br) * Math.cos(lr);
+  const y = Math.cos(obl) * Math.cos(br) * Math.sin(lr) - Math.sin(obl) * Math.sin(br);
+  const z = Math.sin(obl) * Math.cos(br) * Math.sin(lr) + Math.cos(obl) * Math.sin(br);
+
+  // Into the same frame the globe uses, where +Y is the rotation axis and
+  // longitude 0 faces +Z -- the frame latLonToVec3 builds.
+  const dec = Math.asin(z);
+  let ra = Math.atan2(y, x);
+
+  // Greenwich apparent sidereal time, so the Moon sits over the right
+  // meridian rather than merely at the right declination.
+  const gmst = ((280.46061837 + 360.98564736629 * (jd - 2451545.0)) % 360 + 360) % 360;
+  let lonGeo = (ra / r) - gmst;
+  lonGeo = ((lonGeo + 540) % 360) - 180;
+
+  // Illuminated fraction, from the Sun-Moon elongation. The sign of the
+  // change over an hour says whether it is waxing or waning, which is
+  // cheaper to compute than to reason about.
+  const sun = subsolarPoint(date);
+  const sunDir = latLonToVec3(sun.lat, sun.lon, 1).normalize();
+  const moonDir = latLonToVec3(dec / r, lonGeo, 1).normalize();
+  const elongation = Math.acos(
+    Math.max(-1, Math.min(1, sunDir.dot(moonDir)))
+  );
+  const illuminated = (1 - Math.cos(elongation)) / 2;
+  const later = (218.316 + 481267.8813 * (T + 1 / (36525 * 24))) - Lp;
+  const waxing = elongation < Math.PI ? later >= 0 : later < 0;
+
+  return {
+    dir: latLonToVec3(dec / r, lonGeo, 1),
+    lat: dec / r,
+    lon: lonGeo,
+    distanceKm,
+    distanceEarthRadii: distanceKm / 6371,
+    illuminated,
+    phase: phaseName(illuminated, waxing),
+  };
+}
+
+/** The phase in the words people use for it. */
+export function phaseName(illuminated, waxing) {
+  if (illuminated < 0.03) return "new";
+  if (illuminated > 0.97) return "full";
+  if (Math.abs(illuminated - 0.5) < 0.06) {
+    return waxing ? "first quarter" : "last quarter";
+  }
+  if (illuminated < 0.5) return waxing ? "waxing crescent" : "waning crescent";
+  return waxing ? "waxing gibbous" : "waning gibbous";
 }
 
 const easeInOutCubic = (t) =>
@@ -323,8 +432,13 @@ const ATMO_FRAG = /* glsl */ `
     // broader thin haze above it. One exponential alone is either a
     // hairline or a fog bank.
     float dense = exp(-h * 7.0);
-    float haze  = exp(-h * 1.9) * 0.45;
-    float density = (dense + haze) * (1.0 - h) * (1.0 - h);
+    // The broad component used to reach most of the way out to the shell,
+    // which put a blue veil over the whole sky and drowned the stars. Real
+    // limb haze is a band, not a wash: tighter falloff, lower weight, and
+    // a cubic rather than square edge so it is gone well before the shell.
+    float haze  = exp(-h * 3.1) * 0.30;
+    float edge  = (1.0 - h) * (1.0 - h) * (1.0 - h);
+    float density = (dense + haze) * edge;
 
     vec3 dir = normalize(P);
     float sunDot = dot(dir, normalize(sunDir));
@@ -394,7 +508,11 @@ export class Globe {
     this.renderer.setPixelRatio(
       Math.min(window.devicePixelRatio || 1, this.opts.maxPixelRatio)
     );
-    this.renderer.setClearColor(0x01030a, 1);
+    // Black. The previous value was a very dark navy, which on its own
+    // is almost invisible -- but the atmosphere's outer haze sits on top
+    // of it across most of the frame, and the two together read as a blue
+    // wash rather than as space.
+    this.renderer.setClearColor(0x000000, 1);
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 1.08;
@@ -494,6 +612,9 @@ export class Globe {
 
     this.stars = this._buildStarfield();
     this.scene.add(this.stars);
+
+    this.moon = this._buildMoon();
+    this.scene.add(this.moon);
 
     this.detail = this.opts.tileUrl
       ? new DetailPatch(this.root, {
@@ -638,7 +759,7 @@ export class Globe {
 
     this.atmoUniforms.strength.value = 1.0;
     this._setOverlay(false);
-    this.starMaterial.opacity = 0.55;
+    this.starMaterial.opacity = 0.95;
     if (this.bloom) { this.bloom.strength = 0.55; this.bloom.threshold = 1.05; }
   }
 
@@ -665,7 +786,7 @@ export class Globe {
     this.clouds.visible = false;
     this.atmoUniforms.strength.value = 1.15;
     this._setOverlay(true);
-    this.starMaterial.opacity = 0.9;
+    this.starMaterial.opacity = 1.0;
     if (this.bloom) { this.bloom.strength = 0.6; this.bloom.threshold = 0.85; }
   }
 
@@ -758,36 +879,163 @@ export class Globe {
 
   /* ----------------------------------------------------- decorations */
 
+  /**
+   * The Moon.
+   *
+   * Its *direction* is real, computed from the clock, so it is on the
+   * correct side of the Earth and at the correct angle to the Sun --
+   * which means its phase is tonight's phase, for free, because it is lit
+   * by the same light as the Earth.
+   *
+   * Its *distance* is not. The real Moon is sixty Earth radii away, which
+   * puts it outside the frustum from 97% of viewpoints: correct, and
+   * indistinguishable from a bug. It is drawn at five, measured rather
+   * than guessed -- see MOON_DISTANCE for the numbers. The radius is the
+   * true ratio, so the compression is the only thing being faked here.
+   */
+  _buildMoon() {
+    const tex = this._moonTexture();
+    const geo = new THREE.SphereGeometry(MOON_RADIUS, 48, 32);
+    this.moonMaterial = new THREE.MeshStandardMaterial({
+      map: tex,
+      roughness: 1.0,
+      metalness: 0.0,
+      transparent: true,
+      opacity: 0,
+    });
+    const mesh = new THREE.Mesh(geo, this.moonMaterial);
+    mesh.visible = false;
+
+    // Lit by the Sun, from wherever the Sun actually is. A directional
+    // light rather than the shader the Earth uses: the Moon has no
+    // atmosphere to scatter anything, so plain Lambert is correct.
+    this.moonLight = new THREE.DirectionalLight(0xfff4e2, 3.1);
+    this.scene.add(this.moonLight);
+    this.scene.add(new THREE.AmbientLight(0x0a0f18, 1.0));
+    return mesh;
+  }
+
+  /** A grey disc with maria and craters, drawn rather than downloaded. */
+  _moonTexture() {
+    const w = 1024, h = 512;
+    const c = document.createElement("canvas");
+    c.width = w; c.height = h;
+    const ctx = c.getContext("2d");
+
+    ctx.fillStyle = "#9a9791";
+    ctx.fillRect(0, 0, w, h);
+
+    // Maria: a few large dark basins on the near side.
+    const maria = [
+      [0.30, 0.34, 0.16], [0.40, 0.46, 0.11], [0.22, 0.50, 0.09],
+      [0.34, 0.24, 0.08], [0.48, 0.33, 0.07], [0.17, 0.38, 0.06],
+    ];
+    for (const [mx, my, mr] of maria) {
+      const g = ctx.createRadialGradient(
+        mx * w, my * h, 0, mx * w, my * h, mr * w
+      );
+      g.addColorStop(0, "rgba(86, 86, 88, 0.92)");
+      g.addColorStop(0.7, "rgba(104, 104, 105, 0.55)");
+      g.addColorStop(1, "rgba(120, 119, 117, 0)");
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(mx * w, my * h, mr * w, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // Craters: bright rim, darker floor, smaller ones far more numerous.
+    for (let i = 0; i < 900; i++) {
+      const x = Math.random() * w;
+      const y = Math.random() * h;
+      const rad = Math.pow(Math.random(), 3.4) * 26 + 1.2;
+      const shade = 0.5 + Math.random() * 0.35;
+      ctx.beginPath();
+      ctx.arc(x, y, rad, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(${Math.round(150 * shade)},${
+        Math.round(148 * shade)},${Math.round(144 * shade)},0.55)`;
+      ctx.fill();
+      ctx.lineWidth = Math.max(0.6, rad * 0.16);
+      ctx.strokeStyle = "rgba(208, 206, 200, 0.42)";
+      ctx.stroke();
+    }
+
+    const tex = new THREE.CanvasTexture(c);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    tex.anisotropy = Math.min(8, this.maxAnisotropy || 1);
+    return tex;
+  }
+
   _buildStarfield() {
-    const COUNT = 6500;
+    // Two populations, because one uniform scatter never looks like a sky.
+    //
+    //   * a background of faint stars spread evenly over the sphere;
+    //   * a band along one great circle, denser and dimmer, standing in
+    //     for the Milky Way. It is what makes a starfield read as *the*
+    //     sky rather than as noise, and it costs one extra term.
+    //
+    // Positions are random, not catalogued. This is a backdrop, not a
+    // planetarium, and pretending otherwise in a geolocation tool would
+    // invite someone to navigate by it.
+    const SCATTERED = 9000;
+    const BAND = 5500;
+    const COUNT = SCATTERED + BAND;
+
     const pos = new Float32Array(COUNT * 3);
     const col = new Float32Array(COUNT * 3);
-    const siz = new Float32Array(COUNT);
     const tint = new THREE.Color();
+
+    // The galactic plane, tilted so it crosses the view at an angle
+    // rather than lying flat along the horizon.
+    const TILT = 1.05;
+    const cosT = Math.cos(TILT);
+    const sinT = Math.sin(TILT);
+
     for (let i = 0; i < COUNT; i++) {
-      const u = Math.random() * 2 - 1;
+      const inBand = i >= SCATTERED;
+      let u;
+      if (inBand) {
+        // Concentrated near the plane: three samples averaged gives a
+        // soft-edged band instead of a hard stripe.
+        const g = (Math.random() + Math.random() + Math.random()) / 3 - 0.5;
+        u = Math.max(-1, Math.min(1, g * 0.42));
+      } else {
+        u = Math.random() * 2 - 1;
+      }
       const t = Math.random() * Math.PI * 2;
-      const s = Math.sqrt(1 - u * u);
-      const r = 120 + Math.random() * 60;
-      pos[i * 3] = r * s * Math.cos(t);
-      pos[i * 3 + 1] = r * u;
-      pos[i * 3 + 2] = r * s * Math.sin(t);
-      // Most stars are faint; a handful are not. A uniform field looks fake.
-      const mag = Math.pow(Math.random(), 3.2);
-      const hue = Math.random() < 0.8 ? 0.58 : 0.08;
-      tint.setHSL(hue, 0.22, 0.35 + mag * 0.6);
+      const s = Math.sqrt(Math.max(0, 1 - u * u));
+      const r = 130 + Math.random() * 50;
+
+      let x = r * s * Math.cos(t);
+      let y = r * u;
+      let z = r * s * Math.sin(t);
+      if (inBand) {
+        const ty = y * cosT - z * sinT;
+        const tz = y * sinT + z * cosT;
+        y = ty; z = tz;
+      }
+      pos[i * 3] = x; pos[i * 3 + 1] = y; pos[i * 3 + 2] = z;
+
+      // Most stars are faint and a handful are not, so brightness follows
+      // a steep power law. Band stars are dimmer: the Milky Way is many
+      // unresolved stars, not many bright ones.
+      const mag = Math.pow(Math.random(), inBand ? 5.0 : 2.6);
+      // Mostly white with a blue bias, a few warm ones, as the real sky is.
+      const roll = Math.random();
+      const hue = roll < 0.74 ? 0.58 : (roll < 0.92 ? 0.10 : 0.02);
+      const sat = inBand ? 0.10 : 0.20;
+      tint.setHSL(hue, sat, (inBand ? 0.24 : 0.46) + mag * 0.54);
       col[i * 3] = tint.r; col[i * 3 + 1] = tint.g; col[i * 3 + 2] = tint.b;
-      siz[i] = 0.35 + mag * 1.5;
     }
+
     const geo = new THREE.BufferGeometry();
     geo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
     geo.setAttribute("color", new THREE.BufferAttribute(col, 3));
     this.starMaterial = new THREE.PointsMaterial({
-      size: 0.55,
+      size: 0.95,
       sizeAttenuation: true,
       vertexColors: true,
       transparent: true,
-      opacity: 0.55,
+      opacity: 0.95,
       depthWrite: false,
       map: this._dotSprite(),
       blending: THREE.AdditiveBlending,
@@ -1265,6 +1513,7 @@ export class Globe {
     this.atmoUniforms.strength.value = this._atmosphereStrength();
 
     const d = this.camera.position.length();
+    this._updateMoon(now, d);
 
     if (this.clouds.visible) this.clouds.rotation.y += dt * 0.0045;
     for (const line of this.overlay.children) {
@@ -1300,12 +1549,54 @@ export class Globe {
       const p = vec3ToLatLon(this.camera.position);
       const altKm = (d - R) * EARTH_RADIUS_KM;
       this.onHudUpdate(p.lat, p.lon, altKm, !!this._flight, this.sunInfo, {
+        moon: this.moonInfo,
         label: this.imageryLabel,
         kmPerTexel: this.imageryKmPerTexel,
         beyond: this.beyondImagery(),
         tiles: Boolean(this.detail?.enabled),
       });
     }
+  }
+
+  /**
+   * Put the Moon where it is, and show it only when there is room for it.
+   *
+   * Close in it is behind the camera or off the side, and drawing it
+   * would just be a grey ball intruding on a street. It fades in as the
+   * camera pulls back, which is also when a person is most likely to be
+   * looking at the whole system rather than at one place on it.
+   */
+  _updateMoon(now, cameraDistance) {
+    if (!this.moon) return;
+
+    // Recomputed every few seconds: the Moon moves about half a degree an
+    // hour, so anything faster is arithmetic nobody can see.
+    if (!this._moonAt || now - this._moonAt > 4000) {
+      this._moonAt = now;
+      const m = moonPosition(new Date());
+      this.moonInfo = m;
+      this.moon.position.copy(m.dir).multiplyScalar(MOON_DISTANCE);
+      // Tidally locked: the same face turned towards us, always.
+      this.moon.lookAt(0, 0, 0);
+      this.moon.rotateY(Math.PI);
+    }
+
+    // Lit from wherever the Sun is, so the phase is tonight's phase.
+    this.moonLight.position.copy(this.sunDir).multiplyScalar(60);
+    this.moonLight.target.position.copy(this.moon.position);
+    this.moonLight.target.updateMatrixWorld();
+
+    // Absent at working altitudes, where it would only be behind the
+    // camera, and fully present by the time the whole planet is small in
+    // frame -- which is when the measurements above say it is reliably
+    // in shot, and when a person is looking at the system rather than at
+    // a place on it.
+    const want = THREE.MathUtils.clamp((cameraDistance - 6.0) / 4.0, 0, 1);
+    const have = this.moonMaterial.opacity;
+    const eased = have + (want - have) * 0.08;
+    this.moonMaterial.opacity = eased;
+    this.moon.visible = eased > 0.01;
+    this.moonLight.intensity = 3.1 * eased;
   }
 
   /**

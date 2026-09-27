@@ -63,16 +63,54 @@ class TestWritablePaths:
         """Read and write roots answer different questions and may differ."""
         assert (paths.read_root() / "mapify").is_dir()
 
-    def test_models_go_beside_the_state_not_onto_the_system_drive(self):
+    def test_models_stay_with_the_project_not_on_the_system_drive(self):
         """The 1.6 GB download is the biggest thing Mapify is responsible
         for, and it belongs wherever the person put the application."""
-        assert paths.models_dir().parent == paths.state_dir().parent
+        models = paths.models_dir()
+        assert paths.read_root() in models.parents or models.parent == paths.read_root()             or paths.state_dir().parent in models.parents             or models.parent == paths.state_dir().parent, models
 
-    def test_a_source_checkout_does_not_hijack_a_shared_model_cache(self):
-        """Relocating someone's existing 1.6 GB because they ran a script
-        would be rude, so the redirect is for frozen builds only."""
-        assert paths.apply_model_cache_env() is None
+    def test_an_existing_copy_beats_a_tidy_one(self, monkeypatch, tmp_path):
+        """A checkout and the install built beside it share one download.
+
+        Keeping two directories symmetrical at the cost of fetching 1.6 GB
+        twice is 1.6 GB of nothing.
+        """
+        monkeypatch.delenv("MAPIFY_MODELS_DIR", raising=False)
+        planted = tmp_path / "app" / "models"
+        (planted / "hub" / paths._CLIP_CACHE_DIR / "snapshots").mkdir(parents=True)
+        monkeypatch.setattr(paths, "read_root", lambda: tmp_path)
+        monkeypatch.setenv("MAPIFY_STATE_DIR", str(tmp_path / "data"))
+        assert paths.models_dir() == planted
+
+    def test_the_cache_probe_names_the_model_rather_than_counting_files(self):
+        """The Hugging Face cache is shared.
+
+        Another tool's weights sitting in it say nothing about whether
+        ours are there, and answering "yes" on the strength of somebody
+        else's models is how you fetch 1.6 GB you already have.
+        """
+        from mapify import firstrun
+
+        clip = next(c for c in firstrun.COMPONENTS if c.key == "clip")
+        expected = "models--" + clip.repo.replace("/", "--")
+        assert paths._CLIP_CACHE_DIR == expected, (
+            "paths.py and firstrun.COMPONENTS disagree about the model"
+        )
+
+    def test_a_populated_shared_cache_is_left_alone(self, monkeypatch):
+        """Relocating someone's existing download would be rude."""
+        monkeypatch.delenv("HF_HOME", raising=False)
+        monkeypatch.delenv("HF_HUB_CACHE", raising=False)
+        monkeypatch.setattr(paths, "_default_hf_cache_has_weights", lambda: True)
         assert paths.is_frozen() is False
+        assert paths.apply_model_cache_env() is None
+
+    def test_an_empty_shared_cache_falls_back_to_the_project(self, monkeypatch):
+        """Nothing to preserve, so use the copy the project already has."""
+        monkeypatch.delenv("HF_HOME", raising=False)
+        monkeypatch.delenv("HF_HUB_CACHE", raising=False)
+        monkeypatch.setattr(paths, "_default_hf_cache_has_weights", lambda: False)
+        assert paths.apply_model_cache_env() is not None
 
     def test_an_explicit_hf_home_is_never_overridden(self, monkeypatch):
         """That is someone stating where their cache lives."""

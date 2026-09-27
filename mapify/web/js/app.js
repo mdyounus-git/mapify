@@ -40,6 +40,7 @@ const el = {
   hudCoords: $("hud-coords"),
   hudAlt: $("hud-alt"),
   hudSun: $("hud-sun"),
+  hudMoon: $("hud-moon"),
   hudImagery: $("hud-imagery"),
   hudState: $("hud-state"),
   credit: $("credit"),
@@ -125,6 +126,7 @@ const state = {
   native: null,
   previewUrl: null,
   sourcePath: null,
+  home: null,           // where the globe opens, from the system timezone
   batch: null,          // { items, clusters, selected } while a batch exists
   setup: null,          // first-run status, once /api/firstrun has answered
   warming: false,       // a warmup stream is open
@@ -241,6 +243,7 @@ async function boot() {
   });
 
   installDropzone();
+  await goHome();
   await refreshStatus();
 
   const tiles = state.status?.client;
@@ -612,6 +615,54 @@ function showFinding(report) {
   el.finding.hidden = false;
 }
 
+/**
+ * Open the globe over the user's own part of the world, lit for now.
+ *
+ * The alternative is opening over the mid-Atlantic at an arbitrary hour,
+ * which is what it did, and which quietly says the thing on screen is a
+ * picture rather than a model of a planet that is currently turning.
+ *
+ * Where "here" comes from is the interesting part: the system timezone,
+ * which is already on the machine, needs no permission and leaves no
+ * network trace. Not IP geolocation -- that sends the user's address to a
+ * stranger to decide a camera angle. Not the browser's geolocation
+ * prompt -- that asks for a precise fix to do something that needs none.
+ */
+async function goHome() {
+  try {
+    const resp = await fetch("/api/home", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || "",
+        utc_offset_minutes: -new Date().getTimezoneOffset(),
+      }),
+    });
+    if (!resp.ok) return;
+    const home = await resp.json();
+    state.home = home;
+
+    // Real sun, because the whole point is that it matches outside.
+    el.lightMode.value = "realtime";
+    state.globe.setLighting("realtime");
+    // In Earth radii, not kilometres: 3.72 R is the ~17,000 km the globe
+    // already opened at, far enough out that the Moon is in frame.
+    await state.globe.flyTo(home.latitude, home.longitude, {
+      altitude: 3.72,
+      duration: 0,
+    });
+    state.globe.resume();      // it may turn; nothing has been found yet
+
+    const where = home.city
+      ? `${home.city} — from this computer's timezone`
+      : "your approximate longitude — from this computer's clock";
+    setHudState(`Showing ${where}`);
+    el.hudState.title = home.note || "";
+  } catch {
+    /* A camera angle is not worth failing a launch over. */
+  }
+}
+
 function onHud(lat, lon, altKm, flying, sun, imagery) {
   el.hudCoords.textContent = fmtLatLon(lat, lon);
   el.hudAlt.textContent = fmtKm(altKm);
@@ -622,6 +673,22 @@ function onHud(lat, lon, altKm, flying, sun, imagery) {
   } else {
     el.hudSun.textContent = "camera";
   }
+  // Where the Moon is, whether or not it happens to be on this side of
+  // the planet. Without this, a Moon that is astronomically behind the
+  // Earth reads as a feature that does not work.
+  const moon = imagery?.moon;
+  if (moon) {
+    el.hudMoon.textContent =
+      `${moon.lat >= 0 ? "N" : "S"}${Math.abs(moon.lat).toFixed(1)} ` +
+      `${moon.lon >= 0 ? "E" : "W"}${Math.abs(moon.lon).toFixed(1)}  ` +
+      `${Math.round(moon.illuminated * 100)}%`;
+    el.hudMoon.title =
+      `${moon.phase}, ${Math.round(moon.illuminated * 100)}% lit, ` +
+      `${Math.round(moon.distanceKm).toLocaleString()} km away. Its `
+      + `direction and phase are computed from this computer's clock; it `
+      + `is drawn closer than it really is so that it fits in frame.`;
+  }
+
   if (imagery) {
     const scale = imagery.kmPerTexel
       ? `${imagery.kmPerTexel.toFixed(1)} km/px` : "";
