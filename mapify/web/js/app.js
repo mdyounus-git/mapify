@@ -683,6 +683,18 @@ async function goHome() {
 
 function hideAsk() { el.askMore.hidden = true; }
 
+/** One file, chosen through the ordinary input, as a promise. */
+function pickFile() {
+  return new Promise((resolve) => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = ".jpg,.jpeg,.png,.webp,image/*";
+    input.addEventListener("change", () => resolve(input.files?.[0] || null),
+                           { once: true });
+    input.click();
+  });
+}
+
 function showAsk(ask) {
   el.askLede.textContent = ask.lede || "";
   el.askQuestion.textContent = ask.question || "";
@@ -699,18 +711,22 @@ function showAsk(ask) {
 /** Pick another photograph of the same place and fold it in. */
 async function addToSession() {
   const native = nativeApi();
-  if (!native) {
-    fail("Not available here",
-         "Adding more photographs needs the desktop app.");
-    return;
+  let chosen = null;
+  let file = null;
+
+  if (native) {
+    try {
+      chosen = await native.open_image();
+    } catch {
+      return;
+    }
+    if (!chosen || !chosen.path) return;
+  } else {
+    // Same pair as the analysis endpoints: a path where the desktop
+    // dialog approved one, the bytes otherwise.
+    file = await pickFile();
+    if (!file) return;
   }
-  let chosen;
-  try {
-    chosen = await native.open_image();
-  } catch {
-    return;
-  }
-  if (!chosen || !chosen.path) return;
 
   hideAsk();
   state.busy = true;
@@ -718,11 +734,20 @@ async function addToSession() {
   setHudState("Combining with the previous photographs…");
   showProgress(true);
   try {
-    const resp = await fetch("/api/session/add", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ path: chosen.path }),
-    });
+    let resp;
+    if (chosen) {
+      resp = await fetch("/api/session/add", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ path: chosen.path }),
+      });
+    } else {
+      const form = new FormData();
+      form.append("image", file, file.name);
+      resp = await fetch("/api/session/add/upload", {
+        method: "POST", body: form,
+      });
+    }
     if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
     const out = await resp.json();
     state.session = out;
@@ -1276,9 +1301,7 @@ async function analyse(source) {
   state.session = null;
   // Every single-image analysis is also the first observation of a
   // place session, in case it turns out not to be enough on its own.
-  if (source.path) {
-    fetch("/api/session/start", { method: "POST" }).catch(() => {});
-  }
+  fetch("/api/session/start", { method: "POST" }).catch(() => {});
   el.leftTitle.textContent = "Candidates";
   el.batchBar.hidden = true;
   el.openBtn.disabled = true;
@@ -1328,8 +1351,7 @@ async function analyse(source) {
     // offered in the desktop app, where there is a file dialog to add
     // another photograph with, and only for a file we know the path of.
     const band = report.prediction?.confidence;
-    if ((band === "insufficient" || band === "low")
-        && source.path && nativeApi()) {
+    if (band === "insufficient" || band === "low") {
       showAsk({
         lede: band === "insufficient"
           ? "Nothing in this photograph places it."

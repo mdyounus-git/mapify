@@ -499,9 +499,35 @@ def create_app(cfg: Config | None = None, token: str | None = None,
         data, name = _read_approved(payload.get("path", ""))
         _check_size(cfg, len(data))
 
-        obs = await asyncio.to_thread(current.add, data, name)
-        combined = await asyncio.to_thread(current.combine)
+        # The combination is enriched like any other result: it is the
+        # answer now, and an answer without a place name is half of one.
+        return await asyncio.to_thread(_session_add, current, data, name)
 
+    @app.post("/api/session/add/upload")
+    async def session_add_upload(image: UploadFile = File(...)) -> dict[str, Any]:
+        """Add a photograph by upload rather than by path.
+
+        The same pair as the analysis endpoints: the desktop app hands
+        over a path the file dialog approved, and anything else posts
+        the bytes. Without this the feature would exist only in the
+        packaged application and could not be exercised anywhere else.
+        """
+        from .session import PlaceSession
+
+        current = session_state.get("session")
+        if current is None:
+            current = session_state["session"] = PlaceSession(engine)
+
+        data = await image.read()
+        _check_size(cfg, len(data))
+        return await asyncio.to_thread(
+            _session_add, current, data, image.filename
+        )
+
+    def _session_add(current: Any, data: bytes,
+                     name: str | None) -> dict[str, Any]:
+        obs = current.add(data, name)
+        combined = current.combine()
         out: dict[str, Any] = {
             "observation": obs.as_dict(),
             "observations": [o.as_dict() for o in current.observations],
@@ -509,9 +535,6 @@ def create_app(cfg: Config | None = None, token: str | None = None,
             "combined": None,
         }
         if combined is not None:
-            # The combination is enriched like any other result: it is
-            # the answer now, and an answer without a place name is half
-            # an answer.
             report = engine.report_for_fusion(combined, name)
             out["combined"] = report
             confidence = (report.get("prediction") or {}).get("confidence")
