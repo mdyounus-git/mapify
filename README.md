@@ -212,6 +212,32 @@ After all of it, the application works with no network at all.
 If something goes wrong, `Mapify-console.bat` runs the same application with a
 visible console and a log.
 
+### When one photograph is not enough
+
+If an analysis will not place the image, Mapify asks for another picture of
+the same place rather than stopping — and says what would help: a sign, a
+wider view with traffic in it, the horizon.
+
+Several photographs of one place are not averaged. Averaging cannot tell
+agreement from coincidence; three estimates that all say "somewhere in
+France" average to the middle of France with no more justification than any
+one of them had. Each photograph is treated as an *observation*, and the
+question becomes which single place explains all of them — a product of
+likelihoods, which rewards agreement and discards coincidence.
+
+Two pictures of the same signboard are not two observations, so
+near-duplicates are detected and counted once. Only the most readable image
+supplies text, so one sign shot from two angles is not two clues.
+
+Measured on 24 photographs cut in half: combining reaches the accuracy of the
+better half **without knowing which half was better** — 342 km against 311 —
+and beats the worse half 17 times in 24. That is the case it exists for: when
+your first picture was the poor one, a second helps about seven times in ten.
+It does not beat a good first picture, and does not claim to.
+
+Saying "that is the only picture" is an answer, not a failure: you get the
+ranked possibilities with what each one rests on.
+
 ### A whole folder at once
 
 **Open folder** analyses every image in a directory, then groups the results by
