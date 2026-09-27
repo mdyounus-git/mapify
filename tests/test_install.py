@@ -441,6 +441,27 @@ class TestInstallerScripts:
             "installing to Program Files would need administrator"
         )
 
+    def test_reinstalling_does_not_destroy_data_or_models(self):
+        """The bug that cost 2.2 GB of somebody's connection.
+
+        Data and models live inside the installation directory -- that is
+        the point, one root on one drive -- so replacing the installation
+        by removing that directory takes them with it. The weights had
+        already been copied out of the shared Hugging Face cache, and that
+        cache had since been cleared, so there was nothing to copy back
+        and the application re-downloaded 1.6 GB on next launch.
+
+        A reinstall must replace the program and leave everything the user
+        accumulated alone.
+        """
+        script = self._installer("install.ps1")
+        assert "Remove-Item -LiteralPath $InstallDir -Recurse" not in script, (
+            "a reinstall must not remove the directory holding data/ and models/"
+        )
+        assert "$_.Name -notin @('data', 'models')" in script, (
+            "the replace step must exclude data/ and models/"
+        )
+
     def test_the_uninstaller_finds_a_non_default_location(self):
         """It can be installed anywhere, so the path cannot be hardcoded."""
         script = self._installer("uninstall.ps1")

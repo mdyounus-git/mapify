@@ -167,8 +167,20 @@ if (Test-Path -LiteralPath $InstallDir) {
         Write-Host '  Mapify is running. Close it and run this again.' -ForegroundColor Red
         exit 1
     }
-    Write-Step 'Removing the previous installation'
-    Remove-Item -LiteralPath $InstallDir -Recurse -Force
+    # Data and models live *inside* the installation, so removing it
+    # wholesale destroys them. That is not a theoretical concern: it
+    # happened, and it cost 2.2 GB of re-downloading -- the weights had
+    # already been copied out of the shared cache, so once that cache was
+    # gone there was nothing left to copy back from.
+    #
+    # Only the program is replaced. Everything the user accumulated stays
+    # exactly where it is.
+    Write-Step 'Replacing the program, keeping data and models'
+    Get-ChildItem -LiteralPath $InstallDir -Force | Where-Object {
+        $_.Name -notin @('data', 'models')
+    } | ForEach-Object {
+        Remove-Item -LiteralPath $_.FullName -Recurse -Force -ErrorAction Stop
+    }
 }
 
 # --------------------------------------------------------------------- copy
