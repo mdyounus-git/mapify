@@ -75,3 +75,57 @@ Pixel ratio already follows the display and anisotropic filtering is already
 at the device maximum, so the softness on approach is not a filtering
 problem — it is that 8k Blue Marble is 4.9 km per texel and there is nothing
 finer to show. That is Phase 24's tile work, and it cannot be fixed here.
+
+---
+
+## Also done: space, the opening view, and a Moon
+
+Three more pulled forward, all from the same session's feedback.
+
+**Space was blue.** The clear colour was nearly black already, so the fault
+was elsewhere: the atmosphere's broad haze component reached most of the way
+out to its shell and laid a veil over the entire frame, which also drowned the
+starfield behind it. Real limb haze is a band, not a wash. Tighter falloff,
+lower weight, a cubic edge, and a genuinely black background.
+
+**The starfield is now two populations** — an even scatter plus a denser,
+dimmer band along a tilted great circle standing in for the Milky Way. The
+band is what makes a field of dots read as a sky instead of as noise.
+Positions are random rather than catalogued, and the code says so: nobody
+should be able to navigate by a backdrop in a geolocation tool.
+
+**The globe opens over the user's own part of the world**, lit for the actual
+time, rather than over the mid-Atlantic at an arbitrary hour. How it knows is
+the part worth recording. Not IP geolocation, which sends someone's address to
+a third party to settle a camera angle. Not the browser's geolocation prompt,
+which asks for a metre-accurate fix to do something that needs none. The
+system timezone is already on the machine, costs no permission and leaves no
+network trace, and its name carries a city the bundled Natural Earth gazetteer
+can place — `Asia/Kolkata` resolves to 22.57, 88.37 entirely offline. The UTC
+offset gives a longitude when the name is not a place. It is the timezone's
+namesake city and not the user, which the endpoint says in as many words.
+
+**And a Moon**, in its true direction, lit by the same Sun so its phase is
+tonight's. Its distance is not true, and the number was measured rather than
+picked: sweeping the camera over every orientation and altitude,
+
+```
+distance    at 3.7R (default)   at 8R    at 17R (zoomed out)
+5 R                5%            25%           98%
+13.5 R             3%             7%           17%
+60.3 R (real)      ~3%            ~3%           ~3%
+```
+
+The real distance puts the Moon in frame from about three per cent of
+viewpoints — correct, and indistinguishable from a bug. Five earth radii gives
+exactly the behaviour that was asked for: absent while you are working, there
+when you pull back. The radius stays the *true* ratio, so the compression is
+the only thing being faked, and the HUD reports the Moon's position and phase
+even when it is behind you, so an off-screen Moon does not read as a broken
+one.
+
+## Still open
+
+The interface criticism beyond hierarchy: the eyebrow labels, monospace on
+things that are not measurements, rails that hold their width when empty.
+And the imagery resolution, which is Phase 24.
