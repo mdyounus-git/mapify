@@ -79,6 +79,41 @@ class TestWritablePaths:
         monkeypatch.setenv("HF_HOME", r"D:\somewhere\else")
         assert paths.apply_model_cache_env() is None
 
+    def test_easyocr_is_pointed_at_the_directory_holding_the_weights(self):
+        """One level out is a silent 565 MB re-download, not an error.
+
+        EasyOCR joins the filename straight onto model_storage_directory,
+        so that argument names the directory that *contains* the .pth
+        files. Pointing it at the parent finds nothing, and EasyOCR's
+        response to finding nothing is to fetch it all again -- quietly,
+        into the wrong place, on the user's connection.
+        """
+        import inspect
+
+        from mapify.models import ocr as ocr_module
+
+        source = inspect.getsource(ocr_module)
+        assert 'store / "model"' in source, (
+            "model_storage_directory must point at the model/ subdirectory"
+        )
+        assert 'store / "user_network"' in source
+
+    def test_the_layout_the_installer_creates_is_the_one_easyocr_expects(self):
+        """The installer and the reader have to agree about the shape.
+
+        EasyOCR derives <MODULE_PATH>/model and <MODULE_PATH>/user_network
+        itself, and the installer copies ~/.EasyOCR -- which already has
+        that shape -- into the models directory wholesale. This asserts
+        the two halves still describe the same tree.
+        """
+        installer = (paths.read_root() / "installer" / "install.ps1").read_text(
+            encoding="utf-8"
+        )
+        assert "$easyTarget = Join-Path $ModelsDir 'easyocr'" in installer
+        assert "Join-Path $easyTarget 'model'" in installer, (
+            "the installer must check for the model/ subdirectory it copies"
+        )
+
     def test_describe_names_every_location(self):
         described = paths.describe()
         for key in ("frozen", "read_root", "state_dir", "cache_dir",

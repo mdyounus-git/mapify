@@ -194,6 +194,14 @@ def apply_model_cache_env() -> Path | None:
         return None
     os.environ["HF_HOME"] = str(target)
     os.environ["HF_HUB_CACHE"] = str(target / "hub")
+
+    # EasyOCR reads this once, when easyocr.config is imported, and derives
+    # its own model/ and user_network/ underneath it -- which is exactly
+    # the layout the installer lays down. Belt and braces with the explicit
+    # kwargs in models/ocr.py, because a miss here is a silent 565 MB
+    # re-download rather than an error.
+    if not os.environ.get("EASYOCR_MODULE_PATH"):
+        os.environ["EASYOCR_MODULE_PATH"] = str(target / "easyocr")
     return target
 
 

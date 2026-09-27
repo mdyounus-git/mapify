@@ -138,8 +138,13 @@ class EasyOcrEngine:
                 kwargs = {"gpu": self.device != "cpu", "verbose": False}
                 store = ocr_model_dir()
                 if store is not None:
-                    kwargs["model_storage_directory"] = str(store)
-                    kwargs["user_network_directory"] = str(store)
+                    # EasyOCR joins the filename straight onto
+                    # model_storage_directory, so it names the directory
+                    # that *holds* the .pth files, not the one above it.
+                    # Getting that wrong does not fail loudly: it finds
+                    # nothing and downloads 565 MB again.
+                    kwargs["model_storage_directory"] = str(store / "model")
+                    kwargs["user_network_directory"] = str(store / "user_network")
                 reader = easyocr.Reader(list(langs), **kwargs)
                 self._readers[langs] = reader
                 log.info("EasyOCR reader ready for %s", "+".join(langs))

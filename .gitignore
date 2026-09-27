@@ -59,3 +59,13 @@ Mapify.spec
 
 # Rendered test boards and anything a user drops in to try.
 samples/private/
+
+# The installed application, its caches and its 2.2 GB of model weights.
+# install.ps1 puts all of it here by default, inside the project, which is
+# the whole point -- everything on one drive, next to the source. None of
+# it is source: it is 3.35 GB of build output and downloaded weights, and
+# `git add -A` will hoover it up given half a chance. It did, once.
+app/
+
+# Reports the application exported. Somebody's output, not the project's.
+exports/
