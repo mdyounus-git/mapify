@@ -184,7 +184,22 @@ def ocr_model_dir() -> Path | None:
     elif is_frozen():
         path = models_dir() / "easyocr"
     else:
-        return None
+        # The project's own copy wins when it exists, even from a source
+        # checkout. Unlike the Hugging Face cache there is no argument
+        # for deferring to ~/.EasyOCR: reading from the project costs
+        # nobody a download, and defaulting to the home directory puts
+        # half a gigabyte on the system drive for no benefit.
+        #
+        # Only when the project has nothing does EasyOCR keep its own
+        # default, because at that point somebody's existing ~/.EasyOCR
+        # is the only copy there is.
+        candidate = models_dir() / "easyocr"
+        try:
+            if not any((candidate / "model").glob("*.pth")):
+                return None
+        except OSError:
+            return None
+        path = candidate
     try:
         path.mkdir(parents=True, exist_ok=True)
     except OSError:
