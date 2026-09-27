@@ -72,6 +72,18 @@ class AnalysisReport:
     ocr_reader_hint: str | None = None
     toponyms: list[dict[str, Any]] = field(default_factory=list)
     read_places: list[dict[str, Any]] = field(default_factory=list)
+
+    # Not serialised. A multi-image session has to fuse the *inputs* to
+    # each analysis, not its conclusions -- averaging three finished
+    # answers is not the same as combining three observations, and only
+    # the latter can say that two images agreeing is worth more than
+    # either alone. A JSON consumer has no use for any of it.
+    raw_candidates: list[Any] = field(default_factory=list, repr=False)
+    embedding: Any = field(default=None, repr=False)
+    visual_evidence: Any = field(default=None, repr=False)
+    ocr_result: Any = field(default=None, repr=False)
+    script_reading: Any = field(default=None, repr=False)
+    read_place_objs: list[Any] = field(default_factory=list, repr=False)
     engine: dict[str, Any] = field(default_factory=dict)
     warnings: list[str] = field(default_factory=list)
     attribution: list[str] = field(default_factory=list)
@@ -417,6 +429,13 @@ class AnalysisEngine:
             # ---- enrichment -----------------------------------------------
             step("enrich", "Naming the location")
             self._enrich(fused, report, online=online_enrichment)
+
+            report.raw_candidates = list(raw) + list(extra_pool)
+            report.embedding = embedding
+            report.visual_evidence = evidence
+            report.ocr_result = ocr_result
+            report.script_reading = script_reading
+            report.read_place_objs = list(read_places)
 
             report.candidates = [c.as_dict() for c in fused.candidates]
             report.prediction = self._build_prediction(fused, exif_report)
