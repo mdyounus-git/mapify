@@ -1,6 +1,6 @@
 # Phase 22 — Metadata first, then everything the image itself shows
 
-**State:** implementable
+**State:** partly implemented — step 2 is done, step 4 is open
 
 An explicit order of investigation, and a great deal more looked at.
 
@@ -87,3 +87,47 @@ result.
 - Every new evidence group is accompanied by its measured effect on the
   benchmark, kept or deleted on that basis.
 - The prompt bank states, in the file, why faces are not used.
+
+---
+
+## Done: the tag now gets a verdict
+
+Steps 1 and 3 already worked. Step 2 — *test the tag against the picture* —
+was the gap, and it is closed.
+
+The old code measured the distance between the tag and the estimate and
+printed it with a boolean. That is a readout, and it leaves the decision with
+the reader at exactly the point where the tool knows more than they do.
+
+There are three outcomes:
+
+| verdict | when | what happens |
+|---|---|---|
+| `corroborated` | the image independently agrees | the tag *becomes* the reported coordinate — it is metres where a model estimate is kilometres — with provenance saying so and precision set to 20 m |
+| `rejected` | they disagree **and** the image evidence is strong: a read address resolves elsewhere, or the locator committed real mass elsewhere | the estimate stands, the tag is still reported, and the note says it was rejected and why |
+| `unresolved` | they disagree and the image evidence is too weak to adjudicate | neither is trusted, and that is said |
+
+The middle distinction is the whole point. A locator holding four per cent of
+its distribution has not earned the right to call a GPS tag a lie, and the old
+boolean said "inconsistent" in both cases in identical words.
+
+**Verified end to end.** The Kelambakkam board, re-tagged with Budapest
+coordinates 6,811 km away:
+
+```
+verdict     rejected
+note        ...an address read from the image itself resolves elsewhere...
+reported    12.79716, 80.21760   Kelambakkam, India
+error       0.00 km
+tag         still reported: 47.4979, 19.0402
+```
+
+Then reduced to two stub tests with no network: the read-address case rejects,
+and the identical case without it stays `unresolved`, so the second is the
+control for the first.
+
+## Still open: step 4
+
+Everything under *What step 4 needs* above. None of it has been started, and
+the rule stands — each new evidence group has to be measured on the 163-sample
+benchmark before it is kept.
