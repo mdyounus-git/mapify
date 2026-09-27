@@ -67,6 +67,36 @@ class ModelConfig:
     # locator if unavailable.
     geoclip_enabled: bool = True
     geoclip_top_k: int = 12
+    # Select candidate *places* by how much probability sits around them,
+    # rather than taking the individual gallery points with the highest
+    # probability. The gallery is not evenly dense, so the two differ: a
+    # city covered by fifty points at half a per cent each holds a
+    # quarter of the distribution and can contribute nothing to a top-12
+    # chosen point by point.
+    #
+    # Measured over 163 photographs, the point-wise top-12 held a median
+    # of 14.5% of the distribution. Mode finding holds about 99%, for the
+    # same cost -- the distribution was already being computed inside
+    # locate() and thrown away.
+    geoclip_mode_search: bool = True
+    # How far apart two places have to be to count as different ones,
+    # and how far from a mode's peak its reported coordinate is averaged.
+    #
+    # Swept over the 163-sample benchmark against the locator alone. The
+    # pairing matters more than either number: gathering wide finds the
+    # right region, averaging wide then throws away the precision found
+    # inside it.
+    #
+    #   radius  focus   median   <=1km  <=25km  <=200km
+    #   point-wise        594.6     28      50       64
+    #      40      5      427.4     33      62       73
+    #      75     15      385.3     27      59       75
+    #     150      5      385.3     30      55       72
+    #
+    # 40/5 beats point-wise selection on every band, which none of the
+    # wider settings do.
+    geoclip_mode_radius_km: float = 40.0
+    geoclip_mode_focus_km: float = 5.0
     # Secondary locator / evidence backbone: HF CLIP (MIT weights).
     clip_model_id: str = "openai/clip-vit-large-patch14"
     clip_evidence_enabled: bool = True
@@ -103,15 +133,33 @@ class FusionConfig:
     # other half, and the held-out numbers are recorded in
     # PHASES/Implemented Phases/PHASE-13.
     #
+    # Refitted when the locator switched from point-wise top-k to mode
+    # finding, which had to happen: the old numbers were calibrated
+    # against a locator_mass whose median was 0.145, and mode finding
+    # captures about 99% of the distribution, so every one of them would
+    # have been trivially satisfied and everything would have read
+    # "high". Thresholds are only meaningful against the scale they were
+    # measured on, and changing the scale silently is how a calibrated
+    # tool stops being one.
+    #
+    # Refit: 100% precision on 17 high-confidence calls on the tuning
+    # half, 100% of 11 on the held-out half, worst error 47 km.
+    #
     # The earlier values came from an 11-sample set and were badly wrong:
     # "high" was reached by results 15,689 km off target.
     #
     # "high" requires all four of these. Mass is the primary gate -- it is
     # what actually separates a correct prediction from a confidently wrong
     # one -- and dispersion is secondary.
-    high_locator_mass: float = 0.25
-    high_spread_km: float = 20.0
+    high_locator_mass: float = 0.15
+    high_spread_km: float = 40.0
     high_concentration: float = 0.80
+    # The search wanted -1.0, which is no gate at all. Kept at 0: the
+    # search maximises how many high calls can be made at full
+    # precision, and this project would rather make fewer. "High
+    # requires the image to support the answer, not merely fail to
+    # object" is a stance from Phase 13, and being stricter than the
+    # fitted optimum can only improve precision, never harm it.
     high_min_evidence: float = 0.0
 
     # "medium" is a weaker claim and the data supports about 85-90% of these

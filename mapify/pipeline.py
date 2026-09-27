@@ -317,9 +317,24 @@ class AnalysisEngine:
 
             if self.geoclip and self.geoclip.load():
                 try:
-                    raw, embedding = self.geoclip.locate_with_embedding(
-                        image, self.cfg.models.geoclip_top_k
-                    )
+                    # Mode search needs the locator's full distribution.
+                    # Any locator can decline to offer one -- a stand-in
+                    # in the tests, or a different model later -- and the
+                    # point-wise shortlist is the correct fallback rather
+                    # than a failure.
+                    modes = (self.cfg.models.geoclip_mode_search
+                             and hasattr(self.geoclip, "locate_modes"))
+                    if modes:
+                        raw, embedding = self.geoclip.locate_modes(
+                            image,
+                            self.cfg.models.geoclip_top_k,
+                            self.cfg.models.geoclip_mode_radius_km,
+                            focus_km=self.cfg.models.geoclip_mode_focus_km,
+                        )
+                    else:
+                        raw, embedding = self.geoclip.locate_with_embedding(
+                            image, self.cfg.models.geoclip_top_k
+                        )
                 except Exception as exc:
                     report.warnings.append(
                         f"GeoCLIP failed on this image: {type(exc).__name__}: {exc}"
