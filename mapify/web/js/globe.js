@@ -1589,7 +1589,7 @@ export class Globe {
     const altKm = (this.camera.position.length() - R) * EARTH_RADIUS_KM;
     const target = this.activeMarker || this.markers[0];
     if (!target || altKm > 2000) { this.detail.clear(); return; }
-    const zoom = zoomForAltitude(altKm);
+    const zoom = zoomForAltitude(altKm, this.detail.maxZoom ?? 19);
     if (zoom <= 0) { this.detail.clear(); return; }
     this.detail.show(target.lat, target.lon, zoom);
   }
@@ -1674,10 +1674,15 @@ export class Globe {
     if (this.onHudUpdate) {
       const p = vec3ToLatLon(this.camera.position);
       const altKm = (d - R) * EARTH_RADIUS_KM;
+      // When the ground patch is up it is what the operator is looking
+      // at, so it is what the readout has to describe. Reporting the
+      // base texture's 4.9 km/px while showing 100 m tiles would be the
+      // HUD lying about the thing it exists to be honest about.
+      const patch = this.detail?.activeResolution?.();
       this.onHudUpdate(p.lat, p.lon, altKm, !!this._flight, this.sunInfo, {
         moon: this.moonInfo,
-        label: this.imageryLabel,
-        kmPerTexel: this.imageryKmPerTexel,
+        label: patch ? patch.label : this.imageryLabel,
+        kmPerTexel: patch ? patch.kmPerTexel : this.imageryKmPerTexel,
         beyond: this.beyondImagery(),
         tiles: Boolean(this.detail?.enabled),
       });
@@ -1778,17 +1783,19 @@ export class Globe {
     this.resize();
   }
 
-  setTileSource(url, attribution) {
+  setTileSource(url, attribution, maxZoom) {
     if (url && !this.detail) {
       this.detail = new DetailPatch(this.root, {
         tileUrl: url, attribution, radius: R,
       });
+      this.detail.maxZoom = maxZoom;
     } else if (!url && this.detail) {
       this.detail.clear();
       this.detail = null;
     } else if (this.detail) {
       this.detail.tileUrl = url;
       this.detail.attribution = attribution;
+      this.detail.maxZoom = maxZoom;
       this.detail.clear();
     }
   }

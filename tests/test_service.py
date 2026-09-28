@@ -139,18 +139,45 @@ class TestSecurityHeaders:
         b = open_client.get("/").headers["content-security-policy"]
         assert a != b
 
-    def test_tiles_are_not_permitted_by_default(self, open_client):
-        csp = open_client.get("/").headers["content-security-policy"]
+    def test_disabling_tiles_closes_the_policy_completely(self):
+        cfg = config()
+        cfg.network.basemap_tiles_enabled = False
+        client = TestClient(create_app(cfg))
+        csp = client.get("/").headers["content-security-policy"]
         assert "img-src 'self' data: blob:;" in csp
         assert "https:" not in csp
 
-    def test_enabling_tiles_widens_only_images_and_connections(self):
+    def test_tiles_widen_the_policy_to_one_named_host(self):
+        """Not to all of https, which is what it used to do.
+
+        Ground imagery comes from one known origin. Opening the policy to
+        every origin on the internet in order to reach it gives away far
+        more than it buys, and a content policy that names nothing is
+        not doing its job.
+        """
         cfg = config()
         cfg.network.basemap_tiles_enabled = True
+        cfg.network.basemap_tile_url = (
+            "https://gibs.earthdata.nasa.gov/wmts/x/{z}/{y}/{x}.jpeg"
+        )
         client = TestClient(create_app(cfg))
         csp = client.get("/").headers["content-security-policy"]
-        assert "img-src 'self' data: blob: https:;" in csp
+        assert "img-src 'self' data: blob: https://gibs.earthdata.nasa.gov;" in csp
+        assert "connect-src 'self' https://gibs.earthdata.nasa.gov;" in csp
+        assert "blob: https:;" not in csp, "the policy still allows any origin"
         assert "script-src 'self' 'nonce-" in csp
+
+    def test_a_tile_url_that_is_not_https_opens_nothing(self):
+        """A malformed or plaintext URL means no tiles, not tiles from
+        anywhere. Failing closed is the only safe direction here."""
+        for bad in ("http://tiles.example/{z}/{x}/{y}.png", "", "nonsense"):
+            cfg = config()
+            cfg.network.basemap_tiles_enabled = True
+            cfg.network.basemap_tile_url = bad
+            client = TestClient(create_app(cfg))
+            csp = client.get("/").headers["content-security-policy"]
+            assert "img-src 'self' data: blob:;" in csp, bad
+            assert "http" not in csp.split("img-src")[1].split(";")[0], bad
 
     def test_the_usual_hardening_headers_are_set(self, open_client):
         h = open_client.get("/").headers
@@ -180,5 +207,8 @@ class TestUploads:
     def test_status_declares_what_is_switched_off(self, open_client):
         body = open_client.get("/api/status").json()
         assert body["engine"]["offline_only"] is True
-        assert body["client"]["basemap_tiles_enabled"] is False
+        # Ground imagery is on by default now that there is a source
+        # whose terms permit it; the status still declares the state.
+        assert body["client"]["basemap_tiles_enabled"] is True
+        assert body["client"]["basemap_max_zoom"] == 12
         assert body["client"]["native"] is False

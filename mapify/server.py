@@ -71,14 +71,37 @@ def _csp(cfg: Config, nonce: str) -> str:
     rather than the policy being opened up with 'unsafe-inline'.
     """
     if cfg.network.basemap_tiles_enabled:
-        img = "img-src 'self' data: blob: https:; "
-        connect = "connect-src 'self' https:; "
+        # Only the configured tile host, not all of https. Ground imagery
+        # is one known origin; opening the policy to every origin on the
+        # internet to reach it would give away far more than it buys, and
+        # the whole point of a content policy is that it names things.
+        origin = _tile_origin(cfg.network.basemap_tile_url)
+        img = f"img-src 'self' data: blob: {origin}; " if origin else               "img-src 'self' data: blob:; "
+        connect = f"connect-src 'self' {origin}; " if origin else                   "connect-src 'self'; "
     else:
         img = "img-src 'self' data: blob:; "
         connect = "connect-src 'self'; "
     policy = _CSP_BASE.replace("default-src 'self'; ", "default-src 'self'; " + img)
     policy = policy.replace("connect-src 'self'; ", connect)
     return policy.replace("script-src 'self'", f"script-src 'self' 'nonce-{nonce}'")
+
+
+def _tile_origin(url: str) -> str | None:
+    """The scheme and host of the tile source, for the content policy.
+
+    Returns None for anything that is not a plain https origin, which
+    closes the policy rather than opening it: a malformed or http URL in
+    the config should mean no tiles, not tiles from anywhere.
+    """
+    from urllib.parse import urlsplit
+
+    try:
+        parts = urlsplit(url)
+    except ValueError:
+        return None
+    if parts.scheme != "https" or not parts.hostname:
+        return None
+    return f"https://{parts.hostname}"
 
 
 def create_app(cfg: Config | None = None, token: str | None = None,
@@ -182,6 +205,7 @@ def create_app(cfg: Config | None = None, token: str | None = None,
                     if cfg.network.basemap_tiles_enabled else None
                 ),
                 "basemap_attribution": cfg.network.basemap_attribution,
+                "basemap_max_zoom": cfg.network.basemap_max_zoom,
                 "max_upload_mb": round(cfg.server.max_upload_bytes / 1e6, 1),
                 "textures_present": (WEB_DIR / "textures" / "earth_day.jpg").exists(),
                 "candidates_returned": cfg.fusion.candidates_returned,

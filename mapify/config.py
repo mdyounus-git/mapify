@@ -53,9 +53,49 @@ class NetworkConfig:
     request_timeout_s: float = 20.0
     # Basemap raster tiles for the globe.  Off by default: the globe renders
     # from bundled public-domain Natural Earth vectors with zero requests.
-    basemap_tiles_enabled: bool = False
-    basemap_tile_url: str = "https://tile.openstreetmap.org/{z}/{x}/{y}.png"
-    basemap_attribution: str = "© OpenStreetMap contributors"
+    # Ground imagery for the end of the approach.
+    #
+    # On by default, which was only possible once there was a source whose
+    # terms permit it. The previous default pointed at OpenStreetMap's own
+    # tile servers: donated capacity with a usage policy that a desktop
+    # application fetching on every landing would breach, which is why it
+    # had to ship switched off and therefore never ran.
+    #
+    # NASA's Global Imagery Browse Services states its own terms in its
+    # WMTS capabilities document, in as many words:
+    #
+    #     <ows:Fees>none</ows:Fees>
+    #     <ows:AccessConstraints>none</ows:AccessConstraints>
+    #     <ows:ProviderName>National Aeronautics and Space
+    #     Administration</ows:ProviderName>
+    #
+    # NASA imagery is not copyrighted; attribution is requested and given.
+    # No key, no account, no rate limit published.
+    #
+    # Landsat WELD is a cloud-free global annual composite at roughly 38 m
+    # per pixel -- about 130 times finer than the 4.9 km per pixel of the
+    # bundled Blue Marble texture. At that scale a river, a coastline, an
+    # airport, a park and the shape of a city are all legible. Streets are
+    # not: see the note in the README about what is and is not available
+    # under a licence that allows redistribution.
+    #
+    # Note the {z}/{y}/{x} order. WMTS is row-then-column, the opposite of
+    # the XYZ convention, and getting it the wrong way round produces
+    # plausible imagery of entirely the wrong place.
+    basemap_tiles_enabled: bool = True
+    basemap_tile_url: str = (
+        "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/"
+        "Landsat_WELD_CorrectedReflectance_TrueColor_Global_Annual/default/"
+        "2000-12-01/GoogleMapsCompatible_Level12/{z}/{y}/{x}.jpeg"
+    )
+    # No "Ground imagery:" prefix -- the interface adds "Ground detail: "
+    # in front of whatever this says, and the two together read as
+    # "Ground detail: Ground imagery: NASA...".
+    basemap_attribution: str = "NASA EOSDIS GIBS, Landsat WELD. Public domain."
+    # The deepest zoom the source actually has. Asking for more returns
+    # 404s, and a grid of missing tiles looks like a broken renderer
+    # rather than like the end of the available detail.
+    basemap_max_zoom: int = 12
 
 
 @dataclass

@@ -384,10 +384,27 @@ and two for the globe: NASA satellite imagery, or a vector "recon grid" drawn at
 runtime from the Natural Earth coastlines.
 
 Selecting a candidate arcs the camera out through orbit along a great circle and
-descends onto the coordinate. It **will not descend below what the imagery can
-support** — 8k of Blue Marble is 4.9 km per texel, and flying closer just
-magnifies blur. The HUD states the resolution and flags when you have zoomed
-past it. Enable ground tiles in `config.toml` if you need to go lower.
+descends onto the coordinate, where it picks up **ground imagery at about 25 m
+per pixel** — NASA's Landsat WELD composite, served by their Global Imagery
+Browse Services. That is roughly 200× finer than the 4.9 km per texel of the
+bundled Blue Marble texture: enough to make out a coastline, a river bend, an
+airport, a park, the shape of a city. The HUD states the resolution actually on
+screen, not the one it started with.
+
+This is on by default because NASA's service states its own terms as
+`Fees: none`, `AccessConstraints: none`, and NASA imagery is not copyrighted.
+The previous default pointed at OpenStreetMap's own tile servers, which is
+donated capacity whose usage policy a desktop application fetching on every
+landing would breach — so it had to ship switched off, and never ran for
+anybody.
+
+**It is not street level, and it cannot be.** Sub-metre imagery, the kind you
+could recognise a building from, is commercially licensed without exception;
+no free source permits redistributing it inside an application. 25 m/px is the
+honest ceiling for a tool with this project's licensing rules. If you have
+access to something better, point `basemap_tile_url` at it — the content
+policy is derived from whatever host you configure, and a non-https URL
+disables tiles rather than opening the policy up.
 
 ---
 

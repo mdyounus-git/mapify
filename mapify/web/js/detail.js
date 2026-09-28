@@ -6,14 +6,18 @@
  * tiles around the target and lays it on the globe as a curved patch, so the
  * final descent lands on something real.
  *
- * Off by default. Tiles are an outbound request to a third party, and this
- * tool does not make those without being asked.
+ * The default source is NASA's Global Imagery Browse Services, which
+ * states its own terms as Fees: none, AccessConstraints: none. NASA
+ * imagery is not copyrighted. That is what allows this to be on by
+ * default; the previous default was OpenStreetMap's own tile servers,
+ * donated capacity whose usage policy a desktop application fetching on
+ * every landing would breach, so it had to ship switched off and never
+ * ran for anybody.
  *
- * OpenStreetMap's tile usage policy governs the default tile source: it is
- * donated capacity, not a CDN. One landing fetches at most a 4x4 grid, the
- * result is cached per coordinate, and the patch is only built when the
- * camera is actually close enough to need it.
- * https://operations.osmfoundation.org/policies/tiles/
+ * Restraint is kept anyway, because it is somebody's bandwidth either
+ * way: one landing fetches at most a 4x4 grid, the result is cached per
+ * coordinate, and the patch is only built when the camera is close
+ * enough to need it.
  */
 
 import * as THREE from "three";
@@ -57,6 +61,8 @@ export class DetailPatch {
     this.R = opts.radius ?? 1.0;
     this.grid = opts.grid ?? 4;         // grid x grid tiles
     this.mesh = null;
+    this.currentZoom = null;
+    this.currentLat = 0;
     this.key = null;
     this.busy = false;
     this.onAttribution = null;
@@ -74,6 +80,7 @@ export class DetailPatch {
     if (this.mesh.material.map) this.mesh.material.map.dispose();
     this.mesh.material.dispose();
     this.mesh = null;
+    this.currentZoom = null;
     this.key = null;
     if (this.onAttribution) this.onAttribution(null);
   }
@@ -86,7 +93,7 @@ export class DetailPatch {
    */
   async show(lat, lon, zoom) {
     if (!this.enabled || this.busy) return;
-    zoom = Math.max(4, Math.min(16, Math.round(zoom)));
+    zoom = Math.max(4, Math.min(this.maxZoom ?? 16, Math.round(zoom)));
     const key = `${lat.toFixed(4)}/${lon.toFixed(4)}/${zoom}`;
     if (key === this.key) return;
 
@@ -164,6 +171,8 @@ export class DetailPatch {
       this.clear();
       this.mesh = mesh;
       this.key = key;
+      this.currentZoom = zoom;
+      this.currentLat = lat;
       this.parent.add(mesh);
       if (this.onAttribution) this.onAttribution(this.attribution);
 
@@ -180,15 +189,42 @@ export class DetailPatch {
       this.busy = false;
     }
   }
+
+  /**
+   * What the patch is actually showing, for the readout. Null when there
+   * is no patch.
+   *
+   * Otherwise the HUD goes on describing the base texture, and once
+   * tiles are up that is no longer what the operator is looking at.
+   * Reporting 4.9 km per pixel while displaying 25 would be the one
+   * readout whose entire job is honesty about resolution being wrong
+   * about resolution.
+   */
+  activeResolution() {
+    if (!this.enabled || !this.mesh || this.currentZoom == null) return null;
+    return {
+      label: `ground z${this.currentZoom}`,
+      kmPerTexel: metresPerPixel(this.currentZoom, this.currentLat || 0) / 1000,
+    };
+  }
 }
 
 /** Pick a tile zoom that roughly matches the camera altitude. */
-export function zoomForAltitude(altitudeKm) {
+export function zoomForAltitude(altitudeKm, maxZoom = 19) {
+  let zoom;
   if (altitudeKm > 2500) return 0;     // nothing worth loading
-  if (altitudeKm > 1200) return 6;
-  if (altitudeKm > 600) return 8;
-  if (altitudeKm > 250) return 10;
-  if (altitudeKm > 90) return 12;
-  if (altitudeKm > 30) return 14;
-  return 15;
+  else if (altitudeKm > 1200) zoom = 6;
+  else if (altitudeKm > 600) zoom = 8;
+  else if (altitudeKm > 250) zoom = 10;
+  else if (altitudeKm > 90) zoom = 12;
+  else if (altitudeKm > 30) zoom = 14;
+  else zoom = 15;
+  // Never ask a source for detail it does not have. A grid of 404s reads
+  // as a broken renderer rather than as the end of the available detail.
+  return Math.min(zoom, maxZoom);
+}
+
+/** Ground resolution of a tile zoom, in metres per pixel. */
+export function metresPerPixel(zoom, lat = 0) {
+  return (156543.03392 * Math.cos(lat * DEG)) / 2 ** zoom;
 }

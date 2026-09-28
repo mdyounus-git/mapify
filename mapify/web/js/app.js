@@ -256,7 +256,9 @@ async function boot() {
 
   const tiles = state.status?.client;
   if (tiles?.basemap_tiles_enabled && tiles.basemap_tile_url) {
-    state.globe.setTileSource(tiles.basemap_tile_url, tiles.basemap_attribution);
+    state.globe.setTileSource(tiles.basemap_tile_url,
+                              tiles.basemap_attribution,
+                              tiles.basemap_max_zoom);
   }
   updateCredit();
 
