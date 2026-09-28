@@ -72,6 +72,12 @@ class AnalysisReport:
     ocr_reader_hint: str | None = None
     toponyms: list[dict[str, Any]] = field(default_factory=list)
     read_places: list[dict[str, Any]] = field(default_factory=list)
+    # Every numbered technique that was tried, what it found, and -- for
+    # the ones that could not run -- why not. Absence and silence are
+    # different, and a reader who cannot tell them apart will misread
+    # the whole report.
+    techniques: list[dict[str, Any]] = field(default_factory=list)
+    case_id: str | None = None
 
     # Not serialised. A multi-image session has to fuse the *inputs* to
     # each analysis, not its conclusions -- averaging three finished
@@ -105,6 +111,8 @@ class AnalysisReport:
             "ocr": {**self.ocr, "reader_hint": self.ocr_reader_hint},
             "toponyms": self.toponyms,
             "read_places": self.read_places,
+            "techniques": self.techniques,
+            "case_id": self.case_id,
             "engine": self.engine,
             "warnings": self.warnings,
             "attribution": self.attribution,
@@ -460,6 +468,20 @@ class AnalysisEngine:
             report.script_reading = script_reading
             report.read_place_objs = list(read_places)
 
+            # ---- the numbered techniques ----------------------------------
+            # Run last, over everything the analysis already paid for.
+            # A technique cannot load a model or spend a request; it
+            # reads what is there and says what it sees, which is what
+            # keeps 153 of them affordable.
+            step("techniques", "Recording what each technique saw")
+            report.techniques = self._run_techniques(
+                image=image, data=data, filename=filename,
+                exif=exif_report, ocr=ocr_result,
+                script_reading=script_reading, embedding=embedding,
+                evidence=evidence, candidates=list(fused.candidates),
+                read_places=list(read_places), online=online_enrichment,
+            )
+
             report.candidates = [c.as_dict() for c in fused.candidates]
             report.prediction = self._build_prediction(fused, exif_report)
             report.engine = self.engine_status()
@@ -475,6 +497,36 @@ class AnalysisEngine:
         report.elapsed_s = time.time() - t0
         step("done", "Complete")
         return report
+
+    def _run_techniques(self, *, image, data, filename, exif, ocr,
+                        script_reading, embedding, evidence, candidates,
+                        read_places, online) -> list[dict[str, Any]]:
+        """Run every applicable numbered technique and record all of them.
+
+        Failures here must not cost the analysis. The techniques are a
+        second, descriptive account of an image whose location has
+        already been worked out; a broken detector should cost its own
+        finding and nothing else.
+        """
+        try:
+            from .techniques import Context, run_all
+        except Exception as exc:                        # pragma: no cover
+            log.warning("technique registry unavailable: %s", exc)
+            return []
+
+        ctx = Context(
+            image=image, raw_bytes=data, filename=filename, exif=exif,
+            ocr=ocr, script_reading=script_reading, embedding=embedding,
+            evidence=evidence, candidates=candidates,
+            read_places=read_places, cfg=self.cfg, engine=self,
+            online=online,
+        )
+        try:
+            findings = run_all(ctx)
+        except Exception:                               # pragma: no cover
+            log.exception("the technique pass failed")
+            return []
+        return [f.as_dict() for f in findings]
 
     def _choose_ocr_group(self, evidence: VisualEvidence
                           ) -> tuple[str, ...] | None:

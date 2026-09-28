@@ -474,6 +474,108 @@ SETTING = Group(
 )
 
 # --------------------------------------------------------------------------
+# Described, not counted
+#
+# The three groups below carry no constraint on any option, which means
+# they are read out in the report and move nothing. That is deliberate,
+# and it is not the same decision as the one recorded further down.
+#
+# Techniques 10, 14 and 15 of the specification -- road signs, facades,
+# windows and doors -- were measured as *fusion inputs* in Phase 22 and
+# were inert or harmful. Nothing here disputes that: none of them is
+# allowed near a candidate score. What the measurement did not show, and
+# could not, is that the observations are worthless to a person. An
+# analyst reading the evidence list wants to know the signs were yellow
+# diamonds even when that fact moves no coordinate, because they can
+# combine it with things the fusion cannot see.
+#
+# So these report and do not steer. If anyone later wants one of them to
+# steer, the bar is unchanged: measure it on the benchmark and keep it
+# only if the error distribution improves.
+# --------------------------------------------------------------------------
+
+SIGN_STYLE = Group(
+    key="sign_style",
+    title="Road sign convention",
+    weight_key="w_region_hint",
+    min_confidence=0.30,
+    description="Which signing convention the traffic signs follow. "
+                "Reported only: measured on the benchmark and it moved "
+                "nothing, in either direction.",
+    options=(
+        _o("vienna", "Vienna convention (European)",
+           "European road signs: red-bordered white triangles and circles",
+           "a triangular warning sign with a thick red border"),
+        _o("mutcd", "MUTCD (North American)",
+           "North American road signs: yellow diamond warning signs",
+           "a yellow diamond-shaped road warning sign"),
+        _o("sadc", "Southern African",
+           "southern African road signs with red-bordered white triangles"),
+        _o("australasian", "Australasian",
+           "Australian road signs: yellow diamonds with black symbols"),
+        _o("japanese", "Japanese",
+           "Japanese road signs with blue and yellow panels and kanji"),
+        _o("none", "No road signs visible",
+           "a photograph with no road signs or traffic signs in it"),
+    ),
+)
+
+FACADE = Group(
+    key="facade",
+    title="Building facade",
+    weight_key="w_region_hint",
+    min_confidence=0.28,
+    description="What the buildings are faced with. Reported only.",
+    options=(
+        _o("render", "Painted render or stucco",
+           "buildings faced with painted render or stucco"),
+        _o("brick", "Exposed brick",
+           "buildings with exposed red or brown brick walls"),
+        _o("concrete", "Bare concrete",
+           "buildings of bare unpainted concrete"),
+        _o("stone", "Cut stone",
+           "buildings faced with cut stone blocks"),
+        _o("glass", "Glass curtain wall",
+           "a building clad entirely in a glass curtain wall"),
+        _o("timber", "Timber",
+           "buildings clad in painted or bare timber boards"),
+        _o("metal", "Corrugated metal",
+           "buildings clad in corrugated metal sheeting"),
+        _o("tile", "Ceramic tile",
+           "buildings faced with small ceramic wall tiles"),
+    ),
+)
+
+OPENINGS = Group(
+    key="openings",
+    title="Windows, doors and roofline",
+    weight_key="w_region_hint",
+    min_confidence=0.28,
+    description="The shape of the openings and the top of the building. "
+                "Reported only: the roof-form version of this was "
+                "measured and made the median error worse.",
+    options=(
+        _o("shutters", "External shutters",
+           "windows with hinged external shutters"),
+        _o("grilles", "Window grilles or bars",
+           "windows protected by metal security grilles or bars"),
+        _o("sash", "Sash windows",
+           "tall vertically sliding sash windows"),
+        _o("balconies", "Projecting balconies",
+           "apartment buildings with rows of projecting balconies"),
+        _o("flatroof", "Flat roof",
+           "buildings with flat roofs and parapets"),
+        _o("pitchedtile", "Pitched tiled roof",
+           "buildings with steeply pitched roofs of clay tiles"),
+        _o("pitchedmetal", "Pitched metal roof",
+           "buildings with pitched roofs of corrugated metal"),
+        _o("watertanks", "Rooftop water tanks",
+           "rooftops carrying black plastic water storage tanks"),
+    ),
+)
+
+
+# --------------------------------------------------------------------------
 # What is deliberately not in this file
 # --------------------------------------------------------------------------
 #
@@ -512,6 +614,16 @@ SETTING = Group(
 ALL_GROUPS: tuple[Group, ...] = (
     TRAFFIC, SCRIPT, REGION, ARCHITECTURE, BIOME, SNOW, ROAD, UTILITY,
     PLATE, VEHICLES, TERRAIN, SETTING,
+    # Descriptive only -- see "Described, not counted" above. Every option
+    # in these three constrains nothing, so they are read out and ignored
+    # by the fusion.
+    SIGN_STYLE, FACADE, OPENINGS,
+)
+
+# The groups that can actually move a candidate. Kept separate so the
+# distinction is checkable rather than a matter of reading every option.
+SCORING_GROUPS: tuple[Group, ...] = tuple(
+    g for g in ALL_GROUPS if any(o.constrains for o in g.options)
 )
 
 GROUPS_BY_KEY = {g.key: g for g in ALL_GROUPS}
