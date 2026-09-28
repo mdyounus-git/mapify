@@ -92,7 +92,18 @@ class Observation:
 
     @property
     def counted(self) -> bool:
-        return self.duplicate_of is None
+        return self.duplicate_of is None and self.locatable
+
+    @property
+    def locatable(self) -> bool:
+        """Is this a photograph of a place at all?
+
+        A poster added to a session is not a second view of the street.
+        Counting it would put its locator output -- a softmax that had to
+        answer something -- into a product of likelihoods, where every
+        place it failed to mention would be multiplied down.
+        """
+        return bool(getattr(self.report, "locatable", True))
 
     @property
     def ok(self) -> bool:
@@ -105,6 +116,7 @@ class Observation:
             "name": self.name,
             "ok": self.ok,
             "counted": self.counted,
+            "locatable": self.locatable,
             "duplicate_of": self.duplicate_of,
             "similarity": round(self.similarity, 4),
             "confidence": pred.get("confidence"),

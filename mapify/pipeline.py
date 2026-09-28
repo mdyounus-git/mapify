@@ -78,6 +78,11 @@ class AnalysisReport:
     # the whole report.
     techniques: list[dict[str, Any]] = field(default_factory=list)
     case_id: str | None = None
+    # Whether this is a photograph of a place at all, and why the gate
+    # decided as it did. When it is not, nothing downstream is allowed
+    # to produce a coordinate: see mapify/locatability.py.
+    locatability: dict[str, Any] = field(default_factory=dict)
+    locatable: bool = True
 
     # Not serialised. A multi-image session has to fuse the *inputs* to
     # each analysis, not its conclusions -- averaging three finished
@@ -113,6 +118,7 @@ class AnalysisReport:
             "read_places": self.read_places,
             "techniques": self.techniques,
             "case_id": self.case_id,
+            "locatability": self.locatability,
             "engine": self.engine,
             "warnings": self.warnings,
             "attribution": self.attribution,
@@ -445,6 +451,16 @@ class AnalysisEngine:
                 ceiling = max((c.score for c in raw), default=0.05)
                 extra_pool.extend(readplace.to_candidates(read_places, ceiling))
 
+            # ---- is this a photograph of a place? --------------------------
+            #
+            # Asked of evidence the locator did not produce, because the
+            # locator cannot decline: it is a softmax, it always answers.
+            step("gate", "Checking this is a photograph of a place")
+            gate = self._assess_locatability(source, embedding, ocr_result,
+                                             exif_report)
+            report.locatability = gate.as_dict()
+            report.locatable = gate.locatable
+
             # ---- fusion ---------------------------------------------------
             step("fuse", "Weighing the evidence")
             fused = self.fusion.fuse(
@@ -482,8 +498,35 @@ class AnalysisEngine:
                 read_places=list(read_places), online=online_enrichment,
             )
 
-            report.candidates = [c.as_dict() for c in fused.candidates]
-            report.prediction = self._build_prediction(fused, exif_report)
+            if gate.locatable:
+                report.candidates = [c.as_dict() for c in fused.candidates]
+                report.prediction = self._build_prediction(fused, exif_report)
+                report.prediction["locatable"] = True
+                report.prediction["image_kind"] = gate.as_dict()
+                if gate.withhold:
+                    # Doubtful: listed, not located. Same shape as any
+                    # other undetermined result, with the reason stated.
+                    pred = report.prediction
+                    pred["confidence"] = "insufficient"
+                    pred["determinate"] = False
+                    pred["confidence_reason"] = (
+                        gate.headline() + " " + pred.get("confidence_reason", ""))
+                    pred.setdefault("notes", []).insert(0, (
+                        "The candidates below are what the model produced "
+                        "for this image, not a finding: "
+                        + ("it may not be a photograph of a place."
+                           if gate.verdict == "doubtful" else
+                           "there is nothing around the subject to place "
+                           "it by.")))
+            else:
+                # Withheld, not softened. No candidates, no estimate, and
+                # nothing a session or a batch could fuse: the locator's
+                # opinion of a poster is not an observation of anywhere.
+                report.candidates = []
+                report.raw_candidates = []
+                report.gallery_distribution = None
+                report.prediction = self._not_a_place_prediction(
+                    gate, fused, exif_report, read_places)
             report.engine = self.engine_status()
             report.attribution = self.attribution_lines()
             report.ok = True
@@ -497,6 +540,90 @@ class AnalysisEngine:
         report.elapsed_s = time.time() - t0
         step("done", "Complete")
         return report
+
+    def _assess_locatability(self, source, embedding, ocr, exif):
+        """Run the gate. Never raises: a failed check lets the image through.
+
+        Withholding an answer is a claim, and it needs evidence. If the
+        gate itself cannot run, the image goes on to the ordinary
+        confidence path, which is conservative in its own right.
+        """
+        from .forensics.graphic import graphic_stats, text_coverage
+        from .locatability import Locatability, assess
+
+        try:
+            kinds = (self.evidence_extractor.group_probabilities(
+                embedding, "image_kind") if embedding is not None else {})
+            return assess(kinds, graphic_stats(source), text_coverage(ocr),
+                          exif)
+        except Exception as exc:                        # pragma: no cover
+            log.warning("locatability check failed: %s", exc)
+            return Locatability(verdict="place",
+                                reasons=[f"the check failed ({exc})"])
+
+    def _not_a_place_prediction(self, gate, fused: FusionResult,
+                                exif: ExifReport, read_places
+                                ) -> dict[str, Any]:
+        """The prediction for an image that is not of anywhere.
+
+        Same keys as a normal prediction, so nothing downstream has to
+        special-case its shape -- but every positional field is empty.
+        What the image *does* say is kept: a GPS tag is the file's own
+        claim and is reported as one, and a place named in the text is a
+        thing the text says, not where the image was taken.
+        """
+        embedded = None
+        if exif.gps:
+            embedded = {
+                "latitude": exif.gps.latitude,
+                "longitude": exif.gps.longitude,
+                "altitude_m": exif.gps.altitude_m,
+                "timestamp_utc": exif.gps.timestamp_utc,
+                "processing_method": exif.gps.processing_method,
+                "place": self.geocoder.locate(
+                    exif.gps.latitude, exif.gps.longitude, place_limit=3
+                ).as_dict(),
+                "timezone": tz.lookup(exif.gps.latitude,
+                                      exif.gps.longitude).as_dict(),
+                "trust_warnings": exif.trust_warnings,
+                "note": ("The file carries this GPS tag, but the image is not "
+                         "a photograph of a place, so nothing in it can "
+                         "confirm or contradict the tag."),
+            }
+        mentioned = [{"display_name": p.result.display_name,
+                      "latitude": p.result.latitude,
+                      "longitude": p.result.longitude,
+                      "query": p.query}
+                     for p in (read_places or [])[:5]]
+        notes = [
+            "Nothing about where this image was taken can be determined "
+            "from its content, so no location is given -- not a "
+            "low-confidence one, none.",
+        ]
+        if mentioned:
+            notes.append(
+                "The text in the image names a place. That is something the "
+                "image says, not where it was taken, and it is listed as "
+                "such rather than placed on the globe.")
+        reason = gate.headline()
+        if gate.reasons:
+            reason += " " + "; ".join(gate.reasons).capitalize() + "."
+        return {
+            "confidence": "insufficient",
+            "confidence_reason": reason,
+            "diagnostics": fused.diagnostics(),
+            "uncertainty_km": None,
+            "precision_km": None,
+            "centroid": None,
+            "estimated": None,
+            "embedded_gps": embedded,
+            "exif_vs_estimate": None,
+            "notes": notes,
+            "determinate": False,
+            "locatable": False,
+            "image_kind": gate.as_dict(),
+            "mentioned_places": mentioned,
+        }
 
     def _run_techniques(self, *, image, data, filename, exif, ocr,
                         script_reading, embedding, evidence, candidates,

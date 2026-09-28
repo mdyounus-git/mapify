@@ -56,6 +56,30 @@ class ClipEvidenceExtractor:
             return VisualEvidence(error=f"{type(exc).__name__}: {exc}")
         return self.score_embedding(emb)
 
+    def group_probabilities(self, emb: np.ndarray, group_key: str
+                            ) -> dict[str, float]:
+        """Every option's probability in one group, not just the top five.
+
+        The readings keep a ranked top five, which is right for a report
+        and wrong for a decision that has to add up the probability of a
+        whole *set* of options -- "is this any kind of non-photograph" --
+        where the mass that falls outside the top five still counts.
+        """
+        group = P.GROUPS_BY_KEY.get(group_key)
+        if group is None:
+            return {}
+        try:
+            bank = self._ensure_prompts()
+        except Exception:
+            return {}
+        sims = bank @ emb
+        scores = []
+        for option in group.options:
+            lo, hi = self._index[(group.key, option.key)]
+            scores.append(float(np.max(sims[lo:hi])))
+        probs = softmax(np.asarray(scores), SIM_TEMPERATURE)
+        return {o.key: float(p) for o, p in zip(group.options, probs)}
+
     def score_embedding(self, emb: np.ndarray) -> VisualEvidence:
         """Score the prompt bank against an embedding already computed.
 

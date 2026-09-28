@@ -576,6 +576,79 @@ OPENINGS = Group(
 
 
 # --------------------------------------------------------------------------
+# What kind of image this is at all.
+#
+# Every group above assumes it is looking at a photograph of somewhere.
+# This one checks the assumption. GeoCLIP is a softmax over a gallery of
+# GPS points, and a softmax sums to one: hand it a poster and it returns
+# ranked coordinates anyway, because returning nothing is not something
+# the architecture can do. The locatability gate reads this group, among
+# other signals, before any coordinate is allowed out of the pipeline.
+#
+# Descriptive: no option constrains geography. It decides whether the
+# question "where" applies, not what the answer is.
+# --------------------------------------------------------------------------
+
+IMAGE_KIND = Group(
+    key="image_kind",
+    title="Kind of image",
+    weight_key="w_region_hint",
+    min_confidence=0.25,
+    min_margin=0.05,
+    description="Whether this is a photograph of a place at all.",
+    options=(
+        _o("outdoor", "Photograph of an outdoor scene",
+           "a photograph of a street, a road or buildings outdoors",
+           "a photograph of a landscape or countryside",
+           "a travel photograph of a city"),
+        _o("indoor", "Photograph of an interior",
+           "a photograph taken inside a room",
+           "a photograph of the interior of a building"),
+        _o("object", "Close-up photograph of an object",
+           "a close-up product photograph of an object",
+           "a photograph of food on a plate",
+           "a photograph of an object on a table"),
+        _o("document", "Document or page of text",
+           "a scanned document",
+           "a page of printed text",
+           "a letter or a form"),
+        _o("poster", "Poster, flyer or cover",
+           "a graphic design poster with a title",
+           "a flyer or advertisement graphic",
+           "a book cover or album cover design"),
+        _o("screenshot", "Screenshot of software",
+           "a screenshot of a computer program",
+           "a screenshot of a website or app",
+           "a computer terminal window with text"),
+        _o("chart", "Chart or diagram",
+           "a chart or graph of data",
+           "a technical diagram or flowchart",
+           "an infographic"),
+        _o("slide", "Presentation slide",
+           "a presentation slide with bullet points"),
+        _o("logo", "Logo or lettering",
+           "a logo on a plain background",
+           "a word or lettering on a plain background"),
+        _o("illustration", "Illustration or artwork",
+           "a digital illustration or drawing",
+           "a cartoon or clip art",
+           "a painting"),
+        _o("map", "Map",
+           "a map",
+           "a screenshot of a street map"),
+    ),
+)
+
+# Which kinds are photographs of somewhere, which are photographs of
+# something with no surroundings, and which are not photographs at all.
+# The gate reads these sets; changing one changes what gets refused.
+KIND_PLACE = frozenset({"outdoor", "indoor"})
+KIND_NO_SCENERY = frozenset({"object"})
+KIND_NOT_A_PHOTO = frozenset({"document", "poster", "screenshot", "chart",
+                              "slide", "logo", "illustration", "map"})
+
+
+# --------------------------------------------------------------------------
 # What is deliberately not in this file
 # --------------------------------------------------------------------------
 #
@@ -618,6 +691,8 @@ ALL_GROUPS: tuple[Group, ...] = (
     # in these three constrains nothing, so they are read out and ignored
     # by the fusion.
     SIGN_STYLE, FACADE, OPENINGS,
+    # Not about the place at all: whether the image is of a place.
+    IMAGE_KIND,
 )
 
 # The groups that can actually move a candidate. Kept separate so the

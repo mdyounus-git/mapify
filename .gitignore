@@ -73,3 +73,13 @@ exports/
 # Benchmark output. Reproducible from scripts/evaluate.py, and a JSON row
 # per sample times a run per experiment adds up fast.
 bench/
+
+# Local geographic data built on this machine. OpenStreetMap extracts are
+# hundreds of megabytes and the store built from them is a derivative
+# database under ODbL: it is regenerated here, never redistributed.
+data/osm/
+data/geodata/
+data/tiles/
+data/tmp/
+data/cases/
+data/*.log
