@@ -50,6 +50,12 @@ class NetworkConfig:
     # analysis is exactly that. Point overpass_endpoint at your own
     # instance and switch this on if you run one.
     overpass_enabled: bool = False
+    # Historical weather and air quality at the leading candidate for the
+    # capture hour (techniques 61, 95-97): Open-Meteo, ERA5 and CAMS. Only
+    # a coordinate and a date are sent, never the photograph. Free for
+    # non-commercial use; a commercial deployment needs Open-Meteo's paid
+    # plan, or this switched off.
+    weather_history_enabled: bool = True
     overpass_endpoint: str = "https://overpass-api.de/api/interpreter"
     overpass_min_interval_s: float = 2.0
     overpass_timeout_s: float = 25.0

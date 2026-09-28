@@ -21,6 +21,10 @@ from .casefile import CaseFile, case_dir
 # Importing for the side effect of registration. Each module registers
 # its own block of technique numbers when it loads.
 from . import phase1_metadata          # noqa: F401  techniques 1-15
+from . import phase2_scene             # noqa: F401  techniques 16-32
+from . import phase3_solar             # noqa: F401  techniques 33-42
+from . import phase4_vision            # noqa: F401  techniques 43-56
+from . import phase5_temporal          # noqa: F401  techniques 57-72
 
 __all__ = [
     "REGISTRY", "Constraint", "Context", "Finding", "Region", "Technique",

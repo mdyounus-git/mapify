@@ -270,14 +270,21 @@ class GeoService:
 _SHARED: dict[str, GeoService] = {}
 
 
-def get_service(online: bool = True) -> GeoService:
+def get_service(online: bool | None = None) -> GeoService:
     """One service per process, shared by the web routes and the window.
 
     Both open the same SQLite store; two connections in one process would
     only contend with each other for the write lock.
+
+    ``online`` is set only by callers that state it -- the server and the
+    pipeline, from the configuration. A caller that only reads (a
+    technique looking up nearby landmarks) passes nothing, so it can never
+    switch the 3D view's fetching off by happening to run first.
     """
     svc = _SHARED.get("svc")
     if svc is None:
-        svc = GeoService(online=online)
+        svc = GeoService(online=True if online is None else online)
         _SHARED["svc"] = svc
+    elif online is not None:
+        svc.online = online
     return svc

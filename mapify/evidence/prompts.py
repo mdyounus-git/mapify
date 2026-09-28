@@ -576,6 +576,175 @@ OPENINGS = Group(
 
 
 # --------------------------------------------------------------------------
+# More described-not-counted groups, for techniques 17-32 (scene) and
+# 39-42 (light, sky and season). Same rule as the three above: no option
+# constrains geography, so the fusion never sees them. They are here for
+# the reader, and -- for lighting, sky and season -- as inputs to the
+# chronolocation checks, which compare them against astronomy rather
+# than against a map.
+# --------------------------------------------------------------------------
+
+PAVEMENT = Group(
+    key="pavement", title="Pavement and kerb", weight_key="w_region_hint",
+    min_confidence=0.26,
+    description="What the edge of the road is made of. Reported only.",
+    options=(
+        _o("kerbed", "Kerbed concrete pavement",
+           "a raised concrete pavement with a kerb along a street"),
+        _o("striped", "Painted striped kerb",
+           "a road kerb painted in alternating black and white or yellow stripes"),
+        _o("brick", "Brick or block paving",
+           "a sidewalk paved with interlocking bricks or blocks"),
+        _o("unpaved", "Unpaved roadside",
+           "an unpaved dirt shoulder beside the road with no sidewalk"),
+        _o("none", "No pavement visible",
+           "a photograph with no road or sidewalk visible"),
+    ),
+)
+
+STREET_FURNITURE = Group(
+    key="street_furniture", title="Street furniture", weight_key="w_region_hint",
+    min_confidence=0.26,
+    description="Bollards, lamps, benches. Measured as a fusion input in "
+                "Phase 22 and made the median error worse; reported only.",
+    options=(
+        _o("bollards", "Bollards", "a row of metal or concrete bollards"),
+        _o("lamps", "Street lamps", "tall street lamp posts along a road"),
+        _o("benches", "Benches and bins", "public benches and litter bins"),
+        _o("barriers", "Crash barriers or railings",
+           "metal crash barriers or railings beside a road"),
+        _o("none", "No street furniture",
+           "a photograph with no street furniture visible"),
+    ),
+)
+
+TRAFFIC_LIGHTS = Group(
+    key="traffic_lights", title="Traffic lights", weight_key="w_region_hint",
+    min_confidence=0.26,
+    description="How the signals are mounted. Reported only.",
+    options=(
+        _o("vertical", "Vertical signal heads",
+           "vertical red amber green traffic lights on a pole"),
+        _o("horizontal", "Horizontal signal heads",
+           "horizontal traffic lights mounted over the road"),
+        _o("countdown", "Countdown timer signals",
+           "traffic lights with a digital countdown timer"),
+        _o("overhead", "Signals on a mast arm",
+           "traffic lights hanging from a long mast arm over an intersection"),
+        _o("none", "No traffic lights",
+           "a photograph with no traffic lights visible"),
+    ),
+)
+
+TRANSIT = Group(
+    key="transit", title="Public transport", weight_key="w_region_hint",
+    min_confidence=0.26,
+    description="Buses, trams, rickshaws. Reported only.",
+    options=(
+        _o("citybus", "City buses", "a city bus at a bus stop"),
+        _o("doubledecker", "Double-decker buses", "a double-decker bus on a street"),
+        _o("tram", "Trams or streetcars", "a tram running on rails in a street"),
+        _o("minibus", "Shared minibuses", "crowded shared minibuses or vans"),
+        _o("rickshaw", "Cycle or auto rickshaws", "rickshaws waiting for passengers"),
+        _o("none", "No public transport", "a photograph with no public transport"),
+    ),
+)
+
+GROUND = Group(
+    key="ground", title="Soil and ground", weight_key="w_climate",
+    min_confidence=0.26,
+    description="What the bare ground looks like. Reported only.",
+    options=(
+        _o("red", "Red laterite soil", "red laterite soil and dust on the ground"),
+        _o("sand", "Sand", "sandy ground and dunes"),
+        _o("dark", "Dark soil", "dark brown or black earth in fields"),
+        _o("grass", "Grass cover", "ground covered in green grass"),
+        _o("rock", "Bare rock", "bare rocky ground and stones"),
+        _o("paved", "Paved over", "ground entirely covered by asphalt and concrete"),
+    ),
+)
+
+WEATHER = Group(
+    key="weather", title="Weather", weight_key="w_climate",
+    min_confidence=0.26,
+    description="The weather at the moment of the photograph. Reported, and "
+                "compared with weather records when a date and place are known.",
+    options=(
+        _o("clear", "Clear and sunny", "a clear sunny day with strong sunlight"),
+        _o("overcast", "Overcast", "an overcast grey day with no shadows"),
+        _o("rain", "Rain", "rain falling, with wet streets and umbrellas"),
+        _o("fog", "Fog or haze", "thick fog or haze reducing visibility"),
+        _o("snow", "Snowing", "snow falling from the sky"),
+    ),
+)
+
+SKY = Group(
+    key="sky", title="Sky and cloud", weight_key="w_climate",
+    min_confidence=0.26,
+    description="What the sky shows. Reported only.",
+    options=(
+        _o("blue", "Clear blue sky", "a clear deep blue sky with no clouds"),
+        _o("cumulus", "Scattered cumulus", "white puffy cumulus clouds in a blue sky"),
+        _o("overcast", "Overcast cloud", "a sky completely covered in grey cloud"),
+        _o("haze", "Hazy or smoggy", "a pale hazy or smoggy sky"),
+        _o("night", "Night sky", "a dark night sky"),
+        _o("none", "No sky visible", "a photograph with no sky visible"),
+    ),
+)
+
+LIGHTING = Group(
+    key="lighting", title="Light and time of day", weight_key="w_climate",
+    min_confidence=0.26,
+    description="Which part of the day the light belongs to. Compared with "
+                "sunrise and sunset when a time and place are known.",
+    options=(
+        _o("night", "Night, artificial light",
+           "a photograph taken at night lit by street lights"),
+        _o("golden", "Low sun, golden light",
+           "warm golden light from a low sun at sunrise or sunset"),
+        _o("twilight", "Twilight", "dusk twilight with a deep blue sky"),
+        _o("day", "Daylight, high sun",
+           "bright daylight with the sun high and short shadows"),
+        _o("diffuse", "Daylight, diffuse", "soft even daylight under cloud"),
+        _o("indoor", "Indoor lighting", "an interior lit by indoor lamps"),
+    ),
+)
+
+SEASON = Group(
+    key="season", title="Vegetation season", weight_key="w_climate",
+    min_confidence=0.26,
+    description="What the plants say about the time of year. Compared with "
+                "the capture date, accounting for the hemisphere.",
+    options=(
+        _o("lush", "Lush green growth", "trees in full dense green leaf"),
+        _o("autumn", "Autumn colour", "trees with orange and red autumn leaves"),
+        _o("bare", "Bare deciduous trees", "leafless bare trees in winter"),
+        _o("blossom", "Spring blossom", "trees covered in spring blossom"),
+        _o("dry", "Dry season", "dry brown grass and dusty dry-season vegetation"),
+        _o("snow", "Snow on the ground", "snow lying on the ground and trees"),
+        _o("evergreen", "Evergreen, no seasonal cue",
+           "tropical evergreen vegetation with no seasonal change"),
+    ),
+)
+
+
+CONSTRUCTION = Group(
+    key="construction", title="Construction state", weight_key="w_region_hint",
+    min_confidence=0.26,
+    description="Whether the scene is being built, finished, or worn. "
+                "Reported only; dated comparison needs dated building records.",
+    options=(
+        _o("site", "Construction in progress",
+           "a construction site with cranes, scaffolding and unfinished buildings"),
+        _o("new", "Newly finished", "brand new recently completed buildings"),
+        _o("established", "Established", "ordinary established buildings in use"),
+        _o("worn", "Weathered or derelict",
+           "old weathered or derelict buildings with peeling paint"),
+    ),
+)
+
+
+# --------------------------------------------------------------------------
 # What kind of image this is at all.
 #
 # Every group above assumes it is looking at a photograph of somewhere.
@@ -691,6 +860,8 @@ ALL_GROUPS: tuple[Group, ...] = (
     # in these three constrains nothing, so they are read out and ignored
     # by the fusion.
     SIGN_STYLE, FACADE, OPENINGS,
+    PAVEMENT, STREET_FURNITURE, TRAFFIC_LIGHTS, TRANSIT, GROUND,
+    WEATHER, SKY, LIGHTING, SEASON, CONSTRUCTION,
     # Not about the place at all: whether the image is of a place.
     IMAGE_KIND,
 )

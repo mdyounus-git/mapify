@@ -484,20 +484,6 @@ class AnalysisEngine:
             report.script_reading = script_reading
             report.read_place_objs = list(read_places)
 
-            # ---- the numbered techniques ----------------------------------
-            # Run last, over everything the analysis already paid for.
-            # A technique cannot load a model or spend a request; it
-            # reads what is there and says what it sees, which is what
-            # keeps 153 of them affordable.
-            step("techniques", "Recording what each technique saw")
-            report.techniques = self._run_techniques(
-                image=image, data=data, filename=filename,
-                exif=exif_report, ocr=ocr_result,
-                script_reading=script_reading, embedding=embedding,
-                evidence=evidence, candidates=list(fused.candidates),
-                read_places=list(read_places), online=online_enrichment,
-            )
-
             if gate.locatable:
                 report.candidates = [c.as_dict() for c in fused.candidates]
                 report.prediction = self._build_prediction(fused, exif_report)
@@ -527,6 +513,24 @@ class AnalysisEngine:
                 report.gallery_distribution = None
                 report.prediction = self._not_a_place_prediction(
                     gate, fused, exif_report, read_places)
+
+            # ---- the numbered techniques ----------------------------------
+            # Run last, over everything the analysis already paid for, and
+            # after the prediction exists, so the correlating techniques can
+            # read it. An image refused as not a place gets no candidates
+            # here either: a technique must not describe "the leading
+            # candidate" of a poster.
+            step("techniques", "Recording what each technique saw")
+            report.techniques = self._run_techniques(
+                image=image, data=data, filename=filename,
+                exif=exif_report, ocr=ocr_result,
+                script_reading=script_reading, embedding=embedding,
+                evidence=evidence,
+                candidates=list(fused.candidates) if gate.locatable else [],
+                read_places=list(read_places), online=online_enrichment,
+                prediction=report.prediction, fused=fused if gate.locatable else None,
+                locatability=report.locatability,
+            )
             report.engine = self.engine_status()
             report.attribution = self.attribution_lines()
             report.ok = True
@@ -627,7 +631,8 @@ class AnalysisEngine:
 
     def _run_techniques(self, *, image, data, filename, exif, ocr,
                         script_reading, embedding, evidence, candidates,
-                        read_places, online) -> list[dict[str, Any]]:
+                        read_places, online, prediction=None, fused=None,
+                        locatability=None) -> list[dict[str, Any]]:
         """Run every applicable numbered technique and record all of them.
 
         Failures here must not cost the analysis. The techniques are a
@@ -646,7 +651,8 @@ class AnalysisEngine:
             ocr=ocr, script_reading=script_reading, embedding=embedding,
             evidence=evidence, candidates=candidates,
             read_places=read_places, cfg=self.cfg, engine=self,
-            online=online,
+            online=online, prediction=prediction or {}, fused=fused,
+            locatability=locatability or {},
         )
         try:
             findings = run_all(ctx)

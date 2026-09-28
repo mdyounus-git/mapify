@@ -209,6 +209,22 @@ class Context:
     cfg: Any = None
     engine: Any = None                # for the few that need a geocoder
     online: bool = False
+    # What the analysis concluded, for the techniques that correlate
+    # evidence (phases 5 and 10): the prediction as reported, the fusion
+    # result behind it, and the locatability verdict.
+    prediction: dict[str, Any] = field(default_factory=dict)
+    fused: Any = None
+    locatability: dict[str, Any] = field(default_factory=dict)
+    # Shared, per-run results several techniques need -- the resolved
+    # capture time, the sun at the leading candidate -- computed once by
+    # whichever technique asks first. Also holds the findings made so far
+    # ("findings", by id), because techniques run in number order and the
+    # correlating ones read the earlier ones.
+    memo: dict[str, Any] = field(default_factory=dict)
+
+    def finding(self, technique_id: int):
+        """An earlier technique's finding in this run, or None."""
+        return self.memo.get("findings", {}).get(technique_id)
 
     def has(self, need: str) -> bool:
         """Is this need met? One place, so techniques never re-litigate it."""
@@ -259,6 +275,15 @@ def technique(*, id: int, key: str, name: str, phase: int,
     """Register one numbered technique."""
 
     def wrap(fn: Callable[[Context], Finding]) -> Callable[[Context], Finding]:
+        # The specification's own wording and phase win over whatever the
+        # module wrote, so a report names each technique exactly as it was
+        # asked for. Ids outside the specification (tests) keep their own.
+        from .spec import NAMES, phase_of
+        spec_name = NAMES.get(id, name)
+        spec_phase = phase_of(id) if id in NAMES else phase
+        if id in NAMES and spec_phase != phase:
+            raise ValueError(f"technique {id} is in phase {spec_phase} of the "
+                             f"specification, not {phase}")
         need_set = frozenset(needs)
         unknown = need_set - NEEDS
         if unknown:
@@ -267,7 +292,7 @@ def technique(*, id: int, key: str, name: str, phase: int,
             raise ValueError(f"technique {id} is already registered "
                              f"as {REGISTRY[id].key}")
         REGISTRY[id] = Technique(
-            id=id, key=key, name=name, phase=phase, needs=need_set,
+            id=id, key=key, name=spec_name, phase=spec_phase, needs=need_set,
             run=fn, feeds_fusion=feeds_fusion, fusion_note=fusion_note,
             enabled=enabled,
         )
@@ -310,7 +335,9 @@ def run_all(ctx: Context, phases: Iterable[int] | None = None,
         missing = ctx.missing(spec.needs)
         if missing:
             why = ", ".join(_NEED_WORDS.get(m, m) for m in missing)
-            findings.append(Finding.not_applicable(spec, why))
+            skipped = Finding.not_applicable(spec, why)
+            findings.append(skipped)
+            ctx.memo.setdefault("findings", {})[spec.id] = skipped
             continue
 
         started = time.perf_counter()
@@ -326,4 +353,5 @@ def run_all(ctx: Context, phases: Iterable[int] | None = None,
             )
         found.elapsed_ms = (time.perf_counter() - started) * 1000.0
         findings.append(found)
+        ctx.memo.setdefault("findings", {})[spec.id] = found
     return findings
