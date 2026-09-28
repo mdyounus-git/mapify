@@ -42,8 +42,14 @@ class NetworkConfig:
     nominatim_endpoint: str = "https://nominatim.openstreetmap.org"
     nominatim_min_interval_s: float = 1.1
     nominatim_max_lookups_per_analysis: int = 6
-    # Overpass (OpenStreetMap) for nearby named features.
-    overpass_enabled: bool = True
+    # Nearby named features come from local map data now: an imported
+    # OpenStreetMap region, or OpenFreeMap vector tiles fetched once and
+    # kept (mapify/geodata/nearby.py). The public Overpass servers are off
+    # by default because their usage policy names relying on them as an
+    # application's backend as the thing not to do, and one query per
+    # analysis is exactly that. Point overpass_endpoint at your own
+    # instance and switch this on if you run one.
+    overpass_enabled: bool = False
     overpass_endpoint: str = "https://overpass-api.de/api/interpreter"
     overpass_min_interval_s: float = 2.0
     overpass_timeout_s: float = 25.0

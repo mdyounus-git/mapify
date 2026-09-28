@@ -7,6 +7,7 @@
  */
 
 import { Globe } from "./globe.js";
+import { Ground3D, spanForZoom } from "./ground3d.js";
 import { drawLocator, loadCountries } from "./locator.js";
 
 const $ = (id) => document.getElementById(id);
@@ -59,6 +60,9 @@ const el = {
   findingCoord: $("finding-coord"),
   findingSpread: $("finding-spread"),
   findingWhy: $("finding-why"),
+  finding3d: $("finding-3d"),
+  globe3d: $("globe-3d"),
+  ground3d: $("ground3d"),
   askMore: $("ask-more"),
   askLede: $("ask-lede"),
   askQuestion: $("ask-question"),
@@ -89,8 +93,10 @@ const STAGES = [
   ["evidence", "Read visual clues"],
   ["ocr", "Read signage text"],
   ["readplace", "Look up the address"],
+  ["gate", "Check it is a photograph of a place"],
   ["fuse", "Weigh the evidence"],
   ["enrich", "Name the location"],
+  ["techniques", "Record what each technique saw"],
 ];
 
 const CONFIDENCE = {
@@ -205,6 +211,46 @@ async function boot() {
     lighting: el.lightMode.value,
   });
   state.globe.onHudUpdate = onHud;
+
+  state.ground = new Ground3D(el.ground3d, {
+    // Zooming out of the 3D view, or "Back to globe": hand back to the
+    // globe over wherever the 3D camera ended up, at the matching height.
+    // The globe keeps its own floor -- it will not come lower than its
+    // imagery supports -- so this lands at or above that.
+    onClose: (view) => {
+      state.globe.setPaused(false);
+      if (view && Number.isFinite(view.lat) && Number.isFinite(view.lon)) {
+        // No lower than a normal landing (~300 km): at the globe's floor its
+        // own labels are drawn for a much closer camera than the globe is
+        // meant to be read from, and the globe should look as it always does.
+        const altKm = Math.max(300,
+          spanForZoom(view.zoom, view.lat, view.viewportPx) / 830);
+        state.globe.flyTo(view.lat, view.lon,
+          { altitude: 1 + altKm / 6371, duration: 0 });
+      }
+      state.handoffBlockedUntil = performance.now() + 1500;
+      setHudState("Globe");
+    },
+  });
+  el.finding3d.addEventListener("click", () => {
+    if (state.view3d) openGround(state.view3d);
+  });
+  el.globe3d.addEventListener("click", () => {
+    const c = state.camera;
+    if (c) openGround(groundTargetAt(c.lat, c.lon), { fromAltitudeKm: c.altKm });
+  });
+
+  // Scrolling in at the globe's closest zoom carries on into the 3D
+  // ground view, at the same spot and scale. The globe's controls are not
+  // touched: this only listens.
+  el.canvas.addEventListener("wheel", (e) => {
+    const c = state.camera;
+    if (!c || e.deltaY >= 0 || !el.ground3d.hidden) return;
+    if (state.handoffBlockedUntil && performance.now() < state.handoffBlockedUntil) return;
+    if (c.flying || c.altKm > 32) return;
+    openGround(groundTargetAt(c.lat, c.lon),
+               { fromAltitudeKm: c.altKm, viewportPx: el.canvas.clientHeight });
+  }, { passive: true });
 
   loadCountries().then((geo) => {
     state.countries = geo;
@@ -555,11 +601,62 @@ function hideFinding() {
   el.finding.hidden = true;
 }
 
+/** Open the 3D ground view over a target, from anywhere in the app. */
+function openGround(target, how = {}) {
+  el.globe3d.hidden = true;
+  state.globe.setPaused(true);
+  setHudState(`3D ground view: ${target.label || "location"}`);
+  state.ground.open(target, how);
+}
+
+/**
+ * What the 3D view should be about when entered from the globe at a point.
+ *
+ * If the point is near the current result, the result -- so the view marks
+ * it and states its uncertainty. Otherwise just the ground under the camera.
+ */
+function groundTargetAt(lat, lon) {
+  const target = state.view3d;
+  if (target) {
+    const dLat = (target.lat - lat) * 111.32;
+    const dLon = (target.lon - lon) * 111.32 * Math.cos((lat * Math.PI) / 180);
+    if (Math.hypot(dLat, dLon) < 40) return target;
+  }
+  return { lat, lon, label: `${fmtLatLon(lat, lon)}`, origin: "camera" };
+}
+
+/** What "View in 3D" should open, given the result and the selection. */
+function set3dTarget(target) {
+  state.view3d = target;
+  el.finding3d.hidden = !target;
+}
+
 function showFinding(report) {
   const pred = report.prediction || {};
   const est = pred.estimated;
   const card = el.finding.querySelector(".finding-card");
   card.classList.remove("indeterminate", "read");
+  set3dTarget(null);
+
+  if (pred.locatable === false) {
+    // Not a low-confidence answer: no answer. The image is not of
+    // anywhere, and the card says what it is instead of where.
+    const kind = pred.image_kind || {};
+    el.findingOrigin.className = "origin none";
+    el.findingOrigin.textContent = "Not a photograph of a place";
+    el.findingPlace.textContent = kind.kind_label || "Not a photograph";
+    el.findingChip.className = "chip insufficient";
+    el.findingChip.textContent = "No location";
+    el.findingChip.title =
+      "Mapify locates photographs of places. This image is not one, so "
+      + "no coordinate is given.";
+    el.findingCoord.textContent = "";
+    el.findingSpread.textContent = "";
+    el.findingWhy.textContent = kind.headline || pred.confidence_reason || "";
+    card.classList.add("indeterminate");
+    el.finding.hidden = false;
+    return;
+  }
 
   if (!pred.determinate || !est) {
     el.findingOrigin.className = "origin none";
@@ -618,6 +715,13 @@ function showFinding(report) {
       + `that is how sure this is the right place, not how precise the `
       + `coordinate is.`
     : "How far apart the candidates are.";
+
+  set3dTarget({
+    lat: est.latitude, lon: est.longitude,
+    label: el.findingPlace.textContent,
+    uncertaintyKm: pred.uncertainty_km, precisionKm: pred.precision_km,
+    origin: String(est.provenance || "model"),
+  });
 
   el.findingWhy.textContent = wasRead && readPlace
     ? `Matched "${readPlace.display_name.split(",")[0]}" in OpenStreetMap `
@@ -793,6 +897,10 @@ async function declineMore() {
 }
 
 function onHud(lat, lon, altKm, flying, sun, imagery) {
+  // Low and still over the globe: the buildings under the camera are the
+  // next thing worth looking at, result or no result.
+  state.camera = { lat, lon, altKm, flying };
+  if (el.globe3d) el.globe3d.hidden = flying || altKm > 80 || !el.ground3d.hidden;
   el.hudCoords.textContent = fmtLatLon(lat, lon);
   el.hudAlt.textContent = fmtKm(altKm);
   if (sun && sun.lat != null) {
@@ -1276,6 +1384,60 @@ async function exportHtml() {
   }
 }
 
+/** Save the case for QGIS or kepler.gl. */
+async function exportGeo(kind, button) {
+  if (!state.report) return;
+  const result = el.report.querySelector(".export-result");
+  const say = (html) => {
+    if (!result) return;
+    result.hidden = false;
+    result.innerHTML = html;
+  };
+  button.disabled = true;
+  try {
+    if (nativeApi()) {
+      const res = await state.native.export_geo(kind, JSON.stringify(state.report));
+      if (res?.cancelled) return;
+      if (res?.error) { say(`Could not save: ${esc(res.error)}`); return; }
+      if (kind === "gpkg") {
+        say(`Saved to ${esc(res.path)}. `
+          + (res.qgis
+            ? `<button type="button" class="btn small" data-open-qgis>Open in QGIS</button>`
+            : `QGIS is not installed here; it is free from
+               <span class="mono">qgis.org/download</span>, and the file
+               opens in it directly.`));
+        result.querySelector("[data-open-qgis]")?.addEventListener("click",
+          async () => {
+            const r = await state.native.open_in_qgis(res.path);
+            if (r?.error) say(`Could not open QGIS: ${esc(r.error)}`);
+          });
+      } else {
+        say(`Saved to ${esc(res.path)}. Open <span class="mono">kepler.gl</span>
+          in a browser and drop the file onto it.`);
+      }
+      return;
+    }
+    // In a plain browser there is no save dialog; download instead.
+    const resp = await fetch(`/api/export/${kind}`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ report: state.report }),
+    });
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    const blob = kind === "gpkg" ? await resp.blob()
+      : new Blob([JSON.stringify(await resp.json())], { type: "application/json" });
+    const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-");
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = kind === "gpkg" ? `mapify-${stamp}.gpkg` : `mapify-${stamp}.kepler.json`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  } catch (err) {
+    say(`Could not export: ${esc(err.message || String(err))}`);
+  } finally {
+    button.disabled = false;
+  }
+}
+
 /* ─────────────────────────── analysis ─────────────────────────── */
 
 async function analyse(source) {
@@ -1353,7 +1515,9 @@ async function analyse(source) {
     // offered in the desktop app, where there is a file dialog to add
     // another photograph with, and only for a file we know the path of.
     const band = report.prediction?.confidence;
-    if (band === "insufficient" || band === "low") {
+    if (report.prediction?.locatable === false) {
+      setHudState("Not a photograph of a place");
+    } else if (band === "insufficient" || band === "low") {
       showAsk({
         lede: band === "insufficient"
           ? "Nothing in this photograph places it."
@@ -1439,6 +1603,9 @@ function markStage(stage, message) {
   const items = [...el.steps.querySelectorAll("li")];
   let index = items.findIndex((li) => li.dataset.stage === stage);
   if (stage === "done") index = items.length;
+  // A stage the list does not know (a newer server, an optional step)
+  // leaves the bar where it was rather than resetting it to nothing.
+  if (index < 0) return;
   items.forEach((li, i) => {
     li.className = i < index ? "done" : i === index ? "active" : "";
   });
@@ -1475,8 +1642,8 @@ function render(report) {
       lat: c.latitude,
       lon: c.longitude,
       label: candidateName(c),
-      kind: i === 0 ? "primary" : "candidate",
-      radiusKm: i === 0 ? pred.uncertainty_km : 0,
+      kind: i === 0 && pred.determinate ? "primary" : "candidate",
+      radiusKm: i === 0 && pred.determinate ? pred.uncertainty_km : 0,
     });
   });
   const gps = pred.embedded_gps;
@@ -1487,8 +1654,16 @@ function render(report) {
     });
   }
 
-  if (report.candidates?.length) selectCandidate(0, { fly: true });
-  else if (gps) {
+  // Fly to the leader only when there is an answer. An undetermined
+  // result used to land on candidate one with a primary marker and an
+  // uncertainty ring -- the look of an answer -- directly beside a card
+  // saying nothing had been determined. The candidates stay listed, as
+  // what the model considered, and a click still flies to any of them.
+  if (report.candidates?.length && pred.determinate) {
+    selectCandidate(0, { fly: true });
+  } else if (report.candidates?.length) {
+    setHudState("No location determined");
+  } else if (gps) {
     state.globe.setActiveMarker("exif");
     state.globe.flyTo(gps.latitude, gps.longitude, { altitude: 1.5 });
   }
@@ -1608,6 +1783,17 @@ function selectCandidate(index, { fly = false } = {}) {
     node.classList.toggle("active", node.dataset.index === String(index));
   }
   state.globe.setActiveMarker(index);
+  const pred3d = state.report?.prediction || {};
+  if (pred3d.locatable !== false) {
+    set3dTarget({
+      lat: c.latitude, lon: c.longitude,
+      label: `${index === 0 && pred3d.determinate ? "" : `Candidate ${index + 1}: `}`
+        + candidateName(c),
+      uncertaintyKm: pred3d.uncertainty_km,
+      precisionKm: index === 0 ? pred3d.precision_km : null,
+      origin: String(c.provenance || "model"),
+    });
+  }
 
   if (fly) {
     const name = candidateName(c);
@@ -1643,7 +1829,28 @@ function renderReport(report) {
      So the rail's job is the detail behind the answer, and it starts
      with what the band was measured to mean -- the one part of the
      headline that needs more room than a tooltip. ------------------- */
-  if (!pred.determinate || !est) {
+  if (pred.locatable === false) {
+    const kind = pred.image_kind || {};
+    const reasons = (kind.reasons || [])
+      .map((r) => `<li>${esc(r)}</li>`).join("");
+    const mentioned = (pred.mentioned_places || [])
+      .map((m) => `<li>${esc(m.display_name)}
+         <span class="muted">— read as “${esc(m.query)}”</span></li>`)
+      .join("");
+    out.push(block("Not a photograph of a place", `
+      <div class="verdict indeterminate">
+        <p class="measured">${esc(kind.headline || "")}</p>
+        <div class="note risk"><div>Mapify places photographs by what the
+          scene looks like and by what is written in it. This image has no
+          scene, so there is nothing to place, and no coordinate is given —
+          not a low-confidence one, none.</div></div>
+        ${reasons ? `<p class="muted" style="margin:10px 0 4px">Why:</p>
+          <ul class="plain">${reasons}</ul>` : ""}
+        ${mentioned ? `<p class="muted" style="margin:10px 0 4px">
+          The text in it names these places. That is what the image says,
+          not where it was taken:</p><ul class="plain">${mentioned}</ul>` : ""}
+      </div>`));
+  } else if (!pred.determinate || !est) {
     out.push(block("Why nothing was named", `
       <div class="verdict indeterminate">
         <p class="measured">${esc(
@@ -1853,7 +2060,28 @@ function renderReport(report) {
   out.push(`<p class="footnote">Analysed in ${report.elapsed_s}s on this
     machine. The image was not uploaded anywhere.</p>`);
 
+  // Take the case into the tools built for working with an answer.
+  // Offered whenever there is anything positional to take.
+  if (pred.locatable !== false && (report.candidates || []).length) {
+    out.push(block("Open this case elsewhere", `
+      <p class="muted" style="margin:0 0 8px">A GeoPackage opens in QGIS
+        with the candidates, the estimate and — when there is one — the
+        buildings, streets and water around it, styled. A kepler.gl map
+        shows the same in 3D in the browser. Both carry the data's
+        licences with them.</p>
+      <div class="export-row">
+        <button type="button" class="btn small" data-export="gpkg">
+          Save for QGIS (.gpkg)</button>
+        <button type="button" class="btn small" data-export="kepler">
+          Save for kepler.gl (.json)</button>
+      </div>
+      <p class="muted export-result" hidden></p>`));
+  }
+
   el.report.innerHTML = out.join("");
+  for (const btn of el.report.querySelectorAll("[data-export]")) {
+    btn.addEventListener("click", () => exportGeo(btn.dataset.export, btn));
+  }
   const attrib = (report.attribution || []).join("   ·   ");
   el.attribution.textContent = attrib;
   el.attribution.title = (report.attribution || []).join("\n");

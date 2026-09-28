@@ -56,9 +56,48 @@ paper rather than relying on this file.
 |---|---|---|---|
 | **Natural Earth** — admin-0 countries, admin-1 states/provinces, populated places, 110m coastlines | Public domain | None; attribution requested as a courtesy | Credited in the application's status bar and on the globe |
 | **OpenStreetMap** via **Nominatim** (reverse geocoding) | Data: ODbL 1.0 | Attribute; respect the usage policy | See below |
-| **OpenStreetMap** via **Overpass** (nearby named features) | Data: ODbL 1.0 | Attribute; respect the usage policy | See below |
+| **OpenStreetMap** via **Overpass** (nearby named features) | Data: ODbL 1.0 | Attribute; respect the usage policy | **Off by default** since the 3D work — see below |
+| **OpenStreetMap regional extracts** from **Geofabrik** (`download.geofabrik.de`), cut from the planet file | Data: ODbL 1.0 | Attribute; share-alike on derived databases | Imported into a local store on the user's machine (`scripts/import_osm.py`), never redistributed; attribution on the 3D view and in every export |
+| **OpenFreeMap** vector tiles (`tiles.openfreemap.org`), OpenStreetMap in the OpenMapTiles schema | Data: ODbL 1.0. Service: free, no key, "no limits on the number of map views or requests" | "OpenFreeMap © OpenMapTiles Data from OpenStreetMap" | Credited on the 3D view whenever its tiles are drawn; each z14 tile fetched once and kept |
+| **Google Research Open Buildings v3** — 1.8 billion footprints, read from the FlatGeobuf copy on Source Cooperative | CC BY 4.0 **or** ODbL 1.0, the user's choice; used here under CC BY 4.0 | Attribute | "Building footprints: Google Open Buildings v3 (CC BY 4.0)" on the 3D view and in every export |
 | **timezone-boundary-builder** data, used by `timezonefinder` | Data: ODbL 1.0 (derived from OSM) | Attribute | Credited in every report that carries a timezone |
 | **OpenStreetMap raster tiles** (optional ground detail) | Data: ODbL 1.0; tiles: OSMF usage policy | Attribute; respect the tile policy | Off by default; see below |
+
+### The 3D ground view, and where its buildings come from
+
+Zooming past the globe's closest view — or pressing "View the buildings here
+in 3D" — opens a view of the actual buildings around a place, extruded to
+whatever heights are known. Three sources, in order of trust, each labelled
+on screen:
+
+1. **An imported OpenStreetMap region.** The richest: every `height` and
+   `building:levels` tag, and a record of which heights were measured. The
+   Southern India extract holds 7,439,863 buildings, of which 10,832 carry a
+   measured height and 53,652 a floor count — **under one percent** between
+   them. Everything else is drawn at a stated nominal height, in its own
+   colour.
+2. **OpenFreeMap tiles**, for everywhere without an import. OpenMapTiles
+   folds OSM's height information into one number (`render_height`: the
+   height tag, else levels × 3.66 m, else 5 m) and does not say which, so a
+   building at exactly 5 m is drawn as unrecorded.
+3. **Google Open Buildings**, where OSM is thin. Machine detections with a
+   confidence score and no height, type or name; drawn in a colour of their
+   own and dropped wherever a mapped building already stands.
+
+The local store is a **derivative database** of OpenStreetMap under ODbL
+1.0. It is built on the user's machine and not distributed by this project.
+A GeoPackage or kepler.gl file exported from it carries the same obligations,
+and carries a `notice` naming every source and licence so they travel with
+it.
+
+### Exports for QGIS and kepler.gl
+
+Mapify writes files these tools open; it bundles neither. **QGIS** (GPL) is
+desktop software the user installs themselves — the GeoPackage opens in it
+styled, with a 2.5D building renderer, and "Open in QGIS" launches an
+installed copy. **kepler.gl** (MIT) is a web application — the exported map
+file is dropped onto it. GeoPackage is written with the standard library to
+the OGC specification (12-128r18) and read back by GDAL in the tests.
 
 ### ODbL, and what it means for your output
 
@@ -95,9 +134,25 @@ one place so it can be audited:
   crawl;
 - no bulk or systematic querying, and no use as a general geocoding backend.
 
-**Overpass** ([policy](https://dev.overpass-api.de/)) —
-`mapify/geo/landmarks.py`: one query per analysis, cached, rate-limited, and
-abandoned quietly on failure rather than retried.
+**Overpass** ([policy](https://dev.overpass-api.de/overpass-doc/en/preface/commons.html))
+— **off by default.** The policy names "setting up an app ... and relying on
+the public instances as backend" as the thing not to do, and one query per
+analysis was exactly that. Nearby landmarks now come from local map data
+(`mapify/geodata/nearby.py`): an imported region, or OpenFreeMap tiles
+fetched once and kept. `network.overpass_enabled` remains for anyone who
+runs their own instance; when on, `mapify/geo/landmarks.py` still sends one
+cached, rate-limited query per analysis.
+
+**Geofabrik** extracts are downloaded by hand or by the user's choice, once
+per region, with the published MD5 checked; the regional files are the
+intended distribution of the planet data for exactly this kind of use.
+
+**Source Cooperative** serves the Open Buildings FlatGeobuf files from a
+public bucket. They are read by HTTP range request — the access pattern the
+format and the host are built for — so a landing fetches the few hundred
+kilobytes around it, not the file. The envelope of every file is shipped
+in `mapify/data/open_buildings_index.json` (read once from their headers)
+so no landing has to ask 333 files where they are.
 
 **Tile usage** ([policy](https://operations.osmfoundation.org/policies/tiles/))
 — `mapify/web/js/detail.js`: **off by default.** When switched on, a landing
@@ -116,6 +171,15 @@ tile source if you need more.
 | **NASA Earth at Night 2012** (Black Marble) — NASA Earth Observatory / NOAA NGDC | As above | As above |
 | **NASA Blue Marble cloud composite** | As above | As above |
 | **GEBCO_08 elevation and bathymetry**, rendered by NASA Earth Observatory | NASA rendering: as above. The underlying GEBCO grid is © GEBCO/BODC and free for non-commercial use with attribution | Credited; used only as a greyscale relief channel |
+| **USGS The National Map orthoimagery** (`USGSImageryOnly`, USDA NAIP) — 3D ground view, United States only | Public domain; USGS requests the credit "Map services and data available from U.S. Geological Survey, National Geospatial Program." | Credited on the 3D view whenever its tiles are drawn. The only free source here that resolves individual houses (~2 m a pixel at zoom 16); it returns nothing outside the US, and the view says so |
+| **NASA HLS L30** (Harmonized Landsat Sentinel-2, Landsat 8/9) via GIBS — dated imagery in the 3D view | Public domain; GIBS: Fees none, AccessConstraints none; Landsat courtesy of the USGS | Credited with the date shown. 30 m a pixel: the view says buildings are not visible in it |
+| **Landsat WELD** annual composite and **Global Human Built-up and Settlement Extent** (Landsat-derived, SEDAC) via GIBS | As above | Credited on the 3D view |
+
+USGS **EarthExplorer** itself needs a personal account for downloads. Mapify
+does not handle anyone's credentials, so Landsat is reached through NASA
+GIBS, which serves the same public-domain data without one. Every imagery
+tile is fetched by the application and kept under the data folder, so a
+place seen once can be seen again offline and no tile is requested twice.
 
 See <https://www.nasa.gov/nasa-brand-center/images-and-media/>. NASA does not
 endorse this project, and the NASA name and logos are not used.
@@ -143,10 +207,20 @@ Earth vectors instead.
 | **pyshp** | MIT |
 | **timezonefinder** | MIT (code) |
 | **httpx** | BSD-3-Clause |
+| **deck.gl** — the 3D ground view (with luma.gl, math.gl, loaders.gl, bundled) | MIT |
+| **pyosmium** — reading OpenStreetMap extracts (optional; imports only) | BSD-2-Clause; **libosmium** inside it: Boost Software License 1.0 |
 | **pytest** | MIT |
+| **pyogrio** / **GDAL** — test-only independent reader for GeoPackage and FlatGeobuf | MIT / MIT-X11 |
 
-three.js is vendored into `mapify/web/vendor/` by `scripts/fetch_data.py`,
-which also fetches its `LICENSE` file into the same directory, unmodified.
+three.js and deck.gl are vendored into `mapify/web/vendor/` by
+`scripts/fetch_data.py`, which also fetches each `LICENSE` file, unmodified.
+deck.gl is pinned to a version and checked against a SHA-256 before it is
+kept: it is a script the page executes.
+
+The FlatGeobuf and vector-tile readers (`mapify/geodata/fgb.py`,
+`mapify/geodata/mvt.py`) are written from the public specifications
+(flatgeobuf.org, BSD-2-Clause; the Mapbox Vector Tile specification 2.1,
+CC BY 3.0) with no code copied.
 
 ---
 

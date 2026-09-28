@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<osm version="0.6" generator="hand">
+  <bounds minlat="12.7800" minlon="80.2200" maxlat="12.7900" maxlon="80.2300"/>
+  <node id="1" lat="12.7810" lon="80.2210"/>
+  <node id="2" lat="12.7810" lon="80.2215"/>
+  <node id="3" lat="12.7815" lon="80.2215"/>
+  <node id="4" lat="12.7815" lon="80.2210"/>
+  <node id="5" lat="12.7820" lon="80.2220"/>
+  <node id="6" lat="12.7830" lon="80.2230"/>
+  <node id="7" lat="12.7850" lon="80.2250"/>
+  <node id="8" lat="12.7850" lon="80.2260"/>
+  <node id="9" lat="12.7860" lon="80.2260"/>
+  <node id="10" lat="12.7860" lon="80.2250"/>
+  <node id="11" lat="12.7852" lon="80.2252"/>
+  <node id="12" lat="12.7852" lon="80.2254"/>
+  <node id="13" lat="12.7854" lon="80.2254"/>
+  <node id="14" lat="12.7854" lon="80.2252"/>
+  <node id="20" lat="12.7870" lon="80.2270">
+    <tag k="amenity" v="hospital"/><tag k="name" v="Test Hospital"/>
+  </node>
+  <way id="100">
+    <nd ref="1"/><nd ref="2"/><nd ref="3"/><nd ref="4"/><nd ref="1"/>
+    <tag k="building" v="apartments"/><tag k="building:levels" v="4"/>
+    <tag k="name" v="Test Towers"/>
+  </way>
+  <way id="101">
+    <nd ref="5"/><nd ref="6"/>
+    <tag k="highway" v="residential"/><tag k="name" v="Test Street"/>
+  </way>
+  <way id="102">
+    <nd ref="7"/><nd ref="8"/><nd ref="9"/><nd ref="10"/><nd ref="7"/>
+  </way>
+  <way id="103">
+    <nd ref="11"/><nd ref="12"/><nd ref="13"/><nd ref="14"/><nd ref="11"/>
+  </way>
+  <relation id="200">
+    <member type="way" ref="102" role="outer"/>
+    <member type="way" ref="103" role="inner"/>
+    <tag k="type" v="multipolygon"/><tag k="building" v="college"/>
+    <tag k="height" v="18 m"/><tag k="name" v="Courtyard College"/>
+  </relation>
+</osm>

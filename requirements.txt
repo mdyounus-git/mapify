@@ -34,3 +34,12 @@ httpx>=0.27                 # BSD-3-Clause
 
 # --- development ---------------------------------------------------------
 pytest>=8                   # MIT
+
+# Importing an OpenStreetMap regional extract into the local store
+# (scripts/import_osm.py). Not needed to run the application: without it,
+# buildings come from OpenFreeMap tiles and Google Open Buildings instead.
+osmium>=4.3,<5               # BSD-2-Clause (pyosmium); libosmium is BSL-1.0
+
+# Test-only: an independent reader/writer (GDAL) for the GeoPackage and
+# FlatGeobuf tests, which skip cleanly without it.
+# pyogrio>=0.13               # MIT; bundles GDAL (MIT/X11)

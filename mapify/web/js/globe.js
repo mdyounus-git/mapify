@@ -1594,9 +1594,21 @@ export class Globe {
     this.detail.show(target.lat, target.lon, zoom);
   }
 
+  /**
+   * Stop drawing while something else covers the globe.
+   *
+   * The 3D ground view fills the viewport; a planet rendering at full
+   * rate behind it would halve the frame rate of the view in front for
+   * nothing anyone can see.
+   */
+  setPaused(paused) {
+    this._paused = Boolean(paused);
+  }
+
   _animate() {
     if (this._disposed) return;
     requestAnimationFrame(() => this._animate());
+    if (this._paused) return;
     const now = performance.now();
     const dt = Math.min(0.05, (now - (this._last || now)) / 1000);
     this._last = now;

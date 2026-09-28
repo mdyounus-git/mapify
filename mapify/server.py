@@ -692,6 +692,124 @@ def create_app(cfg: Config | None = None, token: str | None = None,
 
         return Response(content=html, media_type="text/html; charset=utf-8")
 
+    # ------------------------------------------------ ground: 3D and imagery
+    #
+    # Buildings, streets and water come from the local store (OSM regions
+    # the user imported, plus Google Open Buildings fetched per area and
+    # kept). Imagery tiles are fetched here and cached on disk, so the
+    # page's content policy never has to name an outside host.
+
+    geo_state: dict[str, Any] = {}
+
+    def geo():
+        from .geodata.service import get_service
+        return get_service(online=not cfg.network.offline_only)
+
+    def tiles():
+        cache = geo_state.get("tiles")
+        if cache is None:
+            from .geodata.tiles import TileCache
+            cache = TileCache(offline=cfg.network.offline_only)
+            geo_state["tiles"] = cache
+        return cache
+
+    def _coord(lat: float, lon: float) -> None:
+        if not (-90.0 <= lat <= 90.0 and -180.0 <= lon <= 180.0):
+            raise HTTPException(status_code=400, detail="coordinate out of range")
+
+    @app.get("/api/geodata/status")
+    def geodata_status(lat: float | None = None, lon: float | None = None
+                       ) -> dict[str, Any]:
+        from .geodata.tiles import sources_for
+        out = geo().status(lat, lon)
+        if lat is not None and lon is not None:
+            _coord(lat, lon)
+            out["imagery"] = sources_for(lat, lon)
+        return out
+
+    @app.get("/api/geodata/around")
+    def geodata_around(lat: float, lon: float, radius: float = 800.0
+                       ) -> dict[str, Any]:
+        _coord(lat, lon)
+        return geo().around(lat, lon, radius)
+
+    @app.get("/api/tiles/{source}/{z}/{x}/{y}")
+    def tile(source: str, z: int, x: int, y: int, date: str | None = None):
+        data, why = tiles().get(source, z, x, y, date)
+        if data is None:
+            # 204 rather than 404: "no imagery here" is an answer the
+            # view draws as empty ground, not an error it reports.
+            return Response(status_code=204, headers={"X-Mapify-Reason": why})
+        return Response(content=data, media_type=why, headers={
+            "Cache-Control": "private, max-age=604800"})
+
+    @app.get("/api/imagery/hls-latest")
+    def hls_latest(lat: float, lon: float, days: int = 40) -> dict[str, Any]:
+        """The most recent date Landsat actually covered this spot.
+
+        HLS is daily granules, not a mosaic: on most days a given place
+        was not imaged, and the tile comes back empty. Walk back until a
+        tile holds something.
+        """
+        import datetime as dt
+        import math as _m
+        _coord(lat, lon)
+        z = 10
+        n = 2 ** z
+        x = int((lon + 180) / 360 * n)
+        y = int((1 - _m.asinh(_m.tan(_m.radians(lat))) / _m.pi) / 2 * n)
+        today = dt.date.today()
+        for back in range(1, max(2, min(90, days))):
+            day = (today - dt.timedelta(days=back)).isoformat()
+            data, _why = tiles().get("hls", z, x, y, day)
+            # An empty PNG tile is a few hundred bytes; anything carrying
+            # imagery is several kilobytes.
+            if data is not None and len(data) > 2000:
+                return {"date": day, "days_ago": back}
+        return {"date": None, "days_ago": None,
+                "note": f"No Landsat pass with imagery here in {days} days."}
+
+    # ------------------------------------------------ exports: QGIS, kepler
+
+    def _around_for(report: dict[str, Any]) -> dict[str, Any] | None:
+        pred = report.get("prediction") or {}
+        est = pred.get("estimated")
+        if not (pred.get("determinate") and est):
+            return None
+        try:
+            return geo().around(est["latitude"], est["longitude"], 900)
+        except Exception as exc:                       # pragma: no cover
+            log.warning("export: no surroundings (%s)", exc)
+            return None
+
+    @app.post("/api/export/kepler")
+    def export_kepler(payload: dict[str, Any]) -> dict[str, Any]:
+        from .exporters import build_kepler
+        report = payload.get("report")
+        if not isinstance(report, dict):
+            raise HTTPException(status_code=400, detail="No report given.")
+        return build_kepler(report, _around_for(report))
+
+    @app.post("/api/export/gpkg")
+    def export_gpkg(payload: dict[str, Any]) -> Response:
+        import tempfile
+        from .exporters import build_gpkg
+        report = payload.get("report")
+        if not isinstance(report, dict):
+            raise HTTPException(status_code=400, detail="No report given.")
+        tmp = Path(tempfile.mkdtemp(dir=str(state_dir()))) / "case.gpkg"
+        try:
+            build_gpkg(report, _around_for(report), tmp)
+            data = tmp.read_bytes()
+        finally:
+            try:
+                tmp.unlink()
+                tmp.parent.rmdir()
+            except OSError:
+                pass
+        return Response(content=data,
+                        media_type="application/geopackage+sqlite3")
+
     @app.get("/api/attribution")
     async def attribution() -> dict[str, Any]:
         path = ROOT / "ATTRIBUTION.md"

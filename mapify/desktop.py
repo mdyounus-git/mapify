@@ -16,6 +16,7 @@ so no other program on the machine -- including a browser -- can reach it.
 
 from __future__ import annotations
 
+import subprocess
 import logging
 import os
 import secrets
@@ -55,6 +56,32 @@ def _free_port() -> int:
 # recurses forever and touches COM interfaces from the wrong thread. Keeping
 # the reference out of the bridge's attribute graph avoids all of that.
 _WINDOW: dict[str, Any] = {"ref": None}
+
+
+def _find_qgis() -> Path | None:
+    """The QGIS executable, from the standard Windows install locations.
+
+    QGIS is GPL desktop software and is not bundled; it is used when the
+    person already has it. The official installers put it under
+    Program Files as "QGIS <version>"; OSGeo4W puts it under C:\\OSGeo4W.
+    """
+    roots = [Path(os.environ.get("ProgramFiles", "C:/Program Files")),
+             Path(os.environ.get("ProgramW6432", "C:/Program Files"))]
+    found: list[Path] = []
+    for root in roots:
+        try:
+            for d in sorted(root.glob("QGIS *"), reverse=True):
+                for name in ("qgis-ltr-bin.exe", "qgis-bin.exe"):
+                    exe = d / "bin" / name
+                    if exe.is_file():
+                        found.append(exe)
+        except OSError:
+            continue
+    for exe in (Path("C:/OSGeo4W/bin/qgis-ltr-bin.exe"),
+                Path("C:/OSGeo4W/bin/qgis-bin.exe")):
+        if exe.is_file():
+            found.append(exe)
+    return found[0] if found else None
 
 
 class NativeBridge:
@@ -198,6 +225,75 @@ class NativeBridge:
         except OSError as exc:
             return {"error": str(exc)}
         return {"path": str(path)}
+
+    def export_geo(self, kind: str, report_json: str) -> dict[str, Any]:
+        """Save a case for QGIS (GeoPackage) or kepler.gl (map JSON).
+
+        Built and written here rather than passed through the page: a
+        GeoPackage is binary and can run to megabytes, which is the wrong
+        shape for a JavaScript bridge call.
+        """
+        import json as _json
+        import webview
+
+        from .exporters import build_gpkg, build_kepler
+        from .geodata.service import get_service
+
+        window = _WINDOW["ref"]
+        if window is None:
+            return {"error": "The application window is not ready yet."}
+        try:
+            report = _json.loads(report_json)
+        except ValueError:
+            return {"error": "The report could not be read."}
+        stamp = time.strftime("%Y-%m-%d-%H%M%S")
+        if kind == "gpkg":
+            suggested = f"mapify-{stamp}.gpkg"
+            types = ("GeoPackage for QGIS (*.gpkg)", "All files (*.*)")
+        elif kind == "kepler":
+            suggested = f"mapify-{stamp}.kepler.json"
+            types = ("kepler.gl map (*.json)", "All files (*.*)")
+        else:
+            return {"error": f"Unknown export: {kind}"}
+        target = window.create_file_dialog(
+            webview.SAVE_DIALOG, save_filename=suggested, file_types=types)
+        if not target:
+            return {"cancelled": True}
+        path = Path(target if isinstance(target, str) else target[0])
+
+        around = None
+        pred = report.get("prediction") or {}
+        est = pred.get("estimated")
+        if pred.get("determinate") and est:
+            try:
+                around = get_service().around(est["latitude"],
+                                              est["longitude"], 900)
+            except Exception as exc:
+                log.warning("export: no surroundings (%s)", exc)
+        try:
+            if kind == "gpkg":
+                build_gpkg(report, around, path)
+            else:
+                path.write_text(_json.dumps(build_kepler(report, around)),
+                                encoding="utf-8")
+        except OSError as exc:
+            return {"error": str(exc)}
+        return {"path": str(path), "qgis": bool(_find_qgis())}
+
+    def open_in_qgis(self, path: str) -> dict[str, Any]:
+        """Open a saved GeoPackage in QGIS, if QGIS is installed."""
+        exe = _find_qgis()
+        if exe is None:
+            return {"error": "QGIS is not installed.",
+                    "download": "https://qgis.org/download/"}
+        p = Path(path)
+        if not p.is_file() or p.suffix.lower() != ".gpkg":
+            return {"error": "That is not a saved GeoPackage."}
+        try:
+            subprocess.Popen([str(exe), str(p)])  # noqa: S603 - user-initiated
+        except OSError as exc:
+            return {"error": str(exc)}
+        return {"opened": str(exe)}
 
     def reveal(self, path: str) -> dict[str, Any]:
         """Show a saved file in Explorer."""

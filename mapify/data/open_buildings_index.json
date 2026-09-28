@@ -1,0 +1,3669 @@
+{
+ "built": "2026-09-28T15:25:52Z",
+ "files": [
+  {
+   "key": "google-research-open-buildings/fgb-s2/009_buildings.fgb",
+   "bytes": 1810550544,
+   "envelope": [
+    -45.0004107,
+    -23.4258059101839,
+    -41.5854147,
+    -21.1423418008094
+   ],
+   "features": 8021302
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/00b_buildings.fgb",
+   "bytes": 2686620840,
+   "envelope": [
+    -45.0006945180755,
+    -22.2460682274027,
+    -39.9811678879603,
+    -16.4192712404493
+   ],
+   "features": 11929133
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/00d_buildings.fgb",
+   "bytes": 43578624,
+   "envelope": [
+    -39.9813333650255,
+    -19.7140387940686,
+    -39.2937734442547,
+    -17.7112922633533
+   ],
+   "features": 193516
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/013_buildings.fgb",
+   "bytes": 3184,
+   "envelope": [
+    -29.3171035751404,
+    -20.5098272687063,
+    -29.310211068494,
+    -20.5060457992242
+   ],
+   "features": 11
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/025_buildings.fgb",
+   "bytes": 129128,
+   "envelope": [
+    -12.6992791544895,
+    -37.4176775270225,
+    -12.2183132219333,
+    -37.0641091676586
+   ],
+   "features": 573
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/04f_buildings.fgb",
+   "bytes": 1660280,
+   "envelope": [
+    -5.76561549848803,
+    -16.0224336012171,
+    -5.64652595285109,
+    -15.9187628546867
+   ],
+   "features": 7409
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/05b_buildings.fgb",
+   "bytes": 342864,
+   "envelope": [
+    -14.4191688085557,
+    -7.97539119825839,
+    -14.3270253348661,
+    -7.89094501718423
+   ],
+   "features": 1503
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/063_buildings.fgb",
+   "bytes": 428240,
+   "envelope": [
+    -33.8161168844539,
+    -3.86970268704148,
+    -32.3879841868273,
+    -3.81280233520524
+   ],
+   "features": 1902
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/071_buildings.fgb",
+   "bytes": 1565530520,
+   "envelope": [
+    -39.9812831,
+    -13.0470894512828,
+    -35.0860843769055,
+    -8.17970902436277
+   ],
+   "features": 6960375
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/073_buildings.fgb",
+   "bytes": 324952184,
+   "envelope": [
+    -39.9813183987291,
+    -17.9808508993238,
+    -38.6853102258818,
+    -12.8165967975966
+   ],
+   "features": 1449097
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/075_buildings.fgb",
+   "bytes": 843583720,
+   "envelope": [
+    -45.0002053512589,
+    -17.7018557013182,
+    -39.9811730043333,
+    -11.8722257241295
+   ],
+   "features": 3766871
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/077_buildings.fgb",
+   "bytes": 441378792,
+   "envelope": [
+    -45.0000643578485,
+    -12.8071099730104,
+    -39.9812194376816,
+    -7.56468057885026
+   ],
+   "features": 1963026
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/079_buildings.fgb",
+   "bytes": 824441440,
+   "envelope": [
+    -45.00008668207,
+    -8.17208073417543,
+    -39.9811632,
+    -3.58421267633568
+   ],
+   "features": 3665983
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/07b_buildings.fgb",
+   "bytes": 2211765736,
+   "envelope": [
+    -39.9813442187388,
+    -8.72257932768776,
+    -34.7914932894435,
+    -3.88469688612825
+   ],
+   "features": 9800953
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/07d_buildings.fgb",
+   "bytes": 347143096,
+   "envelope": [
+    -39.9813036334921,
+    -3.97453891670828,
+    -38.2687437867529,
+    -2.8458121535536
+   ],
+   "features": 1516711
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/07f_buildings.fgb",
+   "bytes": 468671976,
+   "envelope": [
+    -45.0001978214284,
+    -3.87912167932934,
+    -39.9811683258894,
+    -1.26370852588363
+   ],
+   "features": 2076018
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/093_buildings.fgb",
+   "bytes": 43431144,
+   "envelope": [
+    -24.808329821067,
+    14.7838565880626,
+    -23.1015864424246,
+    15.2677459104664
+   ],
+   "features": 193864
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/095_buildings.fgb",
+   "bytes": 26080872,
+   "envelope": [
+    -25.3777170260961,
+    15.2037107073685,
+    -22.6670810395494,
+    17.2036595862694
+   ],
+   "features": 115800
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/0c3_buildings.fgb",
+   "bytes": 18115992,
+   "envelope": [
+    -15.6894056288819,
+    22.1284798368096,
+    -10.6196461576,
+    27.7987051053002
+   ],
+   "features": 79251
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/0c5_buildings.fgb",
+   "bytes": 209076544,
+   "envelope": [
+    -16.5350929,
+    27.767021248495,
+    -13.3334000754568,
+    33.1041860099237
+   ],
+   "features": 912803
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/0c7_buildings.fgb",
+   "bytes": 131086992,
+   "envelope": [
+    -18.1523069272207,
+    27.6394656592965,
+    -16.5344194,
+    32.868709027086
+   ],
+   "features": 577176
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/0d1_buildings.fgb",
+   "bytes": 11809968,
+   "envelope": [
+    -5.98556712976922,
+    35.7915965607879,
+    -5.27948497481665,
+    36.1357399
+   ],
+   "features": 51494
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/0d7_buildings.fgb",
+   "bytes": 339356824,
+   "envelope": [
+    -3.8900225,
+    34.4970663140401,
+    0.000287715140477651,
+    35.9059878830839
+   ],
+   "features": 1485467
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/0d9_buildings.fgb",
+   "bytes": 74407616,
+   "envelope": [
+    -5.05825023393922,
+    28.5979197501372,
+    3.0184108955833e-05,
+    34.508429622297
+   ],
+   "features": 325617
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/0db_buildings.fgb",
+   "bytes": 1784968,
+   "envelope": [
+    -8.66757657683667,
+    28.4040467037159,
+    -5.06025953524009,
+    29.900693084509
+   ],
+   "features": 7934
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/0dd_buildings.fgb",
+   "bytes": 26965656,
+   "envelope": [
+    -10.6195319387209,
+    22.3969164574742,
+    -5.06064077266713,
+    28.5465123836986
+   ],
+   "features": 120952
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/0df_buildings.fgb",
+   "bytes": 41243152,
+   "envelope": [
+    -5.05954982775948,
+    22.6253826378333,
+    4.18358264622221e-05,
+    28.6731293879354
+   ],
+   "features": 182086
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/0e1_buildings.fgb",
+   "bytes": 13696,
+   "envelope": [
+    -0.882699201827163,
+    21.9446385451195,
+    -0.0213851677902741,
+    22.5281126744625
+   ],
+   "features": 59
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/0e3_buildings.fgb",
+   "bytes": 3131480024,
+   "envelope": [
+    -5.05966738085381,
+    10.5805397661243,
+    0.00011105061261274,
+    15.0839063976024
+   ],
+   "features": 14203468
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/0e5_buildings.fgb",
+   "bytes": 268664728,
+   "envelope": [
+    -10.6197147631022,
+    10.4486791600608,
+    -5.05987307475821,
+    16.458020282404
+   ],
+   "features": 1218889
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/0e7_buildings.fgb",
+   "bytes": 32679616,
+   "envelope": [
+    -10.6196583509323,
+    16.2707912039117,
+    -5.56485874171032,
+    22.3977711090669
+   ],
+   "features": 148583
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/0e9_buildings.fgb",
+   "bytes": 441316792,
+   "envelope": [
+    -16.5348734768286,
+    15.8882259051425,
+    -10.6196715225697,
+    22.1600768223549
+   ],
+   "features": 1989577
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/0eb_buildings.fgb",
+   "bytes": 9541416,
+   "envelope": [
+    -17.0626970497544,
+    20.6517872161901,
+    -16.5348688827718,
+    21.3305564160644
+   ],
+   "features": 42252
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/0ed_buildings.fgb",
+   "bytes": 534936696,
+   "envelope": [
+    -17.529115456507,
+    12.2818918433435,
+    -16.534668269977,
+    15.7802445117126
+   ],
+   "features": 2360673
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/0ef_buildings.fgb",
+   "bytes": 1527178456,
+   "envelope": [
+    -16.5349681159095,
+    10.2908362723631,
+    -10.6196324827547,
+    16.2550028099232
+   ],
+   "features": 6904933
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/0f1_buildings.fgb",
+   "bytes": 774329888,
+   "envelope": [
+    -14.4668363310202,
+    6.21663445232626,
+    -10.6195536635488,
+    10.4345294802816
+   ],
+   "features": 3463867
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/0f9_buildings.fgb",
+   "bytes": 71587176,
+   "envelope": [
+    -9.04465604108842,
+    4.31726056889559,
+    -5.93343710742255,
+    5.03235285433166
+   ],
+   "features": 322737
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/0fb_buildings.fgb",
+   "bytes": 1780932352,
+   "envelope": [
+    -10.6198337,
+    4.99738533763526,
+    -5.05970576173943,
+    10.5785135014957
+   ],
+   "features": 8046602
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/0fd_buildings.fgb",
+   "bytes": 3253877104,
+   "envelope": [
+    -5.06003470044092,
+    5.05340187981274,
+    0.000465500502576877,
+    10.6196744167414
+   ],
+   "features": 14455325
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/0ff_buildings.fgb",
+   "bytes": 71325880,
+   "envelope": [
+    -2.90155258701277,
+    4.74007079099885,
+    -1.44069604329647,
+    5.05819962185151
+   ],
+   "features": 316665
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/103_buildings.fgb",
+   "bytes": 4588931848,
+   "envelope": [
+    -0.0004306,
+    5.57771011941269,
+    5.05998761879603,
+    10.6196381723695
+   ],
+   "features": 20549894
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/105_buildings.fgb",
+   "bytes": 5740668304,
+   "envelope": [
+    5.05974692107891,
+    4.97469115099517,
+    10.6197784058171,
+    10.5782131040402
+   ],
+   "features": 25487128
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/107_buildings.fgb",
+   "bytes": 863365328,
+   "envelope": [
+    5.42523239910026,
+    -3.69052215560838e-05,
+    10.6196883603168,
+    5.03562257410377
+   ],
+   "features": 3810163
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/109_buildings.fgb",
+   "bytes": 476712168,
+   "envelope": [
+    10.6195922939204,
+    -5.46388225182714e-05,
+    16.5348300507964,
+    4.97305395926677
+   ],
+   "features": 2140285
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/10b_buildings.fgb",
+   "bytes": 461468832,
+   "envelope": [
+    16.5348983444994,
+    -4.24383577176665e-05,
+    22.6199007057805,
+    4.84915665478656
+   ],
+   "features": 2092460
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/10d_buildings.fgb",
+   "bytes": 133833440,
+   "envelope": [
+    16.534829107707,
+    4.68786452027364,
+    22.6197948804502,
+    9.9107492839101
+   ],
+   "features": 610322
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/10f_buildings.fgb",
+   "bytes": 1725195832,
+   "envelope": [
+    10.6195640638293,
+    4.85880596526194,
+    16.5348449576187,
+    10.4410412529347
+   ],
+   "features": 7814782
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/111_buildings.fgb",
+   "bytes": 1314330440,
+   "envelope": [
+    10.6196309132869,
+    10.2487598164797,
+    15.3963540087917,
+    16.2313586861284
+   ],
+   "features": 5958709
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/113_buildings.fgb",
+   "bytes": 123336528,
+   "envelope": [
+    21.2144769173735,
+    9.83070275673427,
+    22.619893126123,
+    14.6644112707634
+   ],
+   "features": 562475
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/117_buildings.fgb",
+   "bytes": 5709056,
+   "envelope": [
+    10.6241244737927,
+    16.2248225678951,
+    15.9791048399272,
+    22.2586037018735
+   ],
+   "features": 25684
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/119_buildings.fgb",
+   "bytes": 80795912,
+   "envelope": [
+    5.06052785595872,
+    16.2763024378495,
+    10.6147146789993,
+    22.5354318014854
+   ],
+   "features": 365711
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/11b_buildings.fgb",
+   "bytes": 5174316144,
+   "envelope": [
+    5.05981367424873,
+    10.4445298552589,
+    10.6197007996959,
+    16.4707794685142
+   ],
+   "features": 23357039
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/11d_buildings.fgb",
+   "bytes": 1640309440,
+   "envelope": [
+    -8.64968294589374e-05,
+    10.5797859750431,
+    5.05993608599959,
+    16.480858348233
+   ],
+   "features": 7453487
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/11f_buildings.fgb",
+   "bytes": 11503992,
+   "envelope": [
+    0.0199292595743383,
+    16.4796050915381,
+    5.05959397916891,
+    22.6132248910482
+   ],
+   "features": 51588
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/121_buildings.fgb",
+   "bytes": 29227552,
+   "envelope": [
+    -6.01398006430109e-05,
+    22.5470551446693,
+    5.06006279220921,
+    28.6726556085424
+   ],
+   "features": 128729
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/123_buildings.fgb",
+   "bytes": 49746032,
+   "envelope": [
+    5.0597298046609,
+    22.3305097881623,
+    10.6192891973258,
+    28.4634133593121
+   ],
+   "features": 219645
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/125_buildings.fgb",
+   "bytes": 365243504,
+   "envelope": [
+    5.0597983,
+    28.32000163294,
+    10.6197640314062,
+    34.4031237972411
+   ],
+   "features": 1588664
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/127_buildings.fgb",
+   "bytes": 190920792,
+   "envelope": [
+    -1.78488962112589e-05,
+    28.6454621237471,
+    5.05996203473535,
+    34.508359200256
+   ],
+   "features": 837373
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/129_buildings.fgb",
+   "bytes": 1619219528,
+   "envelope": [
+    -0.00028006439609829,
+    34.4045070861769,
+    5.06030170885549,
+    36.9230962957814
+   ],
+   "features": 7108612
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/12f_buildings.fgb",
+   "bytes": 2022499744,
+   "envelope": [
+    5.05952264372265,
+    34.0991647165899,
+    10.6202967,
+    37.5312400184908
+   ],
+   "features": 8878284
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/131_buildings.fgb",
+   "bytes": 320156104,
+   "envelope": [
+    10.6193616881217,
+    34.0168252876591,
+    11.4023568242643,
+    37.1212445743785
+   ],
+   "features": 1388998
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/13b_buildings.fgb",
+   "bytes": 117896384,
+   "envelope": [
+    10.6195476449208,
+    31.8687579961601,
+    11.5904366265871,
+    33.9662279988402
+   ],
+   "features": 511429
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/13d_buildings.fgb",
+   "bytes": 738728,
+   "envelope": [
+    10.620241940945,
+    21.9417945543985,
+    15.1696897351903,
+    24.5650793005833
+   ],
+   "features": 3356
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/141_buildings.fgb",
+   "bytes": 2446640,
+   "envelope": [
+    25.0007734499534,
+    20.2802230927498,
+    28.6731508649889,
+    26.223735943105
+   ],
+   "features": 11117
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/143_buildings.fgb",
+   "bytes": 164480024,
+   "envelope": [
+    28.6732343601732,
+    18.9545475357398,
+    34.5082597127894,
+    25.618066384827
+   ],
+   "features": 724330
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/145_buildings.fgb",
+   "bytes": 3039557352,
+   "envelope": [
+    28.6730354950036,
+    24.3073115798547,
+    34.5060991276883,
+    31.0027875231299
+   ],
+   "features": 13308492
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/147_buildings.fgb",
+   "bytes": 94396672,
+   "envelope": [
+    24.7063017755271,
+    25.6458443755859,
+    28.6734300129937,
+    31.6607482735182
+   ],
+   "features": 416062
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/14f_buildings.fgb",
+   "bytes": 2207919552,
+   "envelope": [
+    29.4267823692308,
+    30.0629957563682,
+    32.698732474625,
+    31.6118454451227
+   ],
+   "features": 9741072
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/15b_buildings.fgb",
+   "bytes": 4856432,
+   "envelope": [
+    34.5087426517705,
+    23.9312217574301,
+    35.7698231871841,
+    25.7608083
+   ],
+   "features": 20613
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/15d_buildings.fgb",
+   "bytes": 146499176,
+   "envelope": [
+    34.5088731983836,
+    18.1207963315925,
+    38.4074230568433,
+    24.2335298667004
+   ],
+   "features": 661138
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/161_buildings.fgb",
+   "bytes": 13668928,
+   "envelope": [
+    39.9812197988896,
+    12.182931803683,
+    43.4006866910008,
+    16.5109137003536
+   ],
+   "features": 62003
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/163_buildings.fgb",
+   "bytes": 765798424,
+   "envelope": [
+    39.9811574723464,
+    7.55736455604727,
+    45.0000757033844,
+    12.8043212570099
+   ],
+   "features": 3453452
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/165_buildings.fgb",
+   "bytes": 3703751696,
+   "envelope": [
+    34.5084838669663,
+    8.1789211156537,
+    39.9813136723196,
+    13.7432219809913
+   ],
+   "features": 16710379
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/167_buildings.fgb",
+   "bytes": 1297158632,
+   "envelope": [
+    34.5085116619318,
+    12.8186318853842,
+    39.9812298572439,
+    18.9279968250123
+   ],
+   "features": 5870035
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/169_buildings.fgb",
+   "bytes": 2448401504,
+   "envelope": [
+    28.6731200678415,
+    13.7548658015119,
+    34.5085490196866,
+    19.9691765782642
+   ],
+   "features": 11029635
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/16b_buildings.fgb",
+   "bytes": 18725560,
+   "envelope": [
+    22.9303218263465,
+    14.5998723730882,
+    28.673140124965,
+    20.6016142121064
+   ],
+   "features": 85446
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/16d_buildings.fgb",
+   "bytes": 1303930984,
+   "envelope": [
+    22.6198398508867,
+    9.34277160896426,
+    28.6731884619651,
+    15.2457952087069
+   ],
+   "features": 5948573
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/16f_buildings.fgb",
+   "bytes": 1363598432,
+   "envelope": [
+    28.6731213436193,
+    8.81794134901987,
+    34.5085925481526,
+    14.5980189144774
+   ],
+   "features": 6203746
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/171_buildings.fgb",
+   "bytes": 343105768,
+   "envelope": [
+    28.6730770515083,
+    4.17763781568636,
+    34.5085463077946,
+    9.3345007945489
+   ],
+   "features": 1558328
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/173_buildings.fgb",
+   "bytes": 246960248,
+   "envelope": [
+    22.619909690227,
+    4.44679818364345,
+    28.6731800366644,
+    9.81730710708786
+   ],
+   "features": 1124853
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/175_buildings.fgb",
+   "bytes": 340773832,
+   "envelope": [
+    22.6198218346866,
+    -1.67426567853819e-05,
+    28.673167869064,
+    4.66878276282979
+   ],
+   "features": 1549920
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/177_buildings.fgb",
+   "bytes": 4405823696,
+   "envelope": [
+    28.6731239217764,
+    -9.0871211593046e-05,
+    34.5085910302837,
+    4.43392385376084
+   ],
+   "features": 19944663
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/179_buildings.fgb",
+   "bytes": 1477318176,
+   "envelope": [
+    34.5084279,
+    -0.000120277730873034,
+    39.9812570413626,
+    4.17227914589551
+   ],
+   "features": 6627875
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/17b_buildings.fgb",
+   "bytes": 2674507736,
+   "envelope": [
+    34.5084870650993,
+    3.90592217738499,
+    39.9813057113907,
+    8.77754132540031
+   ],
+   "features": 12090477
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/17d_buildings.fgb",
+   "bytes": 271540000,
+   "envelope": [
+    39.9811749478985,
+    3.59709888729719,
+    45.0000234655594,
+    8.17457323436568
+   ],
+   "features": 1233214
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/17f_buildings.fgb",
+   "bytes": 235710920,
+   "envelope": [
+    39.9812059142983,
+    -6.20412263632973e-05,
+    45.0000232047486,
+    3.87578586108671
+   ],
+   "features": 1068869
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/181_buildings.fgb",
+   "bytes": 94581864,
+   "envelope": [
+    39.9812042023494,
+    -3.38419199058276,
+    42.8514061819164,
+    3.5769042486073e-05
+   ],
+   "features": 424431
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/183_buildings.fgb",
+   "bytes": 3993462656,
+   "envelope": [
+    34.50821963358,
+    -4.17042772946037,
+    39.9813362628731,
+    0.000178747016721157
+   ],
+   "features": 17871128
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/185_buildings.fgb",
+   "bytes": 2005546800,
+   "envelope": [
+    34.5084614527532,
+    -8.7824111,
+    39.9054029700759,
+    -3.89197893660471
+   ],
+   "features": 8968058
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/189_buildings.fgb",
+   "bytes": 63097856,
+   "envelope": [
+    39.9811796759856,
+    -12.7020965466174,
+    43.5172502814808,
+    -10.0794812419445
+   ],
+   "features": 281214
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/18b_buildings.fgb",
+   "bytes": 169981168,
+   "envelope": [
+    39.9811725444398,
+    -16.5600292962603,
+    45.0000107411344,
+    -12.0732581018907
+   ],
+   "features": 772194
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/18d_buildings.fgb",
+   "bytes": 2074273760,
+   "envelope": [
+    34.508437,
+    -18.9368260970352,
+    39.9813040112787,
+    -13.1440386914893
+   ],
+   "features": 9433908
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/18f_buildings.fgb",
+   "bytes": 665685328,
+   "envelope": [
+    34.5084936207889,
+    -13.7447874220872,
+    39.9812708,
+    -8.2530775868762
+   ],
+   "features": 3001340
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/191_buildings.fgb",
+   "bytes": 1556259296,
+   "envelope": [
+    28.6729370011424,
+    -14.5977810276505,
+    34.5085700475754,
+    -8.7897926254293
+   ],
+   "features": 7048963
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/193_buildings.fgb",
+   "bytes": 2362961544,
+   "envelope": [
+    28.673041405852,
+    -20.0799098296582,
+    34.5085799783119,
+    -13.7489813389754
+   ],
+   "features": 10699262
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/195_buildings.fgb",
+   "bytes": 869698768,
+   "envelope": [
+    22.6198497456775,
+    -21.0037823125757,
+    28.6733483433867,
+    -14.5998091549658
+   ],
+   "features": 3919250
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/197_buildings.fgb",
+   "bytes": 929817264,
+   "envelope": [
+    22.6198472382701,
+    -15.3174391730227,
+    28.6733293661562,
+    -9.36269240236757
+   ],
+   "features": 4182718
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/199_buildings.fgb",
+   "bytes": 589491776,
+   "envelope": [
+    22.6198307248064,
+    -9.80500232451134,
+    28.6731876691124,
+    -4.44659429023779
+   ],
+   "features": 2687276
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/19b_buildings.fgb",
+   "bytes": 944885168,
+   "envelope": [
+    28.6731171979887,
+    -9.3365880546057,
+    34.5085641888077,
+    -4.17498308034258
+   ],
+   "features": 4274604
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/19d_buildings.fgb",
+   "bytes": 4905022648,
+   "envelope": [
+    28.6730683044608,
+    -4.43883111780664,
+    34.5086660481379,
+    0.000110165965903307
+   ],
+   "features": 22106253
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/19f_buildings.fgb",
+   "bytes": 319433944,
+   "envelope": [
+    22.6198388554404,
+    -4.67197149338161,
+    28.6732538393243,
+    1.39711699517172e-05
+   ],
+   "features": 1452728
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/1a1_buildings.fgb",
+   "bytes": 329173312,
+   "envelope": [
+    16.5347840583383,
+    -4.84261510798585,
+    22.619898667554,
+    4.13522393426622e-05
+   ],
+   "features": 1499307
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/1a3_buildings.fgb",
+   "bytes": 596382440,
+   "envelope": [
+    16.5348022360706,
+    -10.1725707579087,
+    22.6199284570001,
+    -4.67545717217974
+   ],
+   "features": 2711874
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/1a5_buildings.fgb",
+   "bytes": 1198033464,
+   "envelope": [
+    11.7845317092139,
+    -10.3277438389148,
+    16.5348628323476,
+    -4.85325591041812
+   ],
+   "features": 5386465
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/1a7_buildings.fgb",
+   "bytes": 760133216,
+   "envelope": [
+    10.6249743110453,
+    -4.95048277641838,
+    16.5349140941027,
+    0.000103940282605609
+   ],
+   "features": 3407014
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/1a9_buildings.fgb",
+   "bytes": 27619056,
+   "envelope": [
+    5.62035195892264,
+    -3.2435836969061,
+    10.6186839707823,
+    2.31357837204348e-05
+   ],
+   "features": 122646
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/1b9_buildings.fgb",
+   "bytes": 504494744,
+   "envelope": [
+    11.6637960136633,
+    -21.9689133392537,
+    16.5349227383008,
+    -15.9158026103225
+   ],
+   "features": 2294452
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/1bb_buildings.fgb",
+   "bytes": 1040358120,
+   "envelope": [
+    11.7462775676575,
+    -16.2012335367389,
+    16.5349329523713,
+    -10.1987490712841
+   ],
+   "features": 4716887
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/1bd_buildings.fgb",
+   "bytes": 247471160,
+   "envelope": [
+    16.5347491552044,
+    -15.878972675137,
+    22.6198821698323,
+    -9.82157705045406
+   ],
+   "features": 1122617
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/1bf_buildings.fgb",
+   "bytes": 163094192,
+   "envelope": [
+    16.5348103773627,
+    -21.7728568350721,
+    22.619864525063,
+    -15.3341578308045
+   ],
+   "features": 740081
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/1c1_buildings.fgb",
+   "bytes": 135499688,
+   "envelope": [
+    16.5348164255608,
+    -27.6033479112487,
+    22.6197989143827,
+    -21.0855041191377
+   ],
+   "features": 602398
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/1c3_buildings.fgb",
+   "bytes": 130460256,
+   "envelope": [
+    16.5348384938084,
+    -33.1698669509019,
+    22.6198829046344,
+    -26.8023835934846
+   ],
+   "features": 577336
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/1c5_buildings.fgb",
+   "bytes": 1599864,
+   "envelope": [
+    15.514884064392,
+    -28.6726802781497,
+    16.5338567386458,
+    -27.6782248278178
+   ],
+   "features": 6952
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/1c7_buildings.fgb",
+   "bytes": 34247280,
+   "envelope": [
+    14.2181591625415,
+    -27.725552865754,
+    16.5348386302653,
+    -21.7904556098968
+   ],
+   "features": 150281
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/1dd_buildings.fgb",
+   "bytes": 750474864,
+   "envelope": [
+    18.0592561869817,
+    -34.8307994283645,
+    22.6199610411974,
+    -32.4157598582477
+   ],
+   "features": 3294213
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/1e5_buildings.fgb",
+   "bytes": 370491664,
+   "envelope": [
+    28.6730551621005,
+    -32.4464853081856,
+    30.538057170299,
+    -30.6321163302231
+   ],
+   "features": 1655938
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/1e7_buildings.fgb",
+   "bytes": 789526160,
+   "envelope": [
+    22.619755044498,
+    -34.2126884063794,
+    28.6732615207561,
+    -31.100939927406
+   ],
+   "features": 3509206
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/1e9_buildings.fgb",
+   "bytes": 2834475184,
+   "envelope": [
+    22.6198287202461,
+    -32.3917131474321,
+    28.6735532,
+    -25.6369417679308
+   ],
+   "features": 12456911
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/1eb_buildings.fgb",
+   "bytes": 1364702776,
+   "envelope": [
+    22.6198451,
+    -26.7625088626456,
+    28.6732338706998,
+    -20.0828307393916
+   ],
+   "features": 6048770
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/1ed_buildings.fgb",
+   "bytes": 2153176912,
+   "envelope": [
+    28.6728515362872,
+    -25.6269283006649,
+    34.5085224325806,
+    -19.0011613647459
+   ],
+   "features": 9547122
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/1ef_buildings.fgb",
+   "bytes": 3647933736,
+   "envelope": [
+    28.6726977683441,
+    -31.0939526277785,
+    34.5085733205938,
+    -24.2856797134418
+   ],
+   "features": 16301075
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/1f1_buildings.fgb",
+   "bytes": 54510880,
+   "envelope": [
+    34.5084825,
+    -24.8525021344466,
+    35.5016535356967,
+    -24.0007749846043
+   ],
+   "features": 248138
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/1f3_buildings.fgb",
+   "bytes": 307893848,
+   "envelope": [
+    34.5085315213668,
+    -24.2435819879909,
+    36.8307098048281,
+    -18.5133916214295
+   ],
+   "features": 1398362
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/1f5_buildings.fgb",
+   "bytes": 52264512,
+   "envelope": [
+    43.4329854221808,
+    -21.6580324005123,
+    45.0000303943574,
+    -16.423279377132
+   ],
+   "features": 237855
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/1f7_buildings.fgb",
+   "bytes": 155183856,
+   "envelope": [
+    43.1897549717787,
+    -25.4675233927226,
+    45.0000379195278,
+    -21.1517678085484
+   ],
+   "features": 707482
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/217_buildings.fgb",
+   "bytes": 226075592,
+   "envelope": [
+    55.4912269118453,
+    -21.4585711910334,
+    57.8246402891341,
+    -19.7499505564426
+   ],
+   "features": 992369
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/219_buildings.fgb",
+   "bytes": 88486392,
+   "envelope": [
+    55.2147701978921,
+    -21.4256329150813,
+    55.4916985276343,
+    -20.8481737759126
+   ],
+   "features": 389151
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/21d_buildings.fgb",
+   "bytes": 268493608,
+   "envelope": [
+    44.9999111665838,
+    -25.5911567741885,
+    48.029880902668,
+    -21.1483963742273
+   ],
+   "features": 1224243
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/21f_buildings.fgb",
+   "bytes": 1111304600,
+   "envelope": [
+    44.9999740190023,
+    -22.1255593,
+    49.5227794096208,
+    -16.4275038710828
+   ],
+   "features": 5037933
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/221_buildings.fgb",
+   "bytes": 530419576,
+   "envelope": [
+    45.0006462169609,
+    -17.5718285296948,
+    50.0188093563105,
+    -12.615897599826
+   ],
+   "features": 2412522
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/223_buildings.fgb",
+   "bytes": 61798992,
+   "envelope": [
+    50.0187216819349,
+    -16.7150337503869,
+    50.4824560270439,
+    -13.3473989735059
+   ],
+   "features": 281361
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/225_buildings.fgb",
+   "bytes": 23640,
+   "envelope": [
+    51.0024791389271,
+    -10.2458229996063,
+    51.1726570147418,
+    -9.44411766554877
+   ],
+   "features": 101
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/227_buildings.fgb",
+   "bytes": 23203312,
+   "envelope": [
+    46.2039222877548,
+    -12.7629248973794,
+    49.7720378426097,
+    -9.36849552283942
+   ],
+   "features": 105041
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/22f_buildings.fgb",
+   "bytes": 6074248,
+   "envelope": [
+    52.7262338119243,
+    -7.01095268139877,
+    55.4915975810472,
+    -4.37717696062481
+   ],
+   "features": 26072
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/231_buildings.fgb",
+   "bytes": 4862992,
+   "envelope": [
+    55.4913081989739,
+    -7.16858629782019,
+    56.2805649217728,
+    -4.21363450541686
+   ],
+   "features": 21158
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/23b_buildings.fgb",
+   "bytes": 99968,
+   "envelope": [
+    56.5865721046009,
+    -10.4558052251773,
+    56.6831756578562,
+    -10.3376162962848
+   ],
+   "features": 445
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/23d_buildings.fgb",
+   "bytes": 1456,
+   "envelope": [
+    59.5010893927015,
+    -16.8156590831045,
+    59.503687570721,
+    -16.815236
+   ],
+   "features": 3
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/23f_buildings.fgb",
+   "bytes": 6630728,
+   "envelope": [
+    63.2996858444618,
+    -19.7996244460686,
+    63.4984300444808,
+    -19.6684149464806
+   ],
+   "features": 29418
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/249_buildings.fgb",
+   "bytes": 427680,
+   "envelope": [
+    71.3457423223671,
+    -7.43080650816441,
+    72.482390317359,
+    -5.21111753749181
+   ],
+   "features": 1873
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/24b_buildings.fgb",
+   "bytes": 4917624,
+   "envelope": [
+    73.0771679423815,
+    -0.703390548583605,
+    73.4406875972724,
+    -0.277507411201104
+   ],
+   "features": 21742
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/2c5_buildings.fgb",
+   "bytes": 271604312,
+   "envelope": [
+    118.928863503214,
+    -10.9894373302129,
+    124.508610385384,
+    -9.16766188725727
+   ],
+   "features": 1214798
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/2cd_buildings.fgb",
+   "bytes": 1423680,
+   "envelope": [
+    130.756235684571,
+    -8.3431244741115,
+    131.300478232573,
+    -8.0200367892686
+   ],
+   "features": 6379
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/2cf_buildings.fgb",
+   "bytes": 169779872,
+   "envelope": [
+    124.508486698684,
+    -10.0892297819761,
+    129.97175455473,
+    -8.19311423403724
+   ],
+   "features": 766424
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/2d1_buildings.fgb",
+   "bytes": 86084680,
+   "envelope": [
+    124.508450693229,
+    -8.7208916155885,
+    129.955573774264,
+    -4.48030737687514
+   ],
+   "features": 385317
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/2d3_buildings.fgb",
+   "bytes": 36821280,
+   "envelope": [
+    129.987785974971,
+    -8.04275560620417,
+    134.99610778642,
+    -3.59729227869188
+   ],
+   "features": 163824
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/2d5_buildings.fgb",
+   "bytes": 10204096,
+   "envelope": [
+    129.98113872066,
+    -3.83667833008354,
+    134.996734258794,
+    -0.00233782717653287
+   ],
+   "features": 45447
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/2d7_buildings.fgb",
+   "bytes": 146210832,
+   "envelope": [
+    124.508542803032,
+    -3.91861753694142,
+    129.981265635132,
+    5.63775298888307e-05
+   ],
+   "features": 647221
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/2d9_buildings.fgb",
+   "bytes": 928223968,
+   "envelope": [
+    118.757411247219,
+    -4.40218733218502,
+    124.507984555146,
+    6.03917005924957e-05
+   ],
+   "features": 4111991
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/2db_buildings.fgb",
+   "bytes": 1010234368,
+   "envelope": [
+    118.673045520207,
+    -8.95566751443362,
+    124.508670743118,
+    -4.24152123611234
+   ],
+   "features": 4491022
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/2dd_buildings.fgb",
+   "bytes": 4323438056,
+   "envelope": [
+    112.619351,
+    -9.10533712093931,
+    118.6734288,
+    -4.90346697017003
+   ],
+   "features": 19290657
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/2df_buildings.fgb",
+   "bytes": 959579392,
+   "envelope": [
+    112.619704511026,
+    -4.22986495046645,
+    117.633695536265,
+    4.39489288009742e-05
+   ],
+   "features": 4264395
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/2e1_buildings.fgb",
+   "bytes": 367482424,
+   "envelope": [
+    106.5347736,
+    -3.48327584419066,
+    112.619912733586,
+    0.000264325707483774
+   ],
+   "features": 1618667
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/2e3_buildings.fgb",
+   "bytes": 2167453856,
+   "envelope": [
+    100.619486674911,
+    -4.91971863235886,
+    106.534904062943,
+    8.343302537832e-05
+   ],
+   "features": 9578320
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/2e5_buildings.fgb",
+   "bytes": 1487362912,
+   "envelope": [
+    102.126448452128,
+    -7.47693321425731,
+    106.5353881,
+    -4.8747575847478
+   ],
+   "features": 6563431
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/2e7_buildings.fgb",
+   "bytes": 13541160184,
+   "envelope": [
+    106.5341163,
+    -8.43088824352949,
+    112.6206762,
+    -5.22334645314424
+   ],
+   "features": 60037358
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/2fd_buildings.fgb",
+   "bytes": 312641528,
+   "envelope": [
+    97.838400278922,
+    -3.31146497806723,
+    100.619811188291,
+    6.48312148325245e-05
+   ],
+   "features": 1371858
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/303_buildings.fgb",
+   "bytes": 1307783192,
+   "envelope": [
+    95.3800351862969,
+    -6.79711714306563e-05,
+    100.620012139158,
+    4.97621043357806
+   ],
+   "features": 5752795
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/305_buildings.fgb",
+   "bytes": 1397003208,
+   "envelope": [
+    95.063894037334,
+    4.97362113122493,
+    100.6199127,
+    10.4969023916611
+   ],
+   "features": 6135045
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/307_buildings.fgb",
+   "bytes": 4427136,
+   "envelope": [
+    92.5040562699522,
+    5.62219491857692,
+    95.0591987270558,
+    10.6095541213174
+   ],
+   "features": 19647
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/309_buildings.fgb",
+   "bytes": 34651400,
+   "envelope": [
+    92.2066745711076,
+    10.6094608955276,
+    94.2740453771506,
+    13.7758547379181
+   ],
+   "features": 154937
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/30b_buildings.fgb",
+   "bytes": 771975760,
+   "envelope": [
+    89.9999306965347,
+    20.5903258038479,
+    93.1984486271268,
+    22.6199070750652
+   ],
+   "features": 3455651
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/30d_buildings.fgb",
+   "bytes": 1921388264,
+   "envelope": [
+    97.3623359,
+    16.2671539603069,
+    100.619748440135,
+    22.3508776624137
+   ],
+   "features": 8538291
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/30f_buildings.fgb",
+   "bytes": 2390055360,
+   "envelope": [
+    98.2974450814132,
+    10.4852383834213,
+    100.620277772739,
+    16.3561717444493
+   ],
+   "features": 10561059
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/311_buildings.fgb",
+   "bytes": 7738585896,
+   "envelope": [
+    100.6191184,
+    10.1899743519097,
+    106.535251665952,
+    16.2661647313113
+   ],
+   "features": 34450593
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/313_buildings.fgb",
+   "bytes": 8823491216,
+   "envelope": [
+    100.619558210563,
+    15.8986934277119,
+    106.535404922798,
+    22.2180972190935
+   ],
+   "features": 39426924
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/315_buildings.fgb",
+   "bytes": 1384801552,
+   "envelope": [
+    106.5343578,
+    15.7271825075389,
+    108.541013350797,
+    21.7732044
+   ],
+   "features": 6222384
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/317_buildings.fgb",
+   "bytes": 4554754544,
+   "envelope": [
+    106.5342357,
+    10.1769174080873,
+    109.466471364813,
+    15.875770620084
+   ],
+   "features": 20380842
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/319_buildings.fgb",
+   "bytes": 62188872,
+   "envelope": [
+    106.5346819,
+    8.63427852158305,
+    106.848155380373,
+    10.1897546130088
+   ],
+   "features": 278719
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/31b_buildings.fgb",
+   "bytes": 1937467344,
+   "envelope": [
+    100.6192893,
+    4.92358249275897,
+    106.535006549951,
+    10.3174496598474
+   ],
+   "features": 8571232
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/31d_buildings.fgb",
+   "bytes": 2239143704,
+   "envelope": [
+    100.619167611422,
+    -4.55012952100208e-05,
+    106.497297581387,
+    4.97355405664004
+   ],
+   "features": 9678574
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/31f_buildings.fgb",
+   "bytes": 494699288,
+   "envelope": [
+    106.979758337211,
+    -0.00014374068156028,
+    112.620051416641,
+    4.79374474159523
+   ],
+   "features": 2173676
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/321_buildings.fgb",
+   "bytes": 277078440,
+   "envelope": [
+    112.619814806427,
+    -5.58560272234485e-05,
+    118.673451902553,
+    4.61310331355031
+   ],
+   "features": 1215574
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/323_buildings.fgb",
+   "bytes": 381932960,
+   "envelope": [
+    114.127405341614,
+    4.44240401553774,
+    118.673191988964,
+    9.38859078239864
+   ],
+   "features": 1675154
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/325_buildings.fgb",
+   "bytes": 638806552,
+   "envelope": [
+    118.673109303522,
+    4.43959032048931,
+    124.509081121349,
+    8.85938030926112
+   ],
+   "features": 2864948
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/327_buildings.fgb",
+   "bytes": 311738736,
+   "envelope": [
+    118.6731229,
+    -9.51597844909314e-06,
+    124.508797359278,
+    4.44112891494089
+   ],
+   "features": 1375676
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/329_buildings.fgb",
+   "bytes": 318979544,
+   "envelope": [
+    124.508445124034,
+    -3.53636671442408e-05,
+    129.87840108282,
+    4.06125084233459
+   ],
+   "features": 1408838
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/32b_buildings.fgb",
+   "bytes": 30208,
+   "envelope": [
+    130.0020524387,
+    -1.35679884064949e-05,
+    131.265674084837,
+    1.08045854470498
+   ],
+   "features": 134
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/32f_buildings.fgb",
+   "bytes": 1159793312,
+   "envelope": [
+    124.508146235004,
+    4.05550871181397,
+    127.160149264742,
+    8.7562517281847
+   ],
+   "features": 5189641
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/331_buildings.fgb",
+   "bytes": 482399920,
+   "envelope": [
+    124.508465346515,
+    8.61642558525329,
+    126.340553351847,
+    12.6828961765149
+   ],
+   "features": 2166378
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/339_buildings.fgb",
+   "bytes": 3428354248,
+   "envelope": [
+    119.753136535579,
+    13.7642099655765,
+    124.415481413716,
+    19.3911697130013
+   ],
+   "features": 15325470
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/33b_buildings.fgb",
+   "bytes": 2424844112,
+   "envelope": [
+    118.673140995073,
+    8.96996196972139,
+    124.508819299595,
+    14.3154525364802
+   ],
+   "features": 10854148
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/33d_buildings.fgb",
+   "bytes": 8648720,
+   "envelope": [
+    118.127806359212,
+    9.35534547325694,
+    118.673189044412,
+    9.99566431681673
+   ],
+   "features": 38837
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/347_buildings.fgb",
+   "bytes": 1786856,
+   "envelope": [
+    121.717668740386,
+    19.5081795687269,
+    122.145963094961,
+    20.8320215331034
+   ],
+   "features": 8022
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/36b_buildings.fgb",
+   "bytes": 117325712,
+   "envelope": [
+    106.534641015816,
+    21.6173705308309,
+    108.048063639821,
+    23.0635506358765
+   ],
+   "features": 525033
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/36d_buildings.fgb",
+   "bytes": 588757824,
+   "envelope": [
+    101.34446990006,
+    21.7739859630651,
+    106.534926673942,
+    23.5733450048384
+   ],
+   "features": 2642065
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/371_buildings.fgb",
+   "bytes": 9045544,
+   "envelope": [
+    95.0600366504961,
+    28.4564133351652,
+    97.7814839885987,
+    29.99452236551
+   ],
+   "features": 40283
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/373_buildings.fgb",
+   "bytes": 875264264,
+   "envelope": [
+    95.0597424777738,
+    22.3409660406843,
+    99.6274995532102,
+    28.5788345284312
+   ],
+   "features": 3917390
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/375_buildings.fgb",
+   "bytes": 8631867896,
+   "envelope": [
+    89.9998675621132,
+    22.5924300877974,
+    95.0599598643616,
+    28.6613342695739
+   ],
+   "features": 38753922
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/377_buildings.fgb",
+   "bytes": 39205056,
+   "envelope": [
+    92.46237189355,
+    28.5792399715019,
+    95.0598982243861,
+    30.1286251172468
+   ],
+   "features": 174511
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/38d_buildings.fgb",
+   "bytes": 3056216912,
+   "envelope": [
+    69.3904830035078,
+    32.765438144787,
+    73.4653708485437,
+    36.8847242793618
+   ],
+   "features": 13504808
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/38f_buildings.fgb",
+   "bytes": 1063176792,
+   "envelope": [
+    73.4650188,
+    33.3885923338297,
+    79.0836099634681,
+    37.2819400724257
+   ],
+   "features": 4737571
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/391_buildings.fgb",
+   "bytes": 16547918512,
+   "envelope": [
+    73.464779307426,
+    27.6673693958702,
+    79.3806814576827,
+    33.9674809678637
+   ],
+   "features": 73380690
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/393_buildings.fgb",
+   "bytes": 7878217192,
+   "envelope": [
+    67.3800124771985,
+    26.7907568127905,
+    73.4657788171609,
+    33.3869342272762
+   ],
+   "features": 35035571
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/395_buildings.fgb",
+   "bytes": 7371356352,
+   "envelope": [
+    67.3798166972839,
+    21.3655016023255,
+    73.4664092053415,
+    27.6654681279084
+   ],
+   "features": 33051058
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/397_buildings.fgb",
+   "bytes": 13632660944,
+   "envelope": [
+    73.4643895048959,
+    21.7782661336491,
+    79.3804537687021,
+    28.2575864493147
+   ],
+   "features": 61048356
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/399_buildings.fgb",
+   "bytes": 18437120144,
+   "envelope": [
+    79.380217395112,
+    22.2721030954862,
+    84.9405454,
+    28.5704537388101
+   ],
+   "features": 82495792
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/39b_buildings.fgb",
+   "bytes": 1153852648,
+   "envelope": [
+    79.3799685797043,
+    28.2600340644804,
+    84.8105845909957,
+    33.1845125847406
+   ],
+   "features": 5190009
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/39d_buildings.fgb",
+   "bytes": 41200,
+   "envelope": [
+    84.946470637334,
+    28.5856149497477,
+    85.2600765712235,
+    28.7441642641289
+   ],
+   "features": 179
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/39f_buildings.fgb",
+   "bytes": 19610319408,
+   "envelope": [
+    84.9397844678188,
+    22.5416591658275,
+    90.0002086621879,
+    28.5854175172689
+   ],
+   "features": 87929797
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/3a1_buildings.fgb",
+   "bytes": 4201970952,
+   "envelope": [
+    84.9399565188231,
+    19.2835791492285,
+    90.0000717927683,
+    22.6199579452328
+   ],
+   "features": 18843456
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/3a3_buildings.fgb",
+   "bytes": 7434792952,
+   "envelope": [
+    79.3802215328451,
+    16.2756733503392,
+    84.9402676289749,
+    22.5385980946578
+   ],
+   "features": 33331593
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/3a5_buildings.fgb",
+   "bytes": 2638976320,
+   "envelope": [
+    79.3801637982875,
+    10.4420260129259,
+    81.9205317047485,
+    16.3789790596144
+   ],
+   "features": 11867571
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/3af_buildings.fgb",
+   "bytes": 2273050568,
+   "envelope": [
+    79.3802763734856,
+    5.87165514902935,
+    81.9447078649096,
+    10.4574478895856
+   ],
+   "features": 10066866
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/3b1_buildings.fgb",
+   "bytes": 3658866472,
+   "envelope": [
+    73.4649706776006,
+    4.95502016628745,
+    79.3804144461959,
+    10.4410516630492
+   ],
+   "features": 16329313
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/3b3_buildings.fgb",
+   "bytes": 9212160,
+   "envelope": [
+    73.4651109785272,
+    0.331594102285369,
+    73.7221678278405,
+    4.7379398001565
+   ],
+   "features": 40789
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/3b5_buildings.fgb",
+   "bytes": 10865152,
+   "envelope": [
+    72.7084374254942,
+    0.192209170913677,
+    73.4652270769584,
+    4.694732239624
+   ],
+   "features": 48076
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/3b7_buildings.fgb",
+   "bytes": 14240792,
+   "envelope": [
+    72.2197595836225,
+    4.86825991131863,
+    73.4652390036204,
+    10.0648874740545
+   ],
+   "features": 63186
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/3b9_buildings.fgb",
+   "bytes": 1008464,
+   "envelope": [
+    72.1787479756807,
+    10.5327995607113,
+    72.7894817043067,
+    11.7014827043948
+   ],
+   "features": 4464
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/3bb_buildings.fgb",
+   "bytes": 11208523352,
+   "envelope": [
+    73.5979350662942,
+    10.3164509247187,
+    79.3805980130433,
+    16.2626693902778
+   ],
+   "features": 50199102
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/3bd_buildings.fgb",
+   "bytes": 11164689400,
+   "envelope": [
+    73.4649816241385,
+    15.8967910249965,
+    79.3805586096659,
+    22.2667288328483
+   ],
+   "features": 50058408
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/3bf_buildings.fgb",
+   "bytes": 2077768200,
+   "envelope": [
+    69.8660250695652,
+    15.8885089694439,
+    73.4653491725496,
+    21.7722580116722
+   ],
+   "features": 9207539
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/3d1_buildings.fgb",
+   "bytes": 5392,
+   "envelope": [
+    50.0324098353744,
+    8.10681183759798,
+    50.1361285936793,
+    8.1779031542566
+   ],
+   "features": 21
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/3d5_buildings.fgb",
+   "bytes": 205449496,
+   "envelope": [
+    44.9999501087082,
+    1.8609462495263,
+    47.1887602081225,
+    3.70977015494704
+   ],
+   "features": 909962
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/3d7_buildings.fgb",
+   "bytes": 107949128,
+   "envelope": [
+    45.0000578239418,
+    3.58749566511763,
+    50.0126496880984,
+    8.16665363738985
+   ],
+   "features": 488039
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/3d9_buildings.fgb",
+   "bytes": 111679592,
+   "envelope": [
+    44.9998406216165,
+    7.56238175938083,
+    50.0187762039055,
+    11.5038810347393
+   ],
+   "features": 499894
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/3db_buildings.fgb",
+   "bytes": 5822216,
+   "envelope": [
+    50.0188169436004,
+    8.19241777146591,
+    51.3922120838653,
+    11.9695004738825
+   ],
+   "features": 26488
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/3eb_buildings.fgb",
+   "bytes": 747640192,
+   "envelope": [
+    61.6237490944685,
+    24.2075094067042,
+    67.3811684,
+    26.78101976252
+   ],
+   "features": 3322102
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/3ed_buildings.fgb",
+   "bytes": 664348024,
+   "envelope": [
+    61.3333953754662,
+    25.7229149810719,
+    67.3802326037426,
+    31.3065777075705
+   ],
+   "features": 2959337
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/3ef_buildings.fgb",
+   "bytes": 111352,
+   "envelope": [
+    60.9093914255544,
+    29.4567103138498,
+    61.3242045861906,
+    29.8469457584398
+   ],
+   "features": 500
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/681_buildings.fgb",
+   "bytes": 57238720,
+   "envelope": [
+    135.000641702527,
+    -3.87439559360178,
+    140.018621521241,
+    -0.401568254777545
+   ],
+   "features": 253785
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/683_buildings.fgb",
+   "bytes": 71925168,
+   "envelope": [
+    135.015908941481,
+    -8.1317239437978,
+    140.018505593052,
+    -3.61887197901402
+   ],
+   "features": 321151
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/685_buildings.fgb",
+   "bytes": 10342768,
+   "envelope": [
+    140.019573711026,
+    -8.28100723982387,
+    141.017013193775,
+    -3.9610415761797
+   ],
+   "features": 46273
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/687_buildings.fgb",
+   "bytes": 51399176,
+   "envelope": [
+    140.01955225477,
+    -3.73074028455215,
+    141.000024647129,
+    -2.31965286758266
+   ],
+   "features": 227106
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/69b_buildings.fgb",
+   "bytes": 21761152,
+   "envelope": [
+    140.020542729348,
+    -9.12432055107654,
+    141.019508613717,
+    -8.18506373970656
+   ],
+   "features": 96228
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/69d_buildings.fgb",
+   "bytes": 1403288,
+   "envelope": [
+    137.65310842778,
+    -8.41462208127524,
+    140.018537508527,
+    -7.93192508233362
+   ],
+   "features": 6212
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/80d_buildings.fgb",
+   "bytes": 617903552,
+   "envelope": [
+    -117.245928023843,
+    31.5702092988433,
+    -113.821280281823,
+    32.8323500514835
+   ],
+   "features": 2719389
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/813_buildings.fgb",
+   "bytes": 74200232,
+   "envelope": [
+    -118.3280326,
+    26.7074163907418,
+    -112.62012071252,
+    32.1864505119265
+   ],
+   "features": 325844
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/815_buildings.fgb",
+   "bytes": 100032,
+   "envelope": [
+    -113.063864577454,
+    26.323595172696,
+    -112.651913276793,
+    26.751170472679
+   ],
+   "features": 447
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/83f_buildings.fgb",
+   "bytes": 3864,
+   "envelope": [
+    -114.735419015379,
+    18.3418962830418,
+    -114.733466238,
+    18.3498491926182
+   ],
+   "features": 14
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/841_buildings.fgb",
+   "bytes": 315344,
+   "envelope": [
+    -110.986244090834,
+    18.7244648710699,
+    -106.53484810627,
+    21.6958741431096
+   ],
+   "features": 1386
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/843_buildings.fgb",
+   "bytes": 211751800,
+   "envelope": [
+    -106.533341914718,
+    17.1282848099036,
+    -100.619623727695,
+    22.2636676
+   ],
+   "features": 934234
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/855_buildings.fgb",
+   "bytes": 6472,
+   "envelope": [
+    -91.5663935563987,
+    0.00377474255515845,
+    -90.5209979607757,
+    0.610061177520341
+   ],
+   "features": 26
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/859_buildings.fgb",
+   "bytes": 2346188776,
+   "envelope": [
+    -95.059893098537,
+    13.6875529769433,
+    -89.9997717966401,
+    16.534812787333
+   ],
+   "features": 10484223
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/85b_buildings.fgb",
+   "bytes": 184174048,
+   "envelope": [
+    -98.571234318492,
+    15.5855231401792,
+    -95.0598961786477,
+    16.4735280745602
+   ],
+   "features": 826459
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/85d_buildings.fgb",
+   "bytes": 8653066760,
+   "envelope": [
+    -100.6206217,
+    16.3621933117617,
+    -95.0597829,
+    22.4275742273215
+   ],
+   "features": 38408748
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/85f_buildings.fgb",
+   "bytes": 1399048064,
+   "envelope": [
+    -95.0600068955629,
+    16.4743780533444,
+    -89.9998593907773,
+    21.1712962
+   ],
+   "features": 6253230
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/865_buildings.fgb",
+   "bytes": 40397776,
+   "envelope": [
+    -100.619732077475,
+    28.2683833029567,
+    -100.268277479693,
+    29.0007368204023
+   ],
+   "features": 176981
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/867_buildings.fgb",
+   "bytes": 1374149336,
+   "envelope": [
+    -100.619861032835,
+    22.2706835013086,
+    -97.1314942078982,
+    28.306435960379
+   ],
+   "features": 6031867
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/869_buildings.fgb",
+   "bytes": 1498324192,
+   "envelope": [
+    -106.534892806216,
+    21.8424366326515,
+    -100.61942091164,
+    28.2553823483277
+   ],
+   "features": 6616665
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/86b_buildings.fgb",
+   "bytes": 634354264,
+   "envelope": [
+    -112.612964857119,
+    22.8577284220239,
+    -106.534773187494,
+    27.6514386872169
+   ],
+   "features": 2805851
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/86d_buildings.fgb",
+   "bytes": 596241624,
+   "envelope": [
+    -112.619504099568,
+    26.8194287603039,
+    -106.53463261628,
+    31.972548
+   ],
+   "features": 2616407
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/86f_buildings.fgb",
+   "bytes": 556391736,
+   "envelope": [
+    -106.534990529394,
+    27.6799660986404,
+    -100.619620147722,
+    31.8228948
+   ],
+   "features": 2450935
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/88d_buildings.fgb",
+   "bytes": 442841448,
+   "envelope": [
+    -84.1933860573563,
+    22.271471493496,
+    -79.38056776552,
+    23.6959622241487
+   ],
+   "features": 1966898
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/893_buildings.fgb",
+   "bytes": 57167712,
+   "envelope": [
+    -79.3802506322053,
+    22.1271374194716,
+    -73.6140424980361,
+    27.2614551729869
+   ],
+   "features": 245676
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/895_buildings.fgb",
+   "bytes": 5300408,
+   "envelope": [
+    -73.1405366819096,
+    21.5605038663534,
+    -71.4799628038223,
+    22.4700916986753
+   ],
+   "features": 22944
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/8c1_buildings.fgb",
+   "bytes": 755231216,
+   "envelope": [
+    -67.3086675234753,
+    15.2102942800995,
+    -61.3267536818246,
+    18.7474265325114
+   ],
+   "features": 3310446
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/8c3_buildings.fgb",
+   "bytes": 949848032,
+   "envelope": [
+    -67.3803189133501,
+    9.44152427000369,
+    -61.3267475371708,
+    12.7277827580231
+   ],
+   "features": 4202932
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/8c5_buildings.fgb",
+   "bytes": 159114392,
+   "envelope": [
+    -61.3271803,
+    9.30934209415419,
+    -59.422182061444,
+    14.5596350647881
+   ],
+   "features": 697058
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/8c7_buildings.fgb",
+   "bytes": 64267936,
+   "envelope": [
+    -61.3270753,
+    14.5341672539769,
+    -60.8218301807474,
+    16.3443147033841
+   ],
+   "features": 283377
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/8d1_buildings.fgb",
+   "bytes": 121251656,
+   "envelope": [
+    -55.4916196877622,
+    3.99254845160379,
+    -51.1930605517714,
+    5.99269308357702
+   ],
+   "features": 533993
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/8d5_buildings.fgb",
+   "bytes": 172840,
+   "envelope": [
+    -50.0184515285466,
+    0.00454539305572507,
+    -49.4096178173854,
+    1.72635169557181
+   ],
+   "features": 777
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/8d7_buildings.fgb",
+   "bytes": 60817432,
+   "envelope": [
+    -55.4898419986479,
+    -8.56040990953937e-05,
+    -50.0392197436578,
+    4.17265410386698
+   ],
+   "features": 271327
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/8d9_buildings.fgb",
+   "bytes": 80745224,
+   "envelope": [
+    -61.3268776060002,
+    0.0005854,
+    -55.4920021592653,
+    4.43445484524795
+   ],
+   "features": 359760
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/8db_buildings.fgb",
+   "bytes": 114004000,
+   "envelope": [
+    -61.3265790531827,
+    4.17412226723567,
+    -55.4914293490365,
+    9.30266039891523
+   ],
+   "features": 505079
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/8dd_buildings.fgb",
+   "bytes": 357849032,
+   "envelope": [
+    -67.3802086,
+    4.45353814539985,
+    -61.3268214577311,
+    9.81217326603186
+   ],
+   "features": 1594630
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/8df_buildings.fgb",
+   "bytes": 5045040,
+   "envelope": [
+    -67.3801095508181,
+    -3.8481845685166e-05,
+    -61.326819277354,
+    4.6531376669722
+   ],
+   "features": 22806
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/8e1_buildings.fgb",
+   "bytes": 62286640,
+   "envelope": [
+    -73.4652282324611,
+    0.00062694436934751,
+    -67.3801756230126,
+    4.85114903434285
+   ],
+   "features": 277823
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/8e3_buildings.fgb",
+   "bytes": 1543885968,
+   "envelope": [
+    -79.3804101492249,
+    -0.000340048734402474,
+    -73.4650498605763,
+    4.93685695465225
+   ],
+   "features": 6821104
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/8e5_buildings.fgb",
+   "bytes": 1305838448,
+   "envelope": [
+    -79.3808114,
+    4.85270968008414,
+    -73.4650874986142,
+    10.2900337065194
+   ],
+   "features": 5801005
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/8e7_buildings.fgb",
+   "bytes": 1354951208,
+   "envelope": [
+    -73.4652990442242,
+    4.6869668323079,
+    -67.3800630302401,
+    10.1888957746341
+   ],
+   "features": 6021080
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/8e9_buildings.fgb",
+   "bytes": 1384169784,
+   "envelope": [
+    -73.4651976587134,
+    9.82062476943007,
+    -67.3798599,
+    12.6289080297002
+   ],
+   "features": 6132348
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/8eb_buildings.fgb",
+   "bytes": 1843586072,
+   "envelope": [
+    -73.4651875252319,
+    17.4599843035994,
+    -67.4805385060599,
+    21.6369542788717
+   ],
+   "features": 8233354
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/8ed_buildings.fgb",
+   "bytes": 1021918984,
+   "envelope": [
+    -79.3803963356705,
+    17.7061801908207,
+    -73.4651010212424,
+    22.2681527836796
+   ],
+   "features": 4561220
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/8ef_buildings.fgb",
+   "bytes": 329312176,
+   "envelope": [
+    -75.6513212354693,
+    10.1928372558829,
+    -73.4651246547442,
+    11.516540874547
+   ],
+   "features": 1461806
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/8f1_buildings.fgb",
+   "bytes": 96962032,
+   "envelope": [
+    -84.9402059144318,
+    10.5531479136407,
+    -81.3543670359441,
+    15.9603140194214
+   ],
+   "features": 434783
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/8f3_buildings.fgb",
+   "bytes": 147818760,
+   "envelope": [
+    -84.9368455612497,
+    17.4050817028078,
+    -79.3803101783005,
+    22.5141367163068
+   ],
+   "features": 658324
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/8f5_buildings.fgb",
+   "bytes": 733994840,
+   "envelope": [
+    -90.0001375161422,
+    16.494171143165,
+    -84.9419323188968,
+    22.3835588979016
+   ],
+   "features": 3244133
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/8f7_buildings.fgb",
+   "bytes": 2688330192,
+   "envelope": [
+    -90.0001330337386,
+    10.5796843525152,
+    -84.94004721541,
+    16.5347656077201
+   ],
+   "features": 11959815
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/8f9_buildings.fgb",
+   "bytes": 51691664,
+   "envelope": [
+    -87.0634385224555,
+    5.54336219559615,
+    -84.9400434846232,
+    10.5902134702944
+   ],
+   "features": 228383
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/8fb_buildings.fgb",
+   "bytes": 1092909256,
+   "envelope": [
+    -84.9401873643297,
+    7.20657000457881,
+    -79.3801436822538,
+    10.5775376461893
+   ],
+   "features": 4816838
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/8fd_buildings.fgb",
+   "bytes": 49486880,
+   "envelope": [
+    -80.0987155334076,
+    -8.43e-05,
+    -79.3802886881004,
+    1.08256994356057
+   ],
+   "features": 220356
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/901_buildings.fgb",
+   "bytes": 1257120,
+   "envelope": [
+    -89.6982956609661,
+    -1.36479585206977,
+    -89.3991818399613,
+    -0.606922176934844
+   ],
+   "features": 5585
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/903_buildings.fgb",
+   "bytes": 928456352,
+   "envelope": [
+    -81.3434127473064,
+    -4.99886201376474,
+    -79.3801817,
+    7.65992251661039e-05
+   ],
+   "features": 4140172
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/905_buildings.fgb",
+   "bytes": 345404328,
+   "envelope": [
+    -81.1983523550994,
+    -8.00275626862876,
+    -79.3796672,
+    -4.97597614946181
+   ],
+   "features": 1532682
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/911_buildings.fgb",
+   "bytes": 1628273936,
+   "envelope": [
+    -77.998907022825,
+    -15.9452157055203,
+    -73.4650866243121,
+    -10.2122379974727
+   ],
+   "features": 7219984
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/913_buildings.fgb",
+   "bytes": 1484272,
+   "envelope": [
+    -74.068085962386,
+    -16.2805864577238,
+    -73.4655412573295,
+    -15.8960480414
+   ],
+   "features": 6588
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/915_buildings.fgb",
+   "bytes": 1179857024,
+   "envelope": [
+    -73.4573277675338,
+    -21.3756019876473,
+    -67.3801171936245,
+    -15.3289878896806
+   ],
+   "features": 5274378
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/917_buildings.fgb",
+   "bytes": 789130616,
+   "envelope": [
+    -73.4652347833073,
+    -15.8774468848522,
+    -67.380072170893,
+    -9.81952671988259
+   ],
+   "features": 3547463
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/919_buildings.fgb",
+   "bytes": 66900648,
+   "envelope": [
+    -73.4647206272073,
+    -10.1783665187523,
+    -67.3801044966155,
+    -4.68513609275462
+   ],
+   "features": 301643
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/91b_buildings.fgb",
+   "bytes": 1116612744,
+   "envelope": [
+    -79.3808558361956,
+    -10.3922555286976,
+    -73.4652882211292,
+    -4.86612846984438
+   ],
+   "features": 4998987
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/91d_buildings.fgb",
+   "bytes": 1038138472,
+   "envelope": [
+    -79.3804954,
+    -4.9727254793134,
+    -73.4650417905811,
+    0.000409453785484789
+   ],
+   "features": 4620593
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/91f_buildings.fgb",
+   "bytes": 81131400,
+   "envelope": [
+    -73.4651820280606,
+    -4.83798687448163,
+    -67.4006178733067,
+    -0.000730134153395388
+   ],
+   "features": 363495
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/921_buildings.fgb",
+   "bytes": 36253472,
+   "envelope": [
+    -67.3635754389459,
+    -4.64310134830863,
+    -61.3269324328614,
+    3.96211788295193e-05
+   ],
+   "features": 163388
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/923_buildings.fgb",
+   "bytes": 123019728,
+   "envelope": [
+    -67.3801918596271,
+    -9.81816790723889,
+    -61.3268639977714,
+    -4.47578552076669
+   ],
+   "features": 549381
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/925_buildings.fgb",
+   "bytes": 43362336,
+   "envelope": [
+    -61.3268303375596,
+    -9.33725033378905,
+    -55.4914326554653,
+    -4.17544888198754
+   ],
+   "features": 195082
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/927_buildings.fgb",
+   "bytes": 358327648,
+   "envelope": [
+    -61.3268642801448,
+    -4.38667121046677,
+    -55.4913824,
+    -0.00343644938999354
+   ],
+   "features": 1603279
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/929_buildings.fgb",
+   "bytes": 181192392,
+   "envelope": [
+    -55.4915321825629,
+    -4.17011078927652,
+    -50.0188744272207,
+    0.0001665
+   ],
+   "features": 812274
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/92b_buildings.fgb",
+   "bytes": 667907264,
+   "envelope": [
+    -50.0185085567122,
+    -3.87435287452274,
+    -44.9998351144691,
+    -0.000186199983109103
+   ],
+   "features": 2990672
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/92d_buildings.fgb",
+   "bytes": 538051312,
+   "envelope": [
+    -50.0188741290887,
+    -8.16821759878434,
+    -44.9998994494551,
+    -3.58482579029755
+   ],
+   "features": 2405698
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/92f_buildings.fgb",
+   "bytes": 71699696,
+   "envelope": [
+    -55.4915282256381,
+    -8.76819173761328,
+    -50.0186015,
+    -3.88530756377137
+   ],
+   "features": 321597
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/931_buildings.fgb",
+   "bytes": 111122552,
+   "envelope": [
+    -55.4918210011352,
+    -13.7431873261013,
+    -50.0187771450302,
+    -8.17789868455565
+   ],
+   "features": 495926
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/933_buildings.fgb",
+   "bytes": 226828208,
+   "envelope": [
+    -50.0187877986023,
+    -12.8130509265028,
+    -44.999943455312,
+    -7.55961016194772
+   ],
+   "features": 1011178
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/935_buildings.fgb",
+   "bytes": 1421705520,
+   "envelope": [
+    -50.0190369210167,
+    -17.6921546451407,
+    -44.9998516213338,
+    -11.8692586248419
+   ],
+   "features": 6298460
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/937_buildings.fgb",
+   "bytes": 417024984,
+   "envelope": [
+    -55.491521034892,
+    -18.8943111870807,
+    -50.0186474962267,
+    -12.8229552834363
+   ],
+   "features": 1854155
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/939_buildings.fgb",
+   "bytes": 370151784,
+   "envelope": [
+    -61.3268934787788,
+    -19.789970023337,
+    -55.4914399709762,
+    -13.7524532603447
+   ],
+   "features": 1648867
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/93b_buildings.fgb",
+   "bytes": 265133424,
+   "envelope": [
+    -61.3268737624334,
+    -14.5971540644796,
+    -55.4912665871682,
+    -8.81597728273863
+   ],
+   "features": 1177723
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/93d_buildings.fgb",
+   "bytes": 318355640,
+   "envelope": [
+    -67.3801782611011,
+    -15.3120020154547,
+    -61.3267894013854,
+    -9.34757313723156
+   ],
+   "features": 1422181
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/93f_buildings.fgb",
+   "bytes": 1144818184,
+   "envelope": [
+    -67.3801757098296,
+    -21.0011170496344,
+    -61.3268337848756,
+    -14.6197858148246
+   ],
+   "features": 5106024
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/941_buildings.fgb",
+   "bytes": 513069472,
+   "envelope": [
+    -67.3801095928284,
+    -26.7624125462724,
+    -61.3269689154517,
+    -20.2559982367037
+   ],
+   "features": 2272390
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/943_buildings.fgb",
+   "bytes": 1121687528,
+   "envelope": [
+    -67.3801553529081,
+    -32.3914723430503,
+    -61.3268440786788,
+    -25.6514060359371
+   ],
+   "features": 4936365
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/945_buildings.fgb",
+   "bytes": 1375655480,
+   "envelope": [
+    -61.3269619403704,
+    -31.0823555013122,
+    -55.4913981731191,
+    -24.2885301939759
+   ],
+   "features": 6112652
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/947_buildings.fgb",
+   "bytes": 242771184,
+   "envelope": [
+    -61.3267826828548,
+    -25.6276171092823,
+    -55.4909358649085,
+    -18.986629529625
+   ],
+   "features": 1086052
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/949_buildings.fgb",
+   "bytes": 1235101800,
+   "envelope": [
+    -55.4915720584689,
+    -24.2195830924337,
+    -50.0180669,
+    -17.712934023373
+   ],
+   "features": 5451640
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/94b_buildings.fgb",
+   "bytes": 2292518960,
+   "envelope": [
+    -50.018949555338,
+    -22.7268690894849,
+    -44.9994586,
+    -16.4180675294183
+   ],
+   "features": 10101864
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/94d_buildings.fgb",
+   "bytes": 5842324080,
+   "envelope": [
+    -50.0189409843574,
+    -27.7759780109492,
+    -44.9998320561342,
+    -21.1435861319545
+   ],
+   "features": 25815726
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/94f_buildings.fgb",
+   "bytes": 2542342320,
+   "envelope": [
+    -55.4915610845088,
+    -29.5247198731624,
+    -50.0185048131054,
+    -22.7375670624136
+   ],
+   "features": 11246301
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/951_buildings.fgb",
+   "bytes": 1684837488,
+   "envelope": [
+    -55.4915688534214,
+    -34.6405789777133,
+    -50.0185385085969,
+    -27.7807149619836
+   ],
+   "features": 7438968
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/953_buildings.fgb",
+   "bytes": 459087488,
+   "envelope": [
+    -50.0189188708388,
+    -29.7723802720802,
+    -48.3472831156455,
+    -27.2676271503482
+   ],
+   "features": 2032850
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/957_buildings.fgb",
+   "bytes": 71332520,
+   "envelope": [
+    -55.4915344456026,
+    -35.1082167377568,
+    -53.3671420059204,
+    -33.9599875522785
+   ],
+   "features": 315675
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/959_buildings.fgb",
+   "bytes": 510005104,
+   "envelope": [
+    -61.3269407641153,
+    -38.9995295155834,
+    -55.4914065832689,
+    -34.6584510651145
+   ],
+   "features": 2250364
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/95b_buildings.fgb",
+   "bytes": 3554583136,
+   "envelope": [
+    -61.3270278468906,
+    -36.3340803824074,
+    -55.4913359937704,
+    -29.5391138334966
+   ],
+   "features": 15719686
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/95d_buildings.fgb",
+   "bytes": 705060472,
+   "envelope": [
+    -67.3801326946183,
+    -37.7072264779529,
+    -61.3265609,
+    -31.1197223955391
+   ],
+   "features": 3093073
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/95f_buildings.fgb",
+   "bytes": 216032680,
+   "envelope": [
+    -67.3800635111758,
+    -42.6817022067798,
+    -61.3266397844097,
+    -36.3450173053546
+   ],
+   "features": 954088
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/961_buildings.fgb",
+   "bytes": 648512352,
+   "envelope": [
+    -73.4653017089578,
+    -43.7611721301757,
+    -67.3799763926048,
+    -37.7745947957249
+   ],
+   "features": 2866713
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/963_buildings.fgb",
+   "bytes": 66731464,
+   "envelope": [
+    -74.8278123950705,
+    -43.8576859610226,
+    -73.4649925572194,
+    -39.8581945295613
+   ],
+   "features": 296669
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/965_buildings.fgb",
+   "bytes": 10802432,
+   "envelope": [
+    -74.0306044796272,
+    -38.6813152842825,
+    -73.4649386,
+    -36.9145760229373
+   ],
+   "features": 47957
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/967_buildings.fgb",
+   "bytes": 2178519528,
+   "envelope": [
+    -73.4652669290664,
+    -38.7848774432113,
+    -67.3802075383863,
+    -32.4121114427007
+   ],
+   "features": 9564778
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/969_buildings.fgb",
+   "bytes": 684876680,
+   "envelope": [
+    -71.7349564499605,
+    -33.1346011511079,
+    -67.380135765938,
+    -26.8181332494254
+   ],
+   "features": 3011724
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/96b_buildings.fgb",
+   "bytes": 112093160,
+   "envelope": [
+    -70.9611331397893,
+    -27.3344374384628,
+    -67.3801111,
+    -21.052005001093
+   ],
+   "features": 493047
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/96f_buildings.fgb",
+   "bytes": 163728,
+   "envelope": [
+    -78.9381672391014,
+    -33.6724449897399,
+    -78.8146458,
+    -33.6020288784749
+   ],
+   "features": 726
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/971_buildings.fgb",
+   "bytes": 15424,
+   "envelope": [
+    -80.8272264118563,
+    -33.8950508807866,
+    -80.6316792504251,
+    -33.6185312009314
+   ],
+   "features": 66
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/973_buildings.fgb",
+   "bytes": 11328,
+   "envelope": [
+    -80.0993881436056,
+    -26.3482205866458,
+    -79.9013424870121,
+    -26.2876707910444
+   ],
+   "features": 48
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/995_buildings.fgb",
+   "bytes": 2392904,
+   "envelope": [
+    -109.517726792819,
+    -27.2555260371822,
+    -109.185815553913,
+    -26.9117357045649
+   ],
+   "features": 10581
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/9ab_buildings.fgb",
+   "bytes": 3638760,
+   "envelope": [
+    -91.6319250964665,
+    -1.31491467605632,
+    -90.0714171753686,
+    -0.00313771110055319
+   ],
+   "features": 16123
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/b5b_buildings.fgb",
+   "bytes": 34912,
+   "envelope": [
+    37.5869858556207,
+    -46.9669346191024,
+    37.9561793395022,
+    -46.5773313411565
+   ],
+   "features": 153
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/bc3_buildings.fgb",
+   "bytes": 1660024,
+   "envelope": [
+    -65.2511089480885,
+    -54.8811990848665,
+    -58.0747552924802,
+    -51.2551795342332
+   ],
+   "features": 7454
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/bc5_buildings.fgb",
+   "bytes": 23416776,
+   "envelope": [
+    -72.984045247996,
+    -55.9756776289873,
+    -65.2458135598479,
+    -53.4845935057413
+   ],
+   "features": 103669
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/bd9_buildings.fgb",
+   "bytes": 12675624,
+   "envelope": [
+    -75.6503429658545,
+    -49.0478938644186,
+    -70.544917971657,
+    -43.8408044370923
+   ],
+   "features": 56511
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/bdb_buildings.fgb",
+   "bytes": 67735904,
+   "envelope": [
+    -75.5034495214035,
+    -54.2114612098433,
+    -68.0688802719675,
+    -48.4072451569286
+   ],
+   "features": 299291
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/bdd_buildings.fgb",
+   "bytes": 8968944,
+   "envelope": [
+    -70.4493190198666,
+    -51.8781166690243,
+    -59.3867272930348,
+    -47.4140003887521
+   ],
+   "features": 39742
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/bdf_buildings.fgb",
+   "bytes": 90744616,
+   "envelope": [
+    -73.3321971199461,
+    -48.3294116274824,
+    -65.5480813840039,
+    -42.8363104694465
+   ],
+   "features": 401707
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/be1_buildings.fgb",
+   "bytes": 43655344,
+   "envelope": [
+    -67.2822991799006,
+    -44.6303751851695,
+    -63.5800820597113,
+    -42.075407314502
+   ],
+   "features": 192125
+  },
+  {
+   "key": "google-research-open-buildings/fgb-s2/be9_buildings.fgb",
+   "bytes": 1276280,
+   "envelope": [
+    -58.6278703166487,
+    -51.7604302323812,
+    -57.7220886597615,
+    -51.2999082616802
+   ],
+   "features": 5634
+  }
+ ],
+ "note": "Envelopes of the Google Open Buildings v3 FlatGeobuf files on Source Cooperative (google-research-open-buildings/fgb-s2/), read from each file's header. Split parts of cells also present whole are omitted. Data: CC BY 4.0 or ODbL 1.0."
+}

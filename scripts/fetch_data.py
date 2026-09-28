@@ -66,6 +66,22 @@ VENDOR_FILES = [
 ]
 
 
+# deck.gl (MIT, vis.gl / OpenJS Foundation) draws the 3D ground view:
+# extruded buildings, streets and imagery tiles. The standalone bundle is
+# one classic script that registers ``window.deck``; the page loads it the
+# first time that view opens. Pinned, and checked against a known hash,
+# because a script the page executes is not something to take on trust.
+DECK_VERSION = "9.3.11"
+DECK_FILES = [
+    (f"https://cdn.jsdelivr.net/npm/deck.gl@{DECK_VERSION}/dist.min.js",
+     "deck/dist.min.js",
+     "91cebf7d9595c50fac694c4ec622d651a1ac07601390ac1315a5e486fc90ec41"),
+    (f"https://cdn.jsdelivr.net/npm/deck.gl@{DECK_VERSION}/LICENSE",
+     "deck/LICENSE.txt",
+     "e499a2c2ba3b9faabe91fdfddf43e329439263264b7148e5548d0ec605cce9f2"),
+]
+
+
 def fetch(url: str, dest: Path, force: bool = False) -> bool:
     """Download ``url`` to ``dest``.  Returns True if a download happened."""
     if dest.exists() and dest.stat().st_size > 0 and not force:
@@ -135,7 +151,8 @@ def build_globe_geojson() -> None:
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--force", action="store_true", help="re-download everything")
-    ap.add_argument("--skip-vendor", action="store_true", help="skip three.js")
+    ap.add_argument("--skip-vendor", action="store_true",
+                    help="skip three.js and deck.gl")
     ap.add_argument("--skip-geo", action="store_true", help="skip Natural Earth")
     args = ap.parse_args()
 
@@ -170,6 +187,20 @@ def main() -> int:
                 "source": url,
                 "license": "MIT (three.js)",
             }
+
+    if not args.skip_vendor:
+        print(f"deck.gl {DECK_VERSION} (MIT) ->", VENDOR_DIR / "deck")
+        for url, name, expected in DECK_FILES:
+            dest = VENDOR_DIR / name
+            fetch(url, dest, args.force)
+            got = sha256(dest)
+            if got != expected:
+                dest.unlink(missing_ok=True)
+                raise SystemExit(
+                    f"{name}: checksum mismatch (got {got}, expected "
+                    f"{expected}). Deleted rather than served.")
+            manifest[name] = {"bytes": dest.stat().st_size, "sha256": got,
+                              "source": url, "license": "MIT (deck.gl)"}
 
     mpath = ROOT / "data" / "MANIFEST.json"
     existing: dict = {}

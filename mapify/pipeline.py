@@ -757,18 +757,35 @@ class AnalysisEngine:
                         "place names come from the offline Natural Earth data."
                     )
 
-            # Overpass: leading candidate only, one query per analysis.
-            if online and net.overpass_enabled and rank == 0:
-                surroundings = self.overpass.nearby(
-                    cand.latitude, cand.longitude, net.overpass_radius_m
-                )
-                info["surroundings"] = surroundings.as_dict()
-                if surroundings.error:
-                    report.warnings.append(
-                        f"Nearby-feature lookup skipped: {surroundings.error}"
-                    )
+            # Nearby landmarks, leading candidate only. Local map data
+            # first -- an imported region or cached vector tiles, which
+            # cost no public server anything -- and Overpass only when
+            # someone has pointed it at their own instance and asked.
+            if rank == 0:
+                surroundings = self._nearby(cand.latitude, cand.longitude,
+                                            online, net)
+                if surroundings is not None:
+                    info["surroundings"] = surroundings.as_dict()
+                    if surroundings.error and not surroundings.features:
+                        report.warnings.append(
+                            f"Nearby-feature lookup skipped: {surroundings.error}"
+                        )
 
             cand.enrichment = info
+
+    def _nearby(self, lat: float, lon: float, online: bool, net):
+        """Landmarks near a point: local data, else an opted-in Overpass."""
+        if net.overpass_enabled and online:
+            return self.overpass.nearby(lat, lon, net.overpass_radius_m)
+        try:
+            from .geodata.nearby import nearby
+            from .geodata.service import get_service
+            svc = get_service(online=not net.offline_only)
+            return nearby(svc, lat, lon, float(net.overpass_radius_m),
+                          fetch=online)
+        except Exception as exc:                        # pragma: no cover
+            log.warning("nearby features unavailable: %s", exc)
+            return None
 
     def name_coordinate(self, lat: float, lon: float) -> dict[str, Any]:
         """Everything we can say about one coordinate, online included.
@@ -1018,6 +1035,12 @@ class AnalysisEngine:
             if self.cfg.network.overpass_enabled:
                 items.append(
                     "Nearby features: Overpass / OpenStreetMap contributors, ODbL"
+                )
+            else:
+                items.append(
+                    "Nearby features and 3D buildings: OpenStreetMap "
+                    "contributors, ODbL (local import and OpenFreeMap "
+                    "\u00a9 OpenMapTiles); Google Open Buildings, CC BY 4.0"
                 )
         if self.ocr and getattr(self.ocr, "name", None) == "easyocr":
             items.append("OCR: EasyOCR (Apache-2.0)")

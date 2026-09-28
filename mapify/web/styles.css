@@ -1044,3 +1044,133 @@ button {
 @media (prefers-reduced-motion: reduce) {
   * { animation-duration: .001ms !important; transition-duration: .001ms !important; }
 }
+
+/* ── the not-a-place verdict ─────────────────────────────────────────
+   Plain lists of reasons and of places the text mentions. Quieter than
+   the notes: they explain the verdict, they are not the verdict. */
+.muted { color: var(--ink-3); font-size: 11px; }
+ul.plain {
+  margin: 0 0 6px; padding-left: 16px;
+  font-size: 11.5px; line-height: 1.55; color: var(--ink-2);
+}
+ul.plain li { margin: 2px 0; }
+
+/* ── the 3D ground view ───────────────────────────────────────────────
+   Covers the globe viewport. Everything floating over the scene uses
+   the same glass as the finding card, so it reads as one application,
+   and nothing covers the middle of the frame: that is where the
+   location being examined is. */
+.finding-3d {
+  margin-top: 11px; padding: 7px 12px;
+  font: 600 12px var(--ui); color: var(--ink-1);
+  background: var(--accent-wash); border: 1px solid var(--accent-dim);
+  border-radius: var(--r-sm); cursor: pointer;
+}
+.finding-3d:hover { background: rgba(90, 184, 240, .18); }
+.finding-3d[hidden] { display: none; }
+
+.globe-3d {
+  position: absolute; right: 20px; bottom: 54px; z-index: 12;
+  padding: 8px 13px; font: 600 12px var(--ui); color: var(--ink-1);
+  background: rgba(14, 19, 27, .92); border: 1px solid var(--accent-dim);
+  border-radius: var(--r-sm); cursor: pointer; box-shadow: var(--shadow-3);
+}
+.globe-3d[hidden] { display: none; }
+
+.ground3d {
+  position: absolute; inset: 0; z-index: 30;
+  background: radial-gradient(ellipse at 50% 60%, #1c2533 0%, #0b0f16 75%);
+  overflow: hidden;
+}
+.ground3d[hidden] { display: none; }
+.g3d-canvas { position: absolute; inset: 0; }
+
+.g3d-top {
+  position: absolute; top: 14px; left: 14px; right: 14px; z-index: 2;
+  display: flex; align-items: flex-start; justify-content: space-between;
+  gap: 12px; pointer-events: none;
+}
+.g3d-title, .g3d-tools, .g3d-legend, .g3d-status, .g3d-note, .g3d-attrib {
+  background: linear-gradient(180deg, rgba(14,19,27,.90), rgba(8,11,16,.92));
+  border: 1px solid var(--line-2); border-radius: var(--r-md);
+  backdrop-filter: blur(10px) saturate(1.1);
+}
+.g3d-title { pointer-events: auto; padding: 10px 14px; max-width: 42%; }
+.g3d-eyebrow {
+  font-size: 10px; font-weight: 650; letter-spacing: .09em;
+  text-transform: uppercase; color: var(--accent);
+}
+.g3d-place {
+  margin: 3px 0 2px; font: 600 18px var(--ui-display); color: var(--ink-1);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.g3d-sub { margin: 0; font: 11px var(--mono); color: var(--ink-3); }
+
+.g3d-tools {
+  pointer-events: auto; display: flex; align-items: center; gap: 6px;
+  flex-wrap: wrap; justify-content: flex-end; padding: 6px;
+}
+.g3d-tools button, .g3d-tools select {
+  font: 600 11.5px var(--ui); color: var(--ink-1);
+  background: var(--raised); border: 1px solid var(--line-2);
+  border-radius: var(--r-sm); padding: 5px 9px; cursor: pointer;
+}
+.g3d-tools button:hover { border-color: var(--accent-dim); }
+.g3d-tools button.on { background: var(--accent-wash); border-color: var(--accent); }
+.g3d-tools .g3d-close { background: var(--accent-wash); border-color: var(--accent-dim); }
+.g3d-imagery-label, .g3d-toggle {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 11px; color: var(--ink-3);
+}
+.g3d-toggle[hidden] { display: none; }
+
+.g3d-legend {
+  position: absolute; left: 14px; bottom: 44px; z-index: 2;
+  padding: 9px 12px; min-width: 230px; font-size: 11.5px; color: var(--ink-2);
+}
+.g3d-legend:empty { display: none; }
+.g3d-legend-head {
+  margin: 0 0 6px; font-size: 10px; font-weight: 650; letter-spacing: .08em;
+  text-transform: uppercase; color: var(--ink-4);
+}
+.g3d-legend-row { display: flex; align-items: center; gap: 8px; margin: 3px 0; }
+.g3d-legend-row i { width: 12px; height: 12px; border-radius: 2px; flex: none; }
+.g3d-legend-row span { flex: 1; }
+.g3d-legend-row b { font: 600 11px var(--mono); color: var(--ink-3); }
+
+.g3d-notes {
+  position: absolute; right: 14px; bottom: 44px; z-index: 2;
+  max-width: min(420px, 45%); display: flex; flex-direction: column; gap: 6px;
+}
+.g3d-note {
+  padding: 6px 10px; font-size: 11px; line-height: 1.45; color: var(--ink-2);
+  border-left: 2px solid var(--warn);
+}
+.g3d-status {
+  position: absolute; left: 50%; top: 86px; transform: translateX(-50%);
+  z-index: 2; padding: 6px 12px; font-size: 11.5px; color: var(--ink-2);
+}
+.g3d-status:empty { display: none; }
+.g3d-status.warn { color: var(--warn); }
+.g3d-hint {
+  position: absolute; left: 50%; bottom: 44px; transform: translateX(-50%);
+  z-index: 1; font-size: 10.5px; color: var(--ink-4); pointer-events: none;
+  white-space: nowrap;
+}
+.g3d-attrib {
+  position: absolute; left: 14px; right: 14px; bottom: 10px; z-index: 2;
+  padding: 5px 10px; font-size: 10px; line-height: 1.45; color: var(--ink-3);
+  border-radius: var(--r-sm);
+}
+.g3d-warn { color: var(--warn); }
+.ground3d .deck-tooltip {
+  font: 12px var(--ui) !important; white-space: pre-line;
+  background: rgba(8, 11, 16, .95) !important; color: var(--ink-1) !important;
+  border: 1px solid var(--line-2); border-radius: var(--r-sm);
+}
+
+/* ── exports ─────────────────────────────────────────────────────── */
+.export-row { display: flex; gap: 6px; flex-wrap: wrap; }
+.btn.small { padding: 5px 10px; font-size: 11.5px; }
+.export-result { margin-top: 8px; }
+.export-result .btn.small { margin-left: 6px; }

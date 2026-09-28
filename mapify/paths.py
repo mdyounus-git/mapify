@@ -167,6 +167,39 @@ def models_dir() -> Path:
     return primary
 
 
+def geodata_dir() -> Path:
+    """Where the local map-feature store and its source extracts live.
+
+    The same rule as the model weights: an existing store beats a tidy
+    one. A regional import is hundreds of megabytes and minutes of
+    processing, and a checkout and the installation beside it should
+    share one rather than each building their own.
+    """
+    override = os.environ.get("MAPIFY_GEODATA_DIR")
+    if override:
+        path = Path(override).expanduser()
+        path.mkdir(parents=True, exist_ok=True)
+        return path
+
+    primary = state_dir() / "geodata"
+    candidates = [primary]
+    beside = install_dir()
+    if is_frozen() and beside is not None:
+        # An installation looking at the checkout it was built from.
+        candidates.append(beside.parent / "data" / "geodata")
+    else:
+        # A checkout looking at the installation built beside it.
+        candidates.append(read_root() / "app" / "data" / "geodata")
+    for candidate in candidates:
+        try:
+            if (candidate / "store.sqlite").is_file():
+                return candidate
+        except OSError:
+            continue
+    primary.mkdir(parents=True, exist_ok=True)
+    return primary
+
+
 def ocr_model_dir() -> Path | None:
     """Where EasyOCR should keep its weights, or None to leave it alone.
 

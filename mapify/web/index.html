@@ -215,8 +215,19 @@
             <span id="finding-spread"></span>
           </p>
           <p id="finding-why" class="finding-why"></p>
+          <button id="finding-3d" class="finding-3d" type="button" hidden
+                  title="Buildings, streets and water around this point, in 3D">
+            View the buildings here in 3D</button>
         </div>
       </div>
+
+      <!-- Offered when the camera is low over the globe: the same 3D view,
+           for whatever point is under it rather than a result. -->
+      <button id="globe-3d" class="globe-3d" type="button" hidden>
+        3D ground view here</button>
+
+      <!-- The 3D ground view. Filled by js/ground3d.js on first use. -->
+      <div id="ground3d" class="ground3d" hidden></div>
 
       <!-- Offered when one photograph will not place itself. Phrased as
            a question with a useful answer either way: another picture,

@@ -1,0 +1,494 @@
+"""Local geographic data: heights, the tile store, the readers, the service.
+
+Nothing here touches the network. The OpenStreetMap importer runs on a
+hand-written file, the vector-tile decoder on a tile encoded in the test,
+and the FlatGeobuf reader on a file GDAL writes (skipped when GDAL's
+Python binding is not installed) -- an independent writer is the point:
+a reader tested only against its own assumptions proves little.
+"""
+
+from __future__ import annotations
+
+import json
+import math
+import sqlite3
+import struct
+
+import pytest
+
+from pathlib import Path
+
+DATA = Path(__file__).resolve().parent / "data"
+
+
+# ---------------------------------------------------------------- heights
+
+class TestHeights:
+    def test_lengths_parse_with_and_without_units(self):
+        from mapify.geodata.heights import parse_length
+        assert parse_length("12") == 12.0
+        assert parse_length("12,5") == 12.5
+        assert parse_length("12 m") == 12.0
+        assert parse_length("40 ft") == pytest.approx(12.192)
+        assert parse_length("12'6\"") == pytest.approx(3.81)
+
+    def test_unreadable_lengths_are_refused_not_guessed(self):
+        from mapify.geodata.heights import parse_length
+        for bad in ("approx 10", "10-12", "tall", "", None, "-3", "5000"):
+            assert parse_length(bad) is None, bad
+
+    def test_every_height_says_how_it_is_known(self):
+        from mapify.geodata.heights import resolve_height
+        assert resolve_height({"building": "yes", "height": "21"}).source == "measured"
+        h = resolve_height({"building": "apartments", "building:levels": "4"})
+        assert (h.source, h.metres) == ("levels", 12.0)
+        h = resolve_height({"building": "house"})
+        assert h.source == "assumed"
+        assert h.metres <= 6.0, "an assumed height must stay modest"
+
+    def test_a_raised_part_keeps_its_base(self):
+        from mapify.geodata.heights import resolve_height
+        h = resolve_height({"building:part": "yes", "height": "30",
+                            "min_height": "12"})
+        assert (h.base_metres, h.metres, h.source) == (12.0, 30.0, "measured")
+
+
+# ------------------------------------------------------------------ store
+
+class TestStore:
+    def test_rings_survive_encoding(self):
+        from mapify.geodata.store import decode_ring, encode_ring
+        ring = [(80.2210, 12.7810), (80.2215, 12.7810), (80.2215, 12.7815)]
+        back = decode_ring(encode_ring(ring))
+        for (x0, y0), (x1, y1) in zip(ring, back):
+            assert abs(x0 - x1) < 1e-6 and abs(y0 - y1) < 1e-6
+
+    def test_small_features_file_at_z14_and_large_ones_coarser(self):
+        from mapify.geodata.store import _placement
+        z, _ = _placement((80.2210, 12.7810, 80.2215, 12.7815))
+        assert z == 14
+        z, _ = _placement((79.0, 12.0, 80.5, 13.5))          # a long river
+        assert z in (10, 6)
+
+    def test_thousands_of_tiles_write_and_read_back(self, tmp_path):
+        """More than one batch of tiles, so the mid-loop write runs."""
+        from mapify.geodata.store import GeoStore, bbox_around, encode_ring
+        st = GeoStore(tmp_path / "s.sqlite")
+        st.begin_stage()
+        n = 0
+        for i in range(60):
+            for j in range(60):
+                lon, lat = 80.0 + i * 0.03, 12.0 + j * 0.03
+                ring = [(lon, lat), (lon + 1e-4, lat), (lon + 1e-4, lat + 1e-4),
+                        (lon, lat)]
+                st.stage("building", "osm", (lon, lat, lon + 1e-4, lat + 1e-4),
+                         [n, None, "yes", 40, 0, 0, None, 0, [encode_ring(ring)]])
+                n += 1
+        written = st.finish_stage()
+        assert written > 2000, "must exceed one write batch"
+        got = st.query(bbox_around(12.0 + 30 * 0.03, 80.0 + 30 * 0.03, 200))
+        assert len(got["building"]) == 1
+        tables = {r[0] for r in st.db.execute(
+            "SELECT name FROM sqlite_master WHERE type='table'")}
+        assert not any(t.startswith("stage") for t in tables), \
+            "the staging table must be dropped"
+
+    def test_a_feature_across_a_tile_edge_is_returned_once(self, tmp_path):
+        from mapify.geodata.store import (GeoStore, _tile_bounds, bbox_around,
+                                          encode_ring, tile_of)
+        st = GeoStore(tmp_path / "s.sqlite")
+        x, y = tile_of(80.22, 12.78, 14)
+        west, south, east, north = _tile_bounds(14, x, y)
+        ring = [(east - 1e-4, south + 1e-3), (east + 1e-4, south + 1e-3),
+                (east + 1e-4, south + 2e-3), (east - 1e-4, south + 2e-3)]
+        st.begin_stage()
+        st.stage("building", "osm", (east - 1e-4, south + 1e-3,
+                                     east + 1e-4, south + 2e-3),
+                 [7, None, "yes", 40, 0, 0, None, 0, [encode_ring(ring)]])
+        st.finish_stage()
+        got = st.query(bbox_around(south + 1.5e-3, east, 500))
+        assert [f[0] for _, f in got["building"]] == [7]
+
+    def test_a_reimport_replaces_rather_than_duplicates(self, tmp_path):
+        from mapify.geodata.store import GeoStore, bbox_around, encode_ring
+        st = GeoStore(tmp_path / "s.sqlite")
+        ring = [(80.221, 12.781), (80.2211, 12.781), (80.2211, 12.7811)]
+        for height in (40, 90):
+            st.begin_stage()
+            st.stage("building", "osm", (80.221, 12.781, 80.2211, 12.7811),
+                     [1, None, "yes", height, 0, 2, None, 0, [encode_ring(ring)]])
+            st.finish_stage()
+        got = st.query(bbox_around(12.781, 80.221, 200))["building"]
+        assert len(got) == 1 and got[0][1][3] == 90, "the newer version wins"
+
+
+# ------------------------------------------------------------ OSM import
+
+class TestOsmImport:
+    def test_the_tiny_file_imports_with_heights_holes_roads_and_places(self, tmp_path):
+        pytest.importorskip("osmium")
+        from mapify.geodata.osm_import import import_pbf
+        from mapify.geodata.store import GeoStore, bbox_around
+        st = GeoStore(tmp_path / "s.sqlite")
+        counts = import_pbf(DATA / "tiny.osm", st, "tiny")
+        assert counts["building"] == 2 and counts["road"] == 1
+        assert counts["poi"] == 1
+        assert counts["height_measured"] == 1 and counts["height_levels"] == 1
+        got = st.query(bbox_around(12.784, 80.224, 1500))
+        by_name = {f[1]: f for _, f in got["building"]}
+        assert by_name["Test Towers"][3] == 120          # 4 levels, in dm
+        assert len(by_name["Courtyard College"][8]) == 2, "the hole is kept"
+        region = st.regions()[0]
+        assert region["licence"].startswith("ODbL")
+        assert region["bbox"] == [80.22, 12.78, 80.23, 12.79]
+
+
+# ------------------------------------------------------------ vector tiles
+
+def _varint(n: int) -> bytes:
+    out = bytearray()
+    while True:
+        b = n & 0x7F
+        n >>= 7
+        if n:
+            out.append(b | 0x80)
+        else:
+            out.append(b)
+            return bytes(out)
+
+
+def _field(num: int, wire: int, payload) -> bytes:
+    key = _varint((num << 3) | wire)
+    if wire == 0:
+        return key + _varint(payload)
+    return key + _varint(len(payload)) + payload
+
+
+def _zz(n: int) -> int:
+    return (n << 1) ^ (n >> 31)
+
+
+def _geom(rings: list[list[tuple[int, int]]], close: bool) -> list[int]:
+    out, cx, cy = [], 0, 0
+    for ring in rings:
+        x, y = ring[0]
+        out += [(1 & 7) | (1 << 3), _zz(x - cx), _zz(y - cy)]
+        cx, cy = x, y
+        rest = ring[1:]
+        out.append((2 & 7) | (len(rest) << 3))
+        for x, y in rest:
+            out += [_zz(x - cx), _zz(y - cy)]
+            cx, cy = x, y
+        if close:
+            out.append((7 & 7) | (1 << 3))
+    return out
+
+
+def _tile() -> bytes:
+    """A vector tile with a clipped building, a hole, a road and a label."""
+    def packed(vals):
+        return b"".join(_varint(v) for v in vals)
+
+    def feature(gtype, tags, geom):
+        return (_field(2, 2, packed(tags)) + _field(3, 0, gtype)
+                + _field(4, 2, packed(geom)))
+
+    def value_str(s):
+        return _field(1, 2, s.encode())
+
+    def value_int(i):
+        return _field(4, 0, i)
+
+    # A square straddling the tile's east edge (x runs past 4096), with a
+    # hole wound the other way.
+    outer = [(3900, 100), (4300, 100), (4300, 500), (3900, 500)]
+    hole = [(3950, 150), (3950, 250), (4050, 250), (4050, 150)]
+    building = (_field(1, 2, b"building")
+                + _field(2, 2, feature(3, [0, 0], _geom([outer, hole], True)))
+                + _field(3, 2, b"render_height") + _field(4, 2, value_int(24))
+                + _field(5, 0, 4096) + _field(15, 0, 2))
+    road = (_field(1, 2, b"transportation")
+            + _field(2, 2, feature(2, [0, 0], _geom([[(0, 2000), (4096, 2100)]], False)))
+            + _field(2, 2, feature(3, [0, 0], _geom([outer], True)))   # a plaza
+            + _field(3, 2, b"class") + _field(4, 2, value_str("primary"))
+            + _field(5, 0, 4096) + _field(15, 0, 2))
+    poi = (_field(1, 2, b"poi")
+           + _field(2, 2, feature(1, [0, 0, 1, 1], _geom([[(2048, 2048)]], False)[:3]))
+           + _field(3, 2, b"name") + _field(3, 2, b"class")
+           + _field(4, 2, value_str("Test Market")) + _field(4, 2, value_str("shop"))
+           + _field(5, 0, 4096) + _field(15, 0, 2))
+    return (_field(3, 2, building) + _field(3, 2, road) + _field(3, 2, poi))
+
+
+class TestVectorTiles:
+    Z, X, Y = 14, 11842, 7577
+
+    def test_a_tile_decodes_into_longitude_and_latitude(self):
+        from mapify.geodata.mvt import decode_tile, tile_bounds
+        layers = decode_tile(_tile(), self.Z, self.X, self.Y)
+        b = tile_bounds(self.Z, self.X, self.Y)
+        (bld,) = layers["building"]
+        assert bld["props"]["render_height"] == 24
+        poly = bld["geometry"][0]
+        assert len(poly) == 2, "the hole stays attached to its building"
+        for ring in poly:
+            for lon, lat in ring:
+                assert b[0] - 1e-9 <= lon <= b[2] + 1e-9, "clipped to the tile"
+                assert b[1] - 1e-9 <= lat <= b[3] + 1e-9
+        (pt,) = layers["poi"]
+        assert pt["props"] == {"name": "Test Market", "class": "shop"}
+
+    def test_gzipped_tiles_decode_too(self):
+        import gzip
+        from mapify.geodata.mvt import decode_tile
+        assert decode_tile(gzip.compress(_tile()), self.Z, self.X, self.Y)["building"]
+
+    def test_filing_skips_geometry_a_layer_does_not_expect(self, tmp_path):
+        """transportation carries plazas as polygons; only lines are streets."""
+        from mapify.geodata.store import GeoStore, _tile_bounds
+        from mapify.geodata.vector_tiles import OpenFreeMap
+        st = GeoStore(tmp_path / "s.sqlite")
+        ofm = OpenFreeMap(st, tmp_path)
+        st.begin_stage()
+        n = ofm._file(_tile(), self.X, self.Y)
+        st.finish_stage()
+        got = st.query(_tile_bounds(self.Z, self.X, self.Y))
+        assert len(got["road"]) == 1
+        assert len(got["building"]) == 1
+        assert got["building"][0][1][5] == 3, "24 m is a published height"
+        assert got["poi"][0][1][2] == "Test Market"
+        assert n == 3
+
+
+# ------------------------------------------------------------- FlatGeobuf
+
+class TestFlatGeobuf:
+    def test_a_bbox_search_matches_brute_force_on_a_gdal_written_file(self, tmp_path):
+        pyogrio = pytest.importorskip("pyogrio")
+        np = pytest.importorskip("numpy")
+        from shapely import wkb as swkb
+        from shapely.geometry import box
+        from mapify.geodata.fgb import open_file
+
+        polys, heights = [], []
+        rng = np.random.default_rng(3)
+        for _ in range(4000):
+            x, y = rng.uniform(80.0, 80.4), rng.uniform(12.6, 13.0)
+            polys.append(box(x, y, x + 2e-4, y + 2e-4).wkb)
+            heights.append(float(rng.uniform(0.65, 1.0)))
+        path = tmp_path / "b.fgb"
+        pyogrio.raw.write(str(path), np.array(polys, dtype=object),
+                          field_data=[np.array(heights)],
+                          fields=["confidence"], driver="FlatGeobuf",
+                          geometry_type="Polygon", crs="EPSG:4326",
+                          layer_options={"SPATIAL_INDEX": "YES"})
+        src = open_file(str(path))
+        assert src.header.features_count == 4000
+        q = (80.1, 12.7, 80.2, 12.8)
+        hits = src.search(q)
+        found = {round(p["confidence"], 9) for _, p, _ in src.features(hits)}
+        expected = {round(h, 9) for w, h in zip(polys, heights)
+                    if swkb.loads(w).intersects(box(*q))}
+        assert found == expected
+
+
+# ------------------------------------------------------------ imagery
+
+class TestTiles:
+    def test_imagery_sources_depend_on_where_you_are(self):
+        from mapify.geodata.tiles import sources_for
+        us = [s["key"] for s in sources_for(39.74, -104.99)]
+        india = [s["key"] for s in sources_for(12.78, 80.22)]
+        assert us[0] == "usgs"
+        assert "usgs" not in india, "the USGS service has nothing outside the US"
+        assert all(not s["shows_buildings"] for s in sources_for(12.78, 80.22))
+
+    def test_cached_tiles_are_served_offline_and_missing_ones_remembered(self, tmp_path):
+        from mapify.geodata.tiles import TileCache
+        cache = TileCache(root=tmp_path, offline=True)
+        p = tmp_path / "weld" / "5" / "22" / "14.jpg"
+        p.parent.mkdir(parents=True)
+        p.write_bytes(b"\xff\xd8jpeg")
+        data, media = cache.get("weld", 5, 22, 14)
+        assert data == b"\xff\xd8jpeg" and media == "image/jpeg"
+        (tmp_path / "weld" / "5" / "22" / "15.missing").write_text("404")
+        assert cache.get("weld", 5, 22, 15)[0] is None
+        assert cache.get("weld", 5, 22, 16) == (None, "offline, and not cached")
+
+    def test_bad_requests_are_refused_before_any_fetch(self, tmp_path):
+        from mapify.geodata.tiles import TileCache
+        cache = TileCache(root=tmp_path, offline=False)
+        assert cache.get("nope", 1, 0, 0)[1] == "unknown source"
+        assert cache.get("usgs", 17, 0, 0)[1] == "outside the source's range"
+        assert cache.get("hls", 3, 0, 0, "../../etc")[1] == "bad date"
+
+
+# ------------------------------------------------------------- service
+
+class TestService:
+    @pytest.fixture
+    def svc(self, tmp_path, monkeypatch):
+        pytest.importorskip("osmium")
+        monkeypatch.setenv("MAPIFY_GEODATA_DIR", str(tmp_path))
+        from mapify.geodata.osm_import import import_pbf
+        from mapify.geodata.service import GeoService
+        s = GeoService(online=False)
+        import_pbf(DATA / "tiny.osm", s.store, "tiny")
+        return s
+
+    def test_around_returns_buildings_with_how_their_height_is_known(self, svc):
+        a = svc.around(12.784, 80.224, 1500, fetch_open_buildings=False)
+        by_name = {b["name"]: b for b in a["buildings"]}
+        assert by_name["Test Towers"]["height_source"] == "levels"
+        assert by_name["Courtyard College"]["height_source"] == "measured"
+        assert len(by_name["Courtyard College"]["polygon"]) == 2
+        assert a["roads"][0]["name"] == "Test Street"
+        assert a["sources"][0]["attribution"].endswith("OpenStreetMap contributors")
+
+    def test_a_detection_inside_a_mapped_building_is_dropped(self, svc):
+        from mapify.geodata.store import encode_ring
+        inside = [(80.2211, 12.7811), (80.2213, 12.7811), (80.2213, 12.7813)]
+        outside = [(80.2280, 12.7880), (80.2282, 12.7880), (80.2282, 12.7882)]
+        svc.store.begin_stage()
+        for fid, ring in ((1, inside), (2, outside)):
+            svc.store.stage("building", "gob",
+                            (min(p[0] for p in ring), min(p[1] for p in ring),
+                             max(p[0] for p in ring), max(p[1] for p in ring)),
+                            [fid, None, "building", 40, 0, 0, None, 0,
+                             [encode_ring(ring)], 0.9, 30.0])
+        svc.store.finish_stage()
+        a = svc.around(12.784, 80.224, 1500, fetch_open_buildings=False)
+        gob = [b["id"] for b in a["buildings"] if b["source"] == "gob"]
+        assert gob == ["gob:2"], "the mapped building wins where both exist"
+
+    def test_offline_with_nothing_stored_says_so(self, tmp_path, monkeypatch):
+        monkeypatch.setenv("MAPIFY_GEODATA_DIR", str(tmp_path / "empty"))
+        from mapify.geodata.service import GeoService
+        a = GeoService(online=False).around(40.758, -73.985, 500)
+        assert a["buildings"] == []
+        assert any("Offline" in n for n in a["notes"])
+
+
+# ------------------------------------------------------------- exports
+
+class TestExports:
+    REPORT = {"prediction": {"determinate": True, "confidence": "medium",
+                             "uncertainty_km": 12.5, "precision_km": 0.02,
+                             "estimated": {"latitude": 12.781,
+                                           "longitude": 80.2212,
+                                           "provenance": "text"}},
+              "candidates": [{"latitude": 12.781, "longitude": 80.2212,
+                              "probability": 0.41, "provenance": "text"}]}
+    AROUND = {"center": [80.2212, 12.781],
+              "buildings": [{"polygon": [[[80.225, 12.785], [80.226, 12.785],
+                                          [80.226, 12.786], [80.225, 12.786]]],
+                             "height": 4.0, "base": 0.0,
+                             "height_source": "assumed", "source": "gob",
+                             "confidence": 0.81}],
+              "roads": [{"path": [[80.222, 12.782], [80.223, 12.783]],
+                         "name": "Test Street", "class": "residential"}],
+              "water": [], "pois": [],
+              "sources": [{"name": "Google Open Buildings v3",
+                           "licence": "CC BY 4.0",
+                           "attribution": "Google Open Buildings v3 (CC BY 4.0)"}]}
+
+    def test_the_geopackage_is_a_valid_one(self, tmp_path):
+        from mapify.exporters import build_gpkg
+        path = build_gpkg(self.REPORT, self.AROUND, tmp_path / "c.gpkg")
+        db = sqlite3.connect(path)
+        assert db.execute("PRAGMA application_id").fetchone()[0] == 0x47504B47
+        assert db.execute("PRAGMA integrity_check").fetchone()[0] == "ok"
+        blob = db.execute("SELECT geom FROM buildings").fetchone()[0]
+        assert blob[:2] == b"GP" and struct.unpack_from("<i", blob, 4)[0] == 4326
+        notices = [r[0] for r in db.execute("SELECT source FROM notice")]
+        assert "Google Open Buildings v3" in notices, "licences travel with data"
+
+    def test_gdal_reads_every_layer(self, tmp_path):
+        pyogrio = pytest.importorskip("pyogrio")
+        from mapify.exporters import build_gpkg
+        path = build_gpkg(self.REPORT, self.AROUND, tmp_path / "c.gpkg")
+        layers = dict(pyogrio.list_layers(str(path)))
+        assert layers["buildings"] == "Polygon"
+        assert layers["candidates"] == "Point"
+        assert pyogrio.read_info(str(path), layer="buildings")["crs"] == "EPSG:4326"
+
+    def test_the_kepler_file_has_datasets_layers_and_a_notice(self):
+        from mapify.exporters import build_kepler
+        k = build_kepler(self.REPORT, self.AROUND)
+        ids = [d["data"]["id"] for d in k["datasets"]]
+        assert ids == ["candidates", "buildings"]
+        layer = k["config"]["config"]["visState"]["layers"][1]
+        assert layer["config"]["visConfig"]["enable3d"] is True
+        assert "CC BY 4.0" in k["info"]["description"]
+        json.dumps(k)                                    # serialisable
+
+
+# --------------------------------------------------------------- routes
+
+class TestRoutes:
+    @pytest.fixture
+    def client(self, tmp_path, monkeypatch):
+        pytest.importorskip("osmium")
+        monkeypatch.setenv("MAPIFY_GEODATA_DIR", str(tmp_path / "geo"))
+        monkeypatch.setenv("MAPIFY_STATE_DIR", str(tmp_path / "state"))
+        import mapify.geodata.service as service
+        monkeypatch.setattr(service, "_SHARED", {})
+        from fastapi.testclient import TestClient
+        from mapify.config import load_config
+        from mapify.geodata.osm_import import import_pbf
+        from mapify.server import create_app
+        cfg = load_config()
+        cfg.network.offline_only = True
+        cfg.models.geoclip_enabled = False
+        cfg.models.clip_evidence_enabled = False
+        cfg.models.ocr_enabled = False
+        import_pbf(DATA / "tiny.osm", service.get_service(online=False).store,
+                   "tiny")
+        return TestClient(create_app(cfg))
+
+    def test_around_serves_the_local_store(self, client):
+        r = client.get("/api/geodata/around?lat=12.784&lon=80.224&radius=1500")
+        assert r.status_code == 200
+        assert {b["name"] for b in r.json()["buildings"]} >= {"Test Towers"}
+
+    def test_a_coordinate_out_of_range_is_refused(self, client):
+        assert client.get("/api/geodata/around?lat=95&lon=0").status_code == 400
+
+    def test_a_missing_tile_is_empty_ground_not_an_error(self, client):
+        r = client.get("/api/tiles/weld/3/1/1")
+        assert r.status_code == 204
+        assert r.headers["X-Mapify-Reason"]
+
+    def test_status_names_the_imagery_for_a_place(self, client):
+        j = client.get("/api/geodata/status?lat=12.78&lon=80.22").json()
+        assert j["regions"][0]["name"] == "tiny"
+        assert "usgs" not in [s["key"] for s in j["imagery"]]
+
+
+# ---------------------------------------------------------- nearby places
+
+class TestNearby:
+    def test_landmarks_and_streets_come_from_local_data(self, tmp_path, monkeypatch):
+        pytest.importorskip("osmium")
+        monkeypatch.setenv("MAPIFY_GEODATA_DIR", str(tmp_path))
+        from mapify.geodata.nearby import nearby
+        from mapify.geodata.osm_import import import_pbf
+        from mapify.geodata.service import GeoService
+        svc = GeoService(online=False)
+        import_pbf(DATA / "tiny.osm", svc.store, "tiny")
+        s = nearby(svc, 12.784, 80.224, 1500, fetch=False)
+        assert [f.name for f in s.features] == ["Test Hospital"]
+        assert s.features[0].distance_m > 0
+        assert s.road_names == ["Test Street"]
+        assert "OpenStreetMap" in s.attribution
+
+    def test_no_local_data_is_said_rather_than_invented(self, tmp_path, monkeypatch):
+        monkeypatch.setenv("MAPIFY_GEODATA_DIR", str(tmp_path))
+        from mapify.geodata.nearby import nearby
+        from mapify.geodata.service import GeoService
+        s = nearby(GeoService(online=False), 40.758, -73.985, 1000, fetch=False)
+        assert s.features == [] and s.error
+
+    def test_public_overpass_is_off_by_default(self):
+        from mapify.config import load_config
+        assert load_config().network.overpass_enabled is False
