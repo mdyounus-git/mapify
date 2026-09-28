@@ -502,3 +502,24 @@ class TestInstallerScripts:
         assert "SmartScreen" in install, (
             "an unsigned installer has to say so; the warning is correct"
         )
+
+
+def test_hugging_face_goes_offline_only_when_the_weights_are_there(tmp_path, monkeypatch):
+    """Every launch used to ask the Hub about a model already on disk."""
+    from mapify import paths
+    for var in ("HF_HUB_OFFLINE", "TRANSFORMERS_OFFLINE"):
+        # Set, then delete: monkeypatch records the original state on the
+        # first call, so whatever the code under test sets is undone after.
+        monkeypatch.setenv(var, "placeholder")
+        monkeypatch.delenv(var)
+    hub = tmp_path / "hub"
+    snap = hub / paths._CLIP_CACHE_DIR / "snapshots" / "abc123"
+    snap.mkdir(parents=True)
+    paths._go_offline_if_complete(hub)
+    assert "HF_HUB_OFFLINE" not in __import__("os").environ, \
+        "a half-downloaded snapshot must not switch the network off"
+    (snap / "model.safetensors").write_bytes(b"weights")
+    paths._go_offline_if_complete(hub)
+    import os
+    assert os.environ["HF_HUB_OFFLINE"] == "1"
+    assert os.environ["TRANSFORMERS_OFFLINE"] == "1"

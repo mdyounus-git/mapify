@@ -267,6 +267,38 @@ def _default_hf_cache_has_weights() -> bool:
         return False
 
 
+def _snapshot_has_weights(hub: Path) -> bool:
+    """Is a complete copy of the CLIP weights in this hub cache?
+
+    A snapshot directory can exist half-filled after an interrupted
+    download, so the weights file itself is what is asked about.
+    """
+    try:
+        for snap in (hub / _CLIP_CACHE_DIR / "snapshots").iterdir():
+            for name in ("model.safetensors", "pytorch_model.bin"):
+                if (snap / name).exists():
+                    return True
+    except OSError:
+        return False
+    return False
+
+
+def _go_offline_if_complete(hub: Path) -> None:
+    """Stop Hugging Face checking the network when the weights are here.
+
+    Without this every launch asked the Hub whether the model had changed
+    -- the installed application's log said so: "You are sending
+    unauthenticated requests to the HF Hub". Nothing needed downloading,
+    and an application that says it works locally should not phone a
+    server to find that out. Only switched on when the weights are
+    verifiably present, because offline mode with a missing file is an
+    error rather than a download. An explicit setting always wins.
+    """
+    if _snapshot_has_weights(hub):
+        os.environ.setdefault("HF_HUB_OFFLINE", "1")
+        os.environ.setdefault("TRANSFORMERS_OFFLINE", "1")
+
+
 def apply_model_cache_env() -> Path | None:
     """Point Hugging Face at our models directory, for a frozen build.
 
@@ -288,6 +320,9 @@ def apply_model_cache_env() -> Path | None:
     if os.environ.get("HF_HOME") or os.environ.get("HF_HUB_CACHE"):
         return None
     if not is_frozen() and _default_hf_cache_has_weights():
+        base = os.environ.get("XDG_CACHE_HOME")
+        _go_offline_if_complete(
+            (Path(base) if base else Path.home() / ".cache") / "huggingface" / "hub")
         return None
     try:
         target = models_dir()
@@ -297,6 +332,7 @@ def apply_model_cache_env() -> Path | None:
         return None
     os.environ["HF_HOME"] = str(target)
     os.environ["HF_HUB_CACHE"] = str(target / "hub")
+    _go_offline_if_complete(target / "hub")
 
     # EasyOCR reads this once, when easyocr.config is imported, and derives
     # its own model/ and user_network/ underneath it -- which is exactly
