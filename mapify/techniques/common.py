@@ -74,3 +74,69 @@ def describe_reading(sp, rd, *, steers: bool,
         confidence=rd.confidence if decisive else 0.0,
         sources=[SRC_CLIP],
     )
+
+
+# ------------------------------------------------------- asking the encoder
+
+def zero_shot(ctx: Context, options: dict, tag: str, embedding=None,
+              temperature: float = 0.02) -> dict | None:
+    """Probabilities over ``options`` ({key: [prompts]}) for one embedding.
+
+    Lets a technique ask its own narrow question -- is there a water
+    reflection, a manhole cover -- without adding a group to the shared
+    prompt bank that every analysis would pay to score. The text side is
+    cached on disk under ``tag``; the image side reuses the embedding the
+    analysis already computed. Returns None when the encoder is not there.
+    """
+    import numpy as np
+    eng = ctx.engine
+    emb = ctx.embedding if embedding is None else embedding
+    clip = getattr(eng, "clip", None) if eng is not None else None
+    if clip is None or emb is None:
+        return None
+    keys = list(options)
+    texts = [t for k in keys for t in options[k]]
+    try:
+        bank = clip.encode_texts_cached(texts, f"technique-{tag}")
+    except Exception:
+        return None
+    sims = bank @ np.asarray(emb)
+    scores, i = [], 0
+    for k in keys:
+        n = len(options[k])
+        scores.append(float(np.max(sims[i:i + n])))
+        i += n
+    z = np.asarray(scores) / temperature
+    z = np.exp(z - z.max())
+    p = z / z.sum()
+    return {k: float(v) for k, v in zip(keys, p)}
+
+
+def tiles(ctx: Context, grid: int = 2):
+    """[(box, embedding)] for a grid of tiles, computed once per run.
+
+    Each tile is encoded at the encoder's full input size, so detail the
+    whole-image view shrank away -- a distant sign, a vehicle, a script --
+    gets its own look. Costs one encoder pass per tile, which is why the
+    grid is small and the result is shared by every technique asking.
+    """
+    key = f"tiles{grid}"
+    if key in ctx.memo:
+        return ctx.memo[key]
+    eng = ctx.engine
+    clip = getattr(eng, "clip", None) if eng is not None else None
+    out = []
+    if clip is not None and ctx.image is not None:
+        w, h = ctx.image.size
+        for gy in range(grid):
+            for gx in range(grid):
+                box = (gx / grid, gy / grid, (gx + 1) / grid, (gy + 1) / grid)
+                crop = ctx.image.crop((int(box[0] * w), int(box[1] * h),
+                                       int(box[2] * w), int(box[3] * h)))
+                try:
+                    out.append((box, clip.encode_image(crop)))
+                except Exception:
+                    out = []
+                    break
+    ctx.memo[key] = out
+    return out
