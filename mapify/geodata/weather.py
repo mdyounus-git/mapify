@@ -39,6 +39,10 @@ _UA = ("Mapify/0.1 (open-source image geolocation; "
        "https://github.com/mdyounus-git/mapify)")
 _ARCHIVE = "https://archive-api.open-meteo.com/v1/archive"
 _AIR = "https://air-quality-api.open-meteo.com/v1/air-quality"
+_ELEVATION = "https://api.open-meteo.com/v1/elevation"
+DEM_ATTRIBUTION = ("Elevation via Open-Meteo from the Copernicus DEM GLO-90, "
+                   "(c) DLR e.V. 2010-2014 and (c) Airbus Defence and Space GmbH "
+                   "2014-2018, provided under COPERNICUS by the EU and ESA")
 
 _CODES = {0: "clear sky", 1: "mainly clear", 2: "partly cloudy", 3: "overcast",
           45: "fog", 48: "rime fog", 51: "light drizzle", 53: "drizzle",
@@ -111,7 +115,8 @@ class WeatherHistory:
         body = self._get(_ARCHIVE, {
             "latitude": round(lat, 2), "longitude": round(lon, 2),
             "start_date": day, "end_date": day, "timezone": "GMT",
-            "hourly": "weather_code,cloud_cover,precipitation,snowfall"})
+            "hourly": "weather_code,cloud_cover,precipitation,snowfall,"
+                      "temperature_2m,relative_humidity_2m"})
         return self._at_hour(body, when)
 
     def air(self, lat: float, lon: float, when: datetime) -> dict[str, Any] | None:
@@ -122,3 +127,15 @@ class WeatherHistory:
             "start_date": day, "end_date": day, "timezone": "GMT",
             "hourly": "pm2_5,pm10,dust,aerosol_optical_depth"})
         return self._at_hour(body, when)
+
+    def elevations(self, points: list[tuple[float, float]]) -> list[float] | None:
+        """Terrain elevation in metres for up to 100 (lat, lon) points."""
+        if not points:
+            return []
+        pts = points[:100]
+        body = self._get(_ELEVATION, {
+            "latitude": ",".join(f"{la:.4f}" for la, _ in pts),
+            "longitude": ",".join(f"{lo:.4f}" for _, lo in pts)})
+        if not body or "elevation" not in body:
+            return None
+        return [float(v) if v is not None else float("nan") for v in body["elevation"]]
