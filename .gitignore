@@ -83,3 +83,7 @@ data/tiles/
 data/tmp/
 data/cases/
 data/*.log
+
+# Pinpoint: reference thumbnails, their features and cached Commons answers.
+# Other people's photographs under their own licences, fetched on demand.
+data/pinpoint/
