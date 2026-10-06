@@ -177,6 +177,11 @@ class FusionConfig:
     w_climate: float = 0.55
     w_plate: float = 0.45
     w_region_hint: float = 0.50
+    # Narrow clues read off the image as text -- a calling code, a
+    # country-code domain, a currency sign, a postcode, miles
+    # (evidence/text_clues.py). Zero until the benchmark has measured
+    # whether letting them steer helps: scripts/measure_text_clues.py.
+    w_text_clue: float = 0.0
     max_total_adjustment: float = 2.5
     # ---- Confidence banding -------------------------------------------
     #

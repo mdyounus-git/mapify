@@ -511,6 +511,31 @@ class FusionEngine:
             ):
                 hit.corroborated_km = d
 
+    def _apply_text_clues(self, cand: Candidate, clues: list) -> None:
+        """Narrow clues read off the image as text, at the measured weight.
+
+        Only clues that name a handful of countries take part; "$" and a
+        trunk code a German number shares stay out. Each counts once per
+        kind, scaled by how hard that kind of clue may argue.
+        """
+        w = getattr(self.cfg, "w_text_clue", 0.0)
+        if w <= 0 or not clues:
+            return
+        for clue in clues:
+            agreement = clue.agreement(cand.iso_a2)
+            if agreement == 0.0:
+                continue
+            fits = "fits" if agreement > 0 else "does not fit"
+            cand.adjustments.append(
+                Adjustment(
+                    source=f"text_{clue.kind}",
+                    detail=(f"Text read off the image ({', '.join(clue.matches[:3])}) "
+                            f"{fits} {cand.iso_a2}"),
+                    delta=w * clue.strength * agreement,
+                    agreement=agreement,
+                )
+            )
+
     # ---------------------------------------------------------------- main
 
     def fuse(
@@ -526,8 +551,12 @@ class FusionEngine:
         notes: list[str] = []
 
         toponyms: list[ToponymHit] = []
+        text_clues: list = []
         if ocr and ocr.lines:
             toponyms = self.find_toponyms(ocr)
+            if getattr(cfg, "w_text_clue", 0.0) > 0:
+                from .text_clues import read_clues
+                text_clues = read_clues(ocr.lines)
 
         pool = list(raw)
         if extra_candidates:
@@ -625,6 +654,8 @@ class FusionEngine:
                 self._apply_language_hints(cand, script_reading)
             if toponyms:
                 self._apply_toponyms(cand, toponyms)
+            if text_clues:
+                self._apply_text_clues(cand, text_clues)
 
             total = max(
                 -cfg.max_total_adjustment,
