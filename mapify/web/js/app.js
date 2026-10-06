@@ -62,6 +62,8 @@ const el = {
   findingWhy: $("finding-why"),
   finding3d: $("finding-3d"),
   findingWalk: $("finding-walk"),
+  findingPinpoint: $("finding-pinpoint"),
+  pinpointPanel: $("pinpoint-panel"),
   globe3d: $("globe-3d"),
   ground3d: $("ground3d"),
   askMore: $("ask-more"),
@@ -239,6 +241,7 @@ async function boot() {
   el.findingWalk.addEventListener("click", () => {
     if (state.view3d) openGround(state.view3d, { walk: true });
   });
+  el.findingPinpoint.addEventListener("click", () => runPinpoint());
   el.globe3d.addEventListener("click", () => {
     const c = state.camera;
     if (c) openGround(groundTargetAt(c.lat, c.lon), { fromAltitudeKm: c.altKm });
@@ -641,6 +644,159 @@ function set3dTarget(target) {
   state.view3d = target;
   el.finding3d.hidden = !target;
   el.findingWalk.hidden = !target;
+  el.findingPinpoint.hidden = !target || !(state.sourceFile || state.sourcePath);
+  if (!target) el.pinpointPanel.hidden = true;   // a new result: the old outcome goes
+}
+
+/* ───────────────────────────── pinpoint ───────────────────────────── */
+
+/* Where to look for photographs of the same scene: an uncontradicted GPS
+   tag, the estimate within its uncertainty, and the next candidates. */
+function pinpointAreas(report) {
+  const pred = report.prediction || {};
+  const km = (a, b, c, d) => {
+    const r = Math.PI / 180;
+    const s = Math.sin((c - a) * r / 2) ** 2
+      + Math.cos(a * r) * Math.cos(c * r) * Math.sin((d - b) * r / 2) ** 2;
+    return 12742 * Math.asin(Math.sqrt(s));
+  };
+  const areas = [];
+  const add = (lat, lon, radius, label) => {
+    if (!areas.some((a) => km(a.lat, a.lon, lat, lon) < 0.8)) {
+      areas.push({ lat, lon, radius_m: Math.round(radius), label });
+    }
+  };
+  const gps = pred.embedded_gps;
+  if (gps && pred.exif_vs_estimate?.verdict !== "rejected") {
+    add(gps.latitude, gps.longitude, 400, "the GPS tag");
+  }
+  const est = pred.estimated;
+  if (pred.determinate && est) {
+    const spreadKm = est.precision_km || pred.uncertainty_km || 1.5;
+    add(est.latitude, est.longitude,
+        Math.max(400, Math.min(3000, spreadKm * 1200)), "the estimate");
+  }
+  (report.candidates || []).slice(0, 3).forEach((c, i) => {
+    if (i > 0 && (c.probability || 0) < 0.05) return;
+    add(c.latitude, c.longitude, 2000, `candidate #${i + 1}`);
+  });
+  return areas.slice(0, 4);
+}
+
+async function readNdjson(resp, onProgress) {
+  const reader = resp.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "", result = null;
+  for (;;) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    let nl;
+    while ((nl = buffer.indexOf("\n")) >= 0) {
+      const line = buffer.slice(0, nl).trim();
+      buffer = buffer.slice(nl + 1);
+      if (!line) continue;
+      let msg;
+      try { msg = JSON.parse(line); } catch { continue; }
+      if (msg.type === "progress") onProgress?.(msg);
+      else if (msg.type === "result") result = msg.pinpoint;
+    }
+  }
+  return result;
+}
+
+async function runPinpoint(budget = null) {
+  const report = state.report;
+  if (!report || state.pinpointing) return;
+  const areas = pinpointAreas(report);
+  const panel = el.pinpointPanel;
+  panel.hidden = false;
+  panel.className = "pinpoint-panel";
+  if (!areas.length) {
+    panel.innerHTML = "<strong>Nothing to pinpoint.</strong> There is no estimate or "
+      + "candidate to search around.";
+    return;
+  }
+  state.pinpointing = true;
+  el.findingPinpoint.disabled = true;
+  panel.innerHTML = `<strong>Pinpointing…</strong> Comparing this photograph with
+    geotagged photographs taken near ${esc(areas.map((a) => a.label).join(", "))}.
+    The photograph itself stays on this computer.
+    <div class="pinpoint-status">Starting</div>`;
+  const status = panel.querySelector(".pinpoint-status");
+  try {
+    let resp;
+    if (state.sourcePath) {
+      resp = await fetch("/api/pinpoint/local/stream", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ path: state.sourcePath, areas, budget }),
+      });
+    } else {
+      const form = new FormData();
+      form.append("image", state.sourceFile, state.sourceFile.name || "image.jpg");
+      form.append("areas", JSON.stringify(areas));
+      if (budget) form.append("budget", String(budget));
+      resp = await fetch("/api/pinpoint/stream", { method: "POST", body: form });
+    }
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    const result = await readNdjson(resp, (m) => { status.textContent = m.message; });
+    if (!result) throw new Error("no result came back");
+    showPinpoint(result);
+  } catch (err) {
+    panel.innerHTML = `<strong>Pinpoint could not run.</strong> ${esc(err.message)}`;
+  } finally {
+    state.pinpointing = false;
+    el.findingPinpoint.disabled = false;
+  }
+}
+
+function showPinpoint(res) {
+  if (state.report) state.report.pinpoint = res;        // saved with the report
+  const panel = el.pinpointPanel;
+  panel.className = `pinpoint-panel ${res.verdict}`;
+  const head = { pinpointed: "Pinpointed", possible: "Possible match", none: "No match",
+                 unavailable: "Pinpoint unavailable" }[res.verdict] || "Pinpoint";
+  const best = res.best;
+  const shown = best && res.verdict !== "none" && res.verdict !== "unavailable";
+  const match = shown ? `
+    <div class="pinpoint-match">
+      <img src="/api/pinpoint/thumb/${esc(best.key)}" alt="The matching reference photograph">
+      <div><strong>${esc(best.title || best.id)}</strong><br>
+        ${best.match.inliers} matching points &middot; taken ${esc(fmtKm(best.distance_m / 1000))}
+        from ${esc(best.area || "the search centre")}
+        <div class="pinpoint-credit">${esc(best.author)} &middot; ${esc(best.licence)}
+          &middot; ${esc(best.page_url)}</div></div>
+    </div>` : "";
+  const searched = res.searched || {};
+  const listed = searched.listed ?? searched.references ?? 0;
+  const compared = searched.references ?? 0;
+  // Not found yet, and photographs listed that were not compared: offer
+  // the next ones. Those already compared come back from the cache.
+  const more = (res.verdict === "none" || res.verdict === "possible")
+    ? Math.min(600, Math.max(0, listed - compared)) : 0;
+  panel.innerHTML = `<strong>${head}.</strong> ${esc(res.message)}${match}
+    <div class="pinpoint-credit" style="margin-top:6px">Compared
+      ${compared}${listed > compared ? ` of ${listed}` : ""} photographs listed near
+      the candidates, from
+      ${esc((searched.sources || []).join(" and ") || "no source")}.
+      ${(res.notes || []).map(esc).join(" ")}</div>
+    ${more ? `<button type="button" class="pinpoint-more">Search further
+      (${more} more photographs)</button>` : ""}`;
+  panel.querySelector(".pinpoint-more")?.addEventListener(
+    "click", () => runPinpoint(compared + more));
+  if (res.verdict === "pinpointed" && res.location) {
+    const loc = res.location;
+    const strong = (res.matches || []).filter(
+      (m) => m.match?.inliers >= (res.threshold?.strong ?? Infinity));
+    set3dTarget({ lat: loc.lat, lon: loc.lon, label: "Pinpointed spot",
+                  precisionKm: loc.precision_m / 1000, origin: "pinpoint",
+                  matches: strong.map((m) => ({
+                    lat: m.lat, lon: m.lon,
+                    label: `Matching photograph · ${m.match.inliers} points` })) });
+    state.globe.addMarker({ id: "pinpoint", lat: loc.lat, lon: loc.lon,
+                            label: "Pinpointed by a matching photograph",
+                            kind: "primary", radiusKm: loc.precision_m / 1000 });
+  }
 }
 
 function showFinding(report) {
@@ -1469,6 +1625,7 @@ async function analyse(source) {
   state.busy = true;
   state.batch = null;
   state.sourcePath = source.path || null;
+  state.sourceFile = source.file || null;      // kept for Pinpoint
   // A new image means the previous answer is gone, so the globe is free
   // to turn again until this one lands.
   state.globe?.resume();

@@ -1071,6 +1071,39 @@ ul.plain li { margin: 2px 0; }
 .finding-actions { display: flex; gap: 6px; flex-wrap: wrap; }
 .finding-walk { background: rgba(88, 201, 141, .10); border-color: rgba(88, 201, 141, .45); }
 .finding-walk:hover { background: rgba(88, 201, 141, .2); }
+.finding-pinpoint { background: rgba(167, 139, 250, .10); border-color: rgba(167, 139, 250, .45); }
+.finding-pinpoint:hover { background: rgba(167, 139, 250, .2); }
+.finding-pinpoint:disabled { opacity: .55; cursor: progress; }
+
+/* Pinpoint's outcome, inside the result card. */
+.pinpoint-panel {
+  margin-top: 10px; padding: 9px 10px; max-width: 420px;
+  border: 1px solid var(--line-2); border-left: 2px solid var(--exif);
+  border-radius: var(--r-md); background: var(--sunken);
+  font-size: 11.5px; line-height: 1.5; color: var(--ink-2);
+}
+.pinpoint-panel[hidden] { display: none; }
+.pinpoint-panel.pinpointed { border-left-color: var(--ok); }
+.pinpoint-panel.possible { border-left-color: var(--warn); }
+.pinpoint-panel strong { color: var(--ink-1); }
+.pinpoint-status { font-family: var(--mono); font-size: 10.5px; color: var(--ink-3); }
+.pinpoint-match {
+  display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: 9px;
+  margin-top: 8px; align-items: start;
+}
+.pinpoint-match img {
+  width: 96px; height: 72px; object-fit: cover; border-radius: var(--r-sm);
+  border: 1px solid var(--line-2); background: var(--raised);
+}
+.pinpoint-credit { font-size: 10.5px; color: var(--ink-3); overflow-wrap: anywhere; }
+.pinpoint-credit a { color: var(--accent); }
+.pinpoint-more {
+  margin-top: 8px; padding: 5px 10px;
+  font: 600 11.5px var(--ui); color: var(--ink-1); cursor: pointer;
+  background: rgba(167, 139, 250, .10); border: 1px solid rgba(167, 139, 250, .45);
+  border-radius: var(--r-sm);
+}
+.pinpoint-more:hover { background: rgba(167, 139, 250, .2); }
 
 .globe-3d {
   position: absolute; right: 20px; bottom: 54px; z-index: 12;
