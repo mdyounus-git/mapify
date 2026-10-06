@@ -165,6 +165,24 @@ def test_the_evidence_map_collects_every_marked_region():
     assert f.detail["regions"][0]["box"] == [0.1, 0.1, 0.4, 0.2]
 
 
+@pytest.mark.parametrize("orientation, expected", [
+    (1, [0.1, 0.2, 0.3, 0.4]),
+    (6, [0.6, 0.1, 0.8, 0.3]),          # stored on its side: turned clockwise
+    (3, [0.7, 0.6, 0.9, 0.8]),
+])
+def test_forensic_boxes_are_turned_upright_before_drawing(orientation, expected):
+    ctx = _ctx()
+    ctx.exif.orientation = orientation
+    box = mapify.techniques.Region(0.1, 0.2, 0.3, 0.4, "copy")
+    ctx.memo["findings"] = {
+        140: Finding(technique=140, key="c", name="copy", phase=9, found=True, regions=[box]),
+        6: Finding(technique=6, key="o", name="ocr", phase=1, found=True, regions=[box])}
+    f = _one(ctx, 151)
+    by = {r["technique"]: r["box"] for r in f.detail["regions"]}
+    assert by[140] == pytest.approx(expected)
+    assert by[6] == [0.1, 0.2, 0.3, 0.4]          # measured on the upright copy already
+
+
 def test_the_provenance_record_hashes_the_input():
     import hashlib
     raw = make_jpeg()

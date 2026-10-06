@@ -446,6 +446,26 @@ def date_interval(ctx: Context) -> Finding:
 
 # --------------------------------------------------------------- 151
 
+# Techniques that measure the file as stored rather than the upright
+# analysis copy: forensics has to see the uploaded bytes. Their boxes are
+# in the stored orientation and are turned upright before drawing.
+_STORED_ORIENTATION = {54, 55, 138, 139, 140}
+
+
+def _upright(box, orientation: int | None):
+    """A normalised box in a stored image, in the upright (displayed) one."""
+    x0, y0, x1, y1 = box
+    return {
+        2: (1 - x1, y0, 1 - x0, y1),            # mirrored
+        3: (1 - x1, 1 - y1, 1 - x0, 1 - y0),    # upside down
+        4: (x0, 1 - y1, x1, 1 - y0),
+        5: (y0, x0, y1, x1),
+        6: (1 - y1, x0, 1 - y0, x1),            # stored on its side (phones)
+        7: (1 - y1, 1 - x1, 1 - y0, 1 - x0),
+        8: (y0, 1 - x1, y1, 1 - x0),
+    }.get(orientation or 1, (x0, y0, x1, y1))
+
+
 @technique(id=151, key="evidence_map", name="Final evidence map / annotated clue regions",
            phase=PHASE,
            fusion_note="Every region any technique marked, with the technique "
@@ -453,13 +473,17 @@ def date_interval(ctx: Context) -> Finding:
                        "photograph. No annotated copy is written to disk.")
 def evidence_map(ctx: Context) -> Finding:
     sp = spec(151)
+    orientation = getattr(ctx.exif, "orientation", None)
     regions = []
     for tid, f in _all(ctx).items():
         if tid >= 151 or not f.ran:
             continue
         for r in f.regions:
+            d = r.as_dict()
+            if tid in _STORED_ORIENTATION and orientation not in (None, 1):
+                d["box"] = [round(v, 4) for v in _upright(d["box"], orientation)]
             regions.append({"technique": tid, "name": f.name, "phase": f.phase,
-                            "found": f.found, **r.as_dict()})
+                            "found": f.found, **d})
     if not regions:
         return Finding.nothing_found(sp, "No technique marked a region of the "
                                          "photograph.")
@@ -562,9 +586,9 @@ def orchestration(ctx: Context) -> Finding:
         else:
             p["skipped"] += 1
             reasons[f.skipped_because] += 1
-    total = sum(p["total"] for p in per.values()) + 1        # and this one
-    ran = sum(p["ran"] for p in per.values()) + 1
-    found = sum(p["found"] for p in per.values())
+    total = sum(p["total"] for p in per.values()) + 1        # and this one,
+    ran = sum(p["ran"] for p in per.values()) + 1            # which runs
+    found = sum(p["found"] for p in per.values()) + 1        # and reports
     failed = sum(p["failed"] for p in per.values())
     band, est, pred = _band(ctx)
     answer = (f"{est['latitude']:.4f}, {est['longitude']:.4f} ({band} confidence)"
@@ -573,7 +597,13 @@ def orchestration(ctx: Context) -> Finding:
     f148 = fs.get(148)
     if f148 is not None and f148.found:
         answer += "; " + f148.summary.split(":", 1)[-1].split("—")[0].strip()
-    top_reasons = "; ".join(f"{why} ({n})" for why, n in reasons.most_common(3))
+    def short(why: str) -> str:
+        # The first clause is the reason; the rest is explanation the
+        # technique's own row already carries.
+        clause = why.split(";")[0].split(" — ")[0].split(" (")[0].strip()
+        return clause if len(clause) <= 70 else clause[:67].rstrip() + "…"
+
+    top_reasons = "; ".join(f"{short(why)} ({n})" for why, n in reasons.most_common(3))
     return Finding(technique=153, key=sp.key, name=sp.name, phase=PHASE, ran=True,
                    found=True, confidence=1.0,
                    summary=(f"{ran} of {total} techniques could run on this image and "
