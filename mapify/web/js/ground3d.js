@@ -106,6 +106,7 @@ const ROAD_DEFAULT = [206, 210, 218];
 const ZOOM_BUILDINGS = 13.5;   // closer than this, buildings are worth loading
 const ZOOM_HANDBACK = 9.6;     // further than this, the globe does it better
 const MAX_BUILDINGS = 90000;   // held in memory before the farthest go
+const WALK_FOVY = 72;          // degrees top to bottom: a phone camera held upright
 
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({
   "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
@@ -165,6 +166,9 @@ export class Ground3D {
     this.walking = false;
     this.index = null;
     this._floors = null;
+    this.photoOn = false;
+    this.photoOpacity = 0.5;
+    this.fovy = WALK_FOVY;
     this.walker = new Walker({
       getState: () => this.viewState,
       setState: (v) => { this.viewState = v; this.deck?.setProps({ viewState: v }); },
@@ -189,6 +193,7 @@ export class Ground3D {
   _build() {
     this.host.innerHTML = `
       <div class="g3d-canvas"></div>
+      <div class="g3d-photo" hidden aria-hidden="true"><img alt=""></div>
       <div class="g3d-top">
         <div class="g3d-title">
           <span class="g3d-eyebrow">3D ground view</span>
@@ -203,6 +208,8 @@ export class Ground3D {
           <button type="button" data-act="orbit" title="Orbit the centre (O)">Orbit</button>
           <button type="button" data-act="walk" class="g3d-walk"
                   title="Walk around at eye level (F)">Walk</button>
+          <button type="button" data-act="photo" class="g3d-photo-btn" hidden
+                  title="Lay your photograph over the view (P)">Photo</button>
           <label class="g3d-imagery-label">Ground
             <select class="g3d-imagery" aria-label="Ground imagery"></select>
           </label>
@@ -226,6 +233,11 @@ export class Ground3D {
           <kbd>Q</kbd><kbd>E</kbd> turn &middot; drag to look &middot;
           <kbd>Shift</kbd> run &middot; <kbd>Esc</kbd> stop walking
         </div>
+        <div class="g3d-walk-keys g3d-walk-photokeys" hidden>
+          <kbd>P</kbd> your photograph over the view &middot;
+          <kbd>[</kbd><kbd>]</kbd> fade &middot; <kbd>-</kbd><kbd>=</kbd> lens
+        </div>
+        <div class="g3d-walk-lens"></div>
         <div class="g3d-walk-light"></div>
       </div>
       <div class="g3d-attrib"></div>`;
@@ -246,6 +258,11 @@ export class Ground3D {
       walkStreet: this.host.querySelector(".g3d-walk-street"),
       walkMeta: this.host.querySelector(".g3d-walk-meta"),
       walkLight: this.host.querySelector(".g3d-walk-light"),
+      walkLens: this.host.querySelector(".g3d-walk-lens"),
+      photo: this.host.querySelector(".g3d-photo"),
+      photoImg: this.host.querySelector(".g3d-photo img"),
+      photoBtn: this.host.querySelector(".g3d-photo-btn"),
+      photoKeys: this.host.querySelector(".g3d-walk-photokeys"),
     };
     this.host.querySelector(".g3d-tools").addEventListener("click", (e) => {
       const act = e.target.closest("button")?.dataset.act;
@@ -260,8 +277,18 @@ export class Ground3D {
       this._render();
     });
     this._keys = (e) => {
-      if (this.host.hidden || this.walking) return;     // the walker has the keys
-      if (e.target.closest("input, select, textarea")) return;
+      if (this.host.hidden) return;
+      if (e.target.closest?.("input, select, textarea")) return;
+      if (this.walking) {                               // the walker has the rest
+        const k = e.key;
+        if (k === "p" || k === "P") this._act("photo");
+        else if (k === "[" || k === "]") this._fade(k === "]" ? 0.1 : -0.1);
+        else if (k === "-" || k === "_") this._lens(3);
+        else if (k === "=" || k === "+") this._lens(-3);
+        else return;
+        e.preventDefault();
+        return;
+      }
       const map = { q: "left", e: "right", t: "tilt", n: "north", o: "orbit",
                     f: "walk", Escape: "close" };
       const act = map[e.key] || map[e.key?.toLowerCase?.()];
@@ -282,6 +309,7 @@ export class Ground3D {
    *   and dive; otherwise open close in on the target.
    */
   async open(target, how = {}) {
+    if (this.walking && this.target?.photoUrl !== target.photoUrl) this._setPhoto(false);
     this.target = target;
     this.host.hidden = false;
     this.el.place.textContent = target.label || "Location";
@@ -592,6 +620,7 @@ export class Ground3D {
         getElevation: 60, getFillColor: [90, 184, 240, 200],
       }));
     }
+    layers.push(...this._matchLayers(deck, false));
 
     // Place names, nearest first, and never on top of one another: the
     // collision filter drops a label that would overlap a nearer one.
@@ -658,12 +687,16 @@ export class Ground3D {
     this.el.walk.classList.add("on");
     this.el.walkHud.hidden = false;
     this.el.hint.hidden = true;
+    const photo = Boolean(this.target?.photoUrl);
+    this.el.photoBtn.hidden = !photo;
+    this.el.photoKeys.hidden = !photo;
+    this.fovy = WALK_FOVY;
     this.viewState = { longitude: lon, latitude: lat, position: [0, 0, EYE_HEIGHT_M],
                        bearing, pitch: 0, minPitch: -80, maxPitch: 80 };
     this._walkOrigin = [lon, lat];
     this._lastLoadAt = [lon, lat];
     this.deck.setProps({
-      views: new deck.FirstPersonView({ id: "walk", fovy: 72, near: 0.1, far: 6000 }),
+      views: this._walkView(deck),
       controller: { dragRotate: true, dragPan: false, scrollZoom: false,
                     keyboard: false, inertia: false, touchRotate: true },
       viewState: this.viewState,
@@ -677,6 +710,9 @@ export class Ground3D {
 
   exitWalk(render = true) {
     if (!this.walking) return;
+    this._setPhoto(false);
+    this.el.photoBtn.hidden = true;
+    this.el.photoKeys.hidden = true;
     this.walker.stop();
     this.walking = false;
     this.host.classList.remove("walking");
@@ -699,6 +735,80 @@ export class Ground3D {
       });
     }
     if (render) this._render();
+  }
+
+  _walkView(deck) {
+    return new deck.FirstPersonView({ id: "walk", fovy: this.fovy, near: 0.1, far: 6000 });
+  }
+
+  /**
+   * The photograph laid over the street, to line the two up by eye.
+   *
+   * It fills the view from top to bottom, so with the view's lens set to
+   * the photograph's (its EXIF focal length gives the angle it covers
+   * top to bottom) the two agree in scale: standing where the camera
+   * stood and facing where it faced, the buildings fall on the
+   * buildings. The lens can be changed when the EXIF does not say.
+   */
+  _setPhoto(on) {
+    const url = this.target?.photoUrl;
+    const was = this.photoOn;
+    this.photoOn = Boolean(on && url && this.walking);
+    this.el.photo.hidden = !this.photoOn;
+    this.el.photoBtn.classList.toggle("on", this.photoOn);
+    if (this.photoOn) {
+      if (this.el.photoImg.getAttribute("src") !== url) this.el.photoImg.src = url;
+      this.el.photoImg.style.opacity = String(this.photoOpacity);
+      const vfov = this.target?.fovDeg?.[1];
+      this._lens(0, Number.isFinite(vfov) ? vfov : null);
+    } else if (was && this.walking) {
+      this._lens(0, WALK_FOVY);
+    }
+    if (!this.photoOn) this.el.walkLens.textContent = "";
+  }
+
+  _fade(delta) {
+    if (!this.photoOn) return;
+    this.photoOpacity = Math.max(0.1, Math.min(0.9, this.photoOpacity + delta));
+    this.el.photoImg.style.opacity = String(this.photoOpacity);
+  }
+
+  _lens(delta, absolute = null) {
+    const deck = window.deck;
+    if (!this.walking || !deck || !this.deck) return;
+    this.fovy = Math.max(15, Math.min(100, absolute ?? this.fovy + delta));
+    this.deck.setProps({ views: this._walkView(deck) });
+    if (!this.photoOn) return;
+    const vfov = this.target?.fovDeg?.[1];
+    const own = Number.isFinite(vfov) && Math.abs(this.fovy - vfov) < 0.5;
+    this.el.walkLens.textContent = `Lens ${Math.round(this.fovy)}° top to bottom`
+      + (own ? ", the photograph's own (from its EXIF focal length)"
+        : Number.isFinite(vfov) ? ` (the photograph's EXIF says ${Math.round(vfov)}°)`
+          : " (the photograph does not record its lens; adjust with - and =)")
+      + ". Turn and step until the buildings line up.";
+  }
+
+  /** Where the matching reference photographs were taken. */
+  _matchLayers(deck, walking) {
+    const m = this.target?.matches;
+    if (!m?.length) return [];
+    return [
+      new deck.ColumnLayer({
+        id: "matches-pole", data: m, diskResolution: 10,
+        radius: walking ? 0.22 : 1.4, extruded: true,
+        getPosition: (p) => [p.lon, p.lat], getElevation: walking ? 2.4 : 26,
+        getFillColor: [240, 160, 60, 235],
+      }),
+      new deck.TextLayer({
+        id: "matches-label", data: m, characterSet: "auto",
+        getPosition: (p) => [p.lon, p.lat, walking ? 2.7 : 28],
+        getText: (p) => p.label, getSize: 12, sizeUnits: "pixels", billboard: true,
+        getColor: [24, 18, 8, 255], background: true,
+        getBackgroundColor: [244, 176, 76, 235], backgroundPadding: [4, 2],
+        fontFamily: '"Segoe UI", "Nirmala UI", "Microsoft YaHei", sans-serif',
+        getTextAnchor: "middle", getAlignmentBaseline: "bottom",
+      }),
+    ];
   }
 
   /** The sun where and when the photograph was taken, if that is known. */
@@ -824,6 +934,7 @@ export class Ground3D {
         getElevation: 40, getFillColor: [90, 184, 240, 170],
       }));
     }
+    layers.push(...this._matchLayers(deck, true));
     this.deck.setProps({ layers });
     this._attrib();
   }
@@ -959,6 +1070,10 @@ export class Ground3D {
     if (act === "walk") {
       if (this.walking) this.exitWalk();
       else this.enterWalk();
+      return;
+    }
+    if (act === "photo") {
+      this._setPhoto(!this.photoOn);
       return;
     }
     const v = { ...this.viewState };

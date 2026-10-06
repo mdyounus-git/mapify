@@ -1227,6 +1227,19 @@ ul.plain li { margin: 2px 0; }
 }
 .g3d-walk-light { font-size: 10.5px; color: var(--ink-4); }
 .g3d-walk-light:empty { display: none; }
+.g3d-walk-keys[hidden] { display: none; }
+.g3d-walk-lens { font-size: 10.5px; color: #f4c27a; }
+.g3d-walk-lens:empty { display: none; }
+/* The user's photograph over the street, top to bottom of the view so its
+   angle matches the view's lens; clicks pass through to the street. */
+.g3d-photo {
+  position: absolute; inset: 0; z-index: 1; overflow: hidden;
+  display: flex; align-items: center; justify-content: center;
+  pointer-events: none;
+}
+.g3d-photo[hidden] { display: none; }
+.g3d-photo img { height: 100%; width: auto; max-width: none; opacity: .5; }
+.g3d-tools .g3d-photo-btn.on { background: #f0a040; color: #1a1206; border-color: #f0a040; }
 /* In the street the HUD owns the bottom-left; the notes move up beside
    the toolbar, and the sources shrink to one line (full text on hover). */
 .ground3d.walking .g3d-legend { display: none; }

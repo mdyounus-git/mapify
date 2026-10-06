@@ -641,6 +641,16 @@ function set3dTarget(target) {
     const utc = t68?.detail?.capture_time?.utc;
     if (utc) target = { ...target, capturedAt: utc };
   }
+  if (target && !target.photoUrl) {
+    // The photograph itself, to lay over the street when walking, and the
+    // angle it covers (technique 45, from the EXIF focal length) so the
+    // street is drawn with the same lens.
+    const src = state.previewUrl || el.sourceThumb.getAttribute("src");
+    const fov = (state.report?.techniques || []).find((t) => t.technique === 45)
+      ?.detail?.fov_deg;
+    target = { ...target, photoUrl: src || null,
+               fovDeg: Array.isArray(fov) && fov.length === 2 ? fov : null };
+  }
   state.view3d = target;
   el.finding3d.hidden = !target;
   el.findingWalk.hidden = !target;
