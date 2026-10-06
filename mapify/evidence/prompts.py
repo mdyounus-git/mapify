@@ -724,6 +724,14 @@ SEASON = Group(
         _o("snow", "Snow on the ground", "snow lying on the ground and trees"),
         _o("evergreen", "Evergreen, no seasonal cue",
            "tropical evergreen vegetation with no seasonal change"),
+        # Without this a scene with no plants in it still "reads" as a
+        # season -- a river at night came back as bare winter trees -- and
+        # the date estimate inherits the invention. Described positively:
+        # the encoder does not do "no trees".
+        _o("none", "No vegetation to read",
+           "a paved city scene of only buildings, roads and water",
+           "a night scene too dark to make out any plants",
+           "an indoor scene"),
     ),
 )
 

@@ -51,31 +51,13 @@ def _reading(ctx: Context, group_key: str):
 
 
 def _describe_reading(spec, reading, *, steers: bool) -> Finding:
-    """Report one zero-shot group, with an honest note about its weight."""
-    if reading is None:
-        return Finding.not_applicable(spec, "the zero-shot pass did not run")
-    runners = ", ".join(f"{label} {p:.0%}" for label, p in reading.runners_up[:2])
-    summary = f"{reading.option_label} ({reading.confidence:.0%})"
-    if runners:
-        summary += f"; then {runners}"
-    if not steers:
-        summary += " — reported only, moves no coordinate"
-    # A group whose top two options are a coin-flip has seen nothing.
-    decisive = (reading.confidence >= 0.30 and reading.margin >= 0.08)
-    return Finding(
-        technique=spec.id, key=spec.key, name=spec.name, phase=spec.phase,
-        ran=True, found=decisive,
-        summary=summary if decisive else
-        f"No clear reading (best was {reading.option_label} at "
-        f"{reading.confidence:.0%}, too close to call)",
-        detail={"option": reading.option_key,
-                "confidence": round(reading.confidence, 4),
-                "margin": round(reading.margin, 4),
-                "ranked": [(k, round(v, 4)) for k, v in reading.ranked],
-                "feeds_location": bool(steers and reading.called)},
-        confidence=reading.confidence if decisive else 0.0,
-        sources=[_SRC_CLIP],
-    )
+    """Report one zero-shot group, with an honest note about its weight.
+
+    The shared helper, so "no road signs visible" means the same thing --
+    a reading, not a finding -- in technique 10 as in technique 113.
+    """
+    from .common import describe_reading
+    return describe_reading(spec, reading, steers=steers)
 
 
 # ---------------------------------------------------------------- 1

@@ -33,7 +33,7 @@ from ..data.countries import get_table
 from ..evidence import prompts as P
 from ..paths import cache_dir
 from .base import Context, Finding, technique
-from .common import SRC_CLIP, SRC_EXIF, SRC_OCR, leader, reading, spec
+from .common import ABSENT, SRC_CLIP, SRC_EXIF, SRC_OCR, leader, reading, spec
 
 PHASE = 5
 SRC_NOAA = "NOAA solar position algorithm (after Meeus)"
@@ -171,7 +171,8 @@ def season_vegetation(ctx: Context) -> Finding:
     if abs(lat) < 23.5:
         return Finding(
             technique=59, key=sp.key, name=sp.name, phase=PHASE, ran=True,
-            found=rd.confidence >= 0.35, detail=detail, confidence=0.0,
+            found=rd.confidence >= 0.35 and rd.option_key not in ABSENT,
+            detail=detail, confidence=0.0,
             summary=(f"Vegetation reads as {rd.option_label.lower()} "
                      f"({rd.confidence:.0%}){greenness}. The leading candidate "
                      f"is in the tropics, where seasons are wet and dry rather "

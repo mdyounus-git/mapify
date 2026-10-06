@@ -11,7 +11,24 @@ from .base import REGISTRY, Context, Finding, Region
 
 __all__ = ["SRC_EXIF", "SRC_OCR", "SRC_CLIP", "SRC_NOMINATIM", "SRC_NE",
            "SRC_OSM_LOCAL", "box_region", "reading", "describe_reading",
-           "spec", "leader"]
+           "spec", "leader", "zero_shot", "roi", "detail_window", "window_name",
+           "ABSENT", "ORDINARY_SCENES"]
+
+# Options that say "nothing of this kind is visible". Reading one is not
+# a finding: a technique that sees no road has found no road marking.
+ABSENT = frozenset({"none", "indeterminate", "urban_flat"})
+
+# "None of these", for a technique's own presence question. It has to be
+# as broad as the scenes people photograph: the encoder does not do
+# negation, so "a scene with no street lights" sits right beside "street
+# lights", and with nothing else to choose a river at night becomes a
+# mosque. A thing is reported present only when it beats all of these.
+ORDINARY_SCENES = ["an ordinary city street", "a skyline of modern buildings",
+                   "a river or a bridge in a city",
+                   "a landscape of fields, hills or trees",
+                   "a residential street with houses",
+                   "a shopping street with shop signs", "a road or highway with cars",
+                   "the interior of a room", "a building facade", "a city at night"]
 
 # Where evidence comes from, named once so provenance is never a guess.
 SRC_EXIF = "the file's own Exif/XMP metadata"
@@ -60,6 +77,20 @@ def describe_reading(sp, rd, *, steers: bool,
         summary += " — reported only, moves no coordinate"
     # A group whose top two options are a coin-flip has seen nothing.
     decisive = rd.confidence >= min_confidence and rd.margin >= min_margin
+    if decisive and rd.option_key in ABSENT:
+        # "No road visible" is a reading, not a road marking.
+        return Finding(
+            technique=sp.id, key=sp.key, name=sp.name, phase=sp.phase,
+            ran=True, found=False,
+            summary=f"Nothing of this kind to read: {rd.option_label.lower()} "
+                    f"({rd.confidence:.0%})",
+            detail={"option": rd.option_key,
+                    "confidence": round(rd.confidence, 4),
+                    "margin": round(rd.margin, 4),
+                    "ranked": [(k, round(v, 4)) for k, v in rd.ranked],
+                    "feeds_location": False},
+            confidence=0.0, sources=[SRC_CLIP],
+        )
     return Finding(
         technique=sp.id, key=sp.key, name=sp.name, phase=sp.phase,
         ran=True, found=decisive,
@@ -112,31 +143,69 @@ def zero_shot(ctx: Context, options: dict, tag: str, embedding=None,
     return {k: float(v) for k, v in zip(keys, p)}
 
 
-def tiles(ctx: Context, grid: int = 2):
-    """[(box, embedding)] for a grid of tiles, computed once per run.
+# Below this the whole-image view has lost little, and a second look at
+# part of the frame is not worth an encoder pass.
+ROI_MIN_SIDE = 640
 
-    Each tile is encoded at the encoder's full input size, so detail the
-    whole-image view shrank away -- a distant sign, a vehicle, a script --
-    gets its own look. Costs one encoder pass per tile, which is why the
-    grid is small and the result is shared by every technique asking.
+
+def detail_window(image) -> tuple[float, float, float, float]:
+    """The half-size window of the frame with the most fine detail.
+
+    Nine overlapping windows, each half the width and height of the frame,
+    scored by mean gradient on a small greyscale copy -- cheap, and it
+    lands on signs, shopfronts and traffic rather than on sky or a blank
+    wall. Returned as a normalised (x0, y0, x1, y1) box.
     """
-    key = f"tiles{grid}"
-    if key in ctx.memo:
-        return ctx.memo[key]
+    import numpy as np
+    from PIL import Image
+    small = image.convert("L")
+    small.thumbnail((256, 256), Image.Resampling.BILINEAR)
+    y = np.asarray(small, dtype=np.float32)
+    grad = np.zeros_like(y)
+    grad[:, 1:] += np.abs(np.diff(y, axis=1))
+    grad[1:, :] += np.abs(np.diff(y, axis=0))
+    h, w = grad.shape
+    best, best_box = -1.0, (0.25, 0.25, 0.75, 0.75)
+    for fy in (0.0, 0.25, 0.5):
+        for fx in (0.0, 0.25, 0.5):
+            win = grad[int(fy * h):int((fy + 0.5) * h), int(fx * w):int((fx + 0.5) * w)]
+            score = float(win.mean()) if win.size else 0.0
+            if score > best:
+                best, best_box = score, (fx, fy, fx + 0.5, fy + 0.5)
+    return best_box
+
+
+def roi(ctx: Context):
+    """(box, embedding) for the frame's most detailed region, or None.
+
+    The whole-image encoder sees the photograph shrunk to 224 pixels,
+    which is how a distant sign or a single vehicle disappears. This gives
+    the most detailed half of the frame its own look at twice the
+    resolution. One extra encoder pass rather than a grid of them: on a
+    CPU each pass costs seconds, so the look goes where the detail is.
+    Computed once per run and shared by every technique that asks.
+    """
+    if "roi" in ctx.memo:
+        return ctx.memo["roi"]
     eng = ctx.engine
     clip = getattr(eng, "clip", None) if eng is not None else None
-    out = []
-    if clip is not None and ctx.image is not None:
+    out = None
+    if clip is not None and ctx.image is not None and max(ctx.image.size) >= ROI_MIN_SIDE:
+        box = detail_window(ctx.image)
         w, h = ctx.image.size
-        for gy in range(grid):
-            for gx in range(grid):
-                box = (gx / grid, gy / grid, (gx + 1) / grid, (gy + 1) / grid)
-                crop = ctx.image.crop((int(box[0] * w), int(box[1] * h),
-                                       int(box[2] * w), int(box[3] * h)))
-                try:
-                    out.append((box, clip.encode_image(crop)))
-                except Exception:
-                    out = []
-                    break
-    ctx.memo[key] = out
+        crop = ctx.image.crop((int(box[0] * w), int(box[1] * h),
+                               int(box[2] * w), int(box[3] * h)))
+        try:
+            out = (box, clip.encode_image(crop))
+        except Exception:
+            out = None
+    ctx.memo["roi"] = out
     return out
+
+
+def window_name(box) -> str:
+    """"the top-left of the frame" for a half-size detail window."""
+    x0, y0 = round(box[0], 2), round(box[1], 2)
+    row = {0.0: "top", 0.25: "middle", 0.5: "bottom"}.get(y0, "middle")
+    col = {0.0: "left", 0.25: "centre", 0.5: "right"}.get(x0, "centre")
+    return "the centre" if (row, col) == ("middle", "centre") else f"the {row}-{col}"
