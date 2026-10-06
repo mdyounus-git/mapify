@@ -34,8 +34,8 @@ from ..data.regional import BRANDS, SIGN_CONVENTION
 from ..evidence import prompts as P
 from ..paths import cache_dir
 from .base import Context, Finding, Region, technique
-from .common import (SRC_CLIP, SRC_EXIF, SRC_OCR, SRC_OSM_LOCAL, leader,
-                     reading, spec, tiles, zero_shot)
+from .common import (ABSENT, ORDINARY_SCENES, SRC_CLIP, SRC_EXIF, SRC_OCR, SRC_OSM_LOCAL,
+                     leader, reading, roi, spec, window_name, zero_shot)
 
 PHASE = 7
 SRC_NOAA = "NOAA solar position algorithm (after Meeus)"
@@ -394,19 +394,29 @@ def footprint_density(ctx: Context) -> Finding:
         return Finding.nothing_found(sp, "No buildings are stored around the "
                                          "leading candidate to compare with.")
     n = len(held)
+    detail = {"stored_buildings_500m": n, "setting": rd.option_key,
+              "note": "true footprint matching is not possible from a "
+                      "street-level photograph"}
     dense_scene = rd.option_key in ("cbd", "oldtown") and rd.confidence >= 0.4
     rural_scene = rd.option_key in ("village", "wilderness") and rd.confidence >= 0.4
+    if not (dense_scene or rural_scene):
+        # Suburbs, industry, interiors, or an unsure reading: nothing about
+        # density to check, so no verdict either way.
+        return Finding(technique=101, key=sp.key, name=sp.name, phase=PHASE, ran=True,
+                       found=False, confidence=0.0, detail=detail,
+                       summary=(f"{n} buildings are stored within about 500 m of the "
+                                f"leading candidate; the scene reads as "
+                                f"{rd.option_label.lower()} ({rd.confidence:.0%}), "
+                                f"which gives no density to check against them."),
+                       sources=[SRC_CLIP, SRC_OSM_LOCAL])
     contradiction = (dense_scene and n < 30) or (rural_scene and n > 1500)
+    detail["contradiction"] = contradiction
     return Finding(technique=101, key=sp.key, name=sp.name, phase=PHASE, ran=True,
-                   found=True, confidence=0.4,
+                   found=True, confidence=0.4, detail=detail,
                    summary=(f"{n} buildings are stored within about 500 m of the "
                             f"leading candidate; the scene reads as "
-                            f"{rd.option_label.lower()} — "
+                            f"{rd.option_label.lower()} ({rd.confidence:.0%}) — "
                             + ("these disagree" if contradiction else "consistent")),
-                   detail={"stored_buildings_500m": n, "setting": rd.option_key,
-                           "contradiction": contradiction,
-                           "note": "true footprint matching is not possible from a "
-                                   "street-level photograph"},
                    sources=[SRC_CLIP, SRC_OSM_LOCAL])
 
 
@@ -462,7 +472,7 @@ def marking_standard(ctx: Context) -> Finding:
     from .phase5_temporal import _countries_for
     sp = spec(105)
     rd = reading(ctx, "road_markings")
-    if rd is None or rd.confidence < 0.4:
+    if rd is None or rd.confidence < 0.4 or rd.option_key in ABSENT:
         return Finding.nothing_found(sp, "No road-marking style read clearly.")
     group = P.GROUPS_BY_KEY["road_markings"]
     opt = next((o for o in group.options if o.key == rd.option_key), None)
@@ -493,6 +503,9 @@ def curb_drainage(ctx: Context) -> Finding:
     rd = reading(ctx, "pavement")
     if rd is None:
         return _na(sp, "the zero-shot pass did not run")
+    if rd.option_key in ABSENT:
+        return Finding.nothing_found(sp, f"No kerb to read: "
+                                         f"{rd.option_label.lower()} ({rd.confidence:.0%}).")
     return Finding(technique=106, key=sp.key, name=sp.name, phase=PHASE, ran=True,
                    found=rd.confidence >= 0.35, confidence=rd.confidence,
                    summary=(f"Kerb reads as {rd.option_label.lower()} "
@@ -513,11 +526,11 @@ def streetlights(ctx: Context) -> Finding:
         "sodium": ["orange sodium street lights at night"],
         "ornate": ["an ornate decorative heritage lamp post"],
         "solar": ["a solar-powered street light with a panel"],
-        "none": ["a scene with no street lights"]}, "streetlights")
+        "none": ORDINARY_SCENES}, "streetlights")
     if p is None:
         return _na(sp, "the image encoder is not available")
     best = max(p.items(), key=lambda kv: kv[1])
-    if best[0] == "none" or best[1] < 0.4:
+    if best[0] == "none" or best[1] < 0.6:
         return Finding.nothing_found(sp, "No streetlight clearly visible.")
     return Finding(technique=107, key=sp.key, name=sp.name, phase=PHASE, ran=True,
                    found=True, confidence=best[1],
@@ -527,64 +540,96 @@ def streetlights(ctx: Context) -> Finding:
                    sources=[SRC_CLIP])
 
 
+_COVER = {"cover": ["a round metal manhole cover on the road",
+                     "a cast-iron utility cover set into the pavement"],
+          # Broad on purpose: a narrow "none" makes any scene a manhole.
+          "none": ["an ordinary road surface", "people walking", *ORDINARY_SCENES]}
+
+
 @technique(id=108, key="manholes", name="Manhole / utility-cover identification",
            phase=PHASE, needs=("embedding", "pixels"),
-           fusion_note="Finds covers in the lower half of the frame; reading a "
+           fusion_note="Looks for covers in the most detailed region of the "
+                       "frame when that region includes the ground; reading a "
                        "city's name off one is left to OCR, which reports it "
                        "as text.")
 def manholes(ctx: Context) -> Finding:
     sp = spec(108)
-    hits = []
-    for box, emb in tiles(ctx, 2):
-        if box[1] < 0.5:
-            continue
-        p = zero_shot(ctx, {"cover": ["a round metal manhole cover on the road"],
-                            "none": ["an ordinary road surface"]},
-                      "manholes", embedding=emb)
-        if p and p["cover"] >= 0.6:
-            hits.append((box, p["cover"]))
-    if not hits:
+    r = roi(ctx)
+    if r is None:
+        return Finding.nothing_found(sp, "No close look at the ground was taken "
+                                         "(small frame or no encoder).")
+    box, emb = r
+    if box[1] < 0.25:                          # the window is the top half
+        return Finding.nothing_found(sp, "The most detailed region is the upper "
+                                         "frame; the ground was not examined up close.")
+    p = zero_shot(ctx, _COVER, "manholes", embedding=emb)
+    if not p or p["cover"] < 0.7:
         return Finding.nothing_found(sp, "No utility cover visible.")
     return Finding(technique=108, key=sp.key, name=sp.name, phase=PHASE, ran=True,
-                   found=True, confidence=max(v for _, v in hits),
-                   summary=f"A utility cover appears in the lower frame "
-                           f"({max(v for _, v in hits):.0%}); any lettering on it "
-                           f"is read as text by technique 6.",
-                   regions=[Region(*b, label="utility cover") for b, _ in hits],
-                   detail={"tiles": [list(b) for b, _ in hits]}, sources=[SRC_CLIP])
+                   found=True, confidence=p["cover"],
+                   summary=f"A utility cover appears in {window_name(box)} of the "
+                           f"frame ({p['cover']:.0%}); any lettering on it is read "
+                           f"as text by technique 6.",
+                   regions=[Region(*box, label="utility cover")],
+                   detail={"box": list(box), "presence": round(p["cover"], 3)},
+                   sources=[SRC_CLIP])
+
+
+def _is_transit(kind: str | None) -> bool:
+    """A stored kind that is a stop or station -- by exact tag, not by the
+    word: "station" is also a fire station, a charging station and, as a
+    substring, a stationery shop."""
+    k = (kind or "").lower()
+    return (k.startswith(("railway=", "bus=", "public_transport=", "aerialway=",
+                          "ferry_terminal="))
+            or k in ("amenity=bus_station", "amenity=ferry_terminal",
+                     "highway=bus_stop"))
+
+
+def _transit_near(lat: float, lon: float, radius_m: float = 1500.0):
+    """[(metres, name, kind)] of stored stops and stations, nearest first."""
+    try:
+        from ..geo.geodesy import haversine_km
+        from ..geodata.service import get_service
+        from ..geodata.store import bbox_around
+        held = get_service().store.query(bbox_around(lat, lon, radius_m), ("poi",))["poi"]
+    except Exception:
+        return []
+    out = {}
+    for _s, f in held:
+        if not f[2] or not _is_transit(f[1]):
+            continue
+        d = haversine_km(lat, lon, f[4] / 1e6, f[3] / 1e6) * 1000.0
+        if d <= radius_m and (f[2] not in out or d < out[f[2]][0]):
+            out[f[2]] = (round(d), f[2], f[1])
+    return sorted(out.values())
 
 
 @technique(id=109, key="transit_match", name="Bus-stop / transit-infrastructure matching",
            phase=PHASE, needs=("evidence", "candidates"),
-           fusion_note="Transit seen (24) against stations stored near the "
-                       "leading candidate.")
+           fusion_note="Transit seen (24) against stops and stations stored "
+                       "near the leading candidate, matched by exact tag.")
 def transit_match(ctx: Context) -> Finding:
     sp = spec(109)
     rd = reading(ctx, "transit")
     top = leader(ctx)
-    stations = []
-    try:
-        from ..geodata.nearby import nearby
-        from ..geodata.service import get_service
-        s = nearby(get_service(), top.latitude, top.longitude, 1500, fetch=False, limit=40)
-        stations = [f for f in s.features if "station" in f.kind or "halt" in f.kind]
-    except Exception:
-        pass
-    seen = rd.option_label if rd is not None and rd.option_key != "none" and \
+    stations = _transit_near(top.latitude, top.longitude)
+    seen = rd.option_label if rd is not None and rd.option_key not in ABSENT and \
         rd.confidence >= 0.35 else None
     if not seen and not stations:
-        return Finding.nothing_found(sp, "No public transport seen, and no station "
-                                         "stored nearby.")
+        return Finding.nothing_found(sp, "No public transport seen, and no stop or "
+                                         "station stored nearby.")
     parts = []
     if seen:
         parts.append(f"the scene shows {seen.lower()}")
     if stations:
-        parts.append("stations stored near the leading candidate: " + ", ".join(
-            f"{f.name} ({f.distance_m} m)" for f in stations[:3]))
+        parts.append("stops and stations stored near the leading candidate: " + ", ".join(
+            f"{name} ({d} m)" for d, name, _k in stations[:3]))
     return Finding(technique=109, key=sp.key, name=sp.name, phase=PHASE, ran=True,
                    found=True, summary="; ".join(parts).capitalize() + ".",
                    detail={"seen": rd.option_key if rd else None,
-                           "stations": [f.as_dict() for f in stations[:5]]},
+                           "stations": [{"name": n, "kind": k, "distance_m": d}
+                                        for d, n, k in stations[:5]]},
                    confidence=0.4, sources=[SRC_CLIP, SRC_OSM_LOCAL])
 
 

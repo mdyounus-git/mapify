@@ -2,11 +2,12 @@
 
 The whole-image encoder sees a photograph shrunk to 224 pixels. That is
 enough for "what kind of place", and it is exactly how a distant sign,
-a single vehicle or a line of script disappears. Tiling (73) gives each
-quarter its own full-resolution look, and the per-tile techniques (75,
-76) build on it -- a coarse "what is where", honestly labelled as
-zero-shot presence rather than detection, because no detector model is
-shipped.
+a single vehicle or a line of script disappears. The region-of-interest
+pass (73) gives the most detailed half of the frame its own look at
+twice the resolution -- one extra encoder pass, not a grid of them,
+because on a CPU each pass costs seconds -- and 75 and 76 build on it:
+a coarse "what is there", honestly labelled as zero-shot presence rather
+than detection, because no detector model is shipped.
 
 The rest measure the pixels directly: colour and texture (74), light
 level and near-infrared capture (78), mirrored scenes in water (81),
@@ -29,16 +30,11 @@ import numpy as np
 from PIL import Image
 
 from .base import Context, Finding, Region, technique
-from .common import SRC_CLIP, SRC_EXIF, leader, spec, tiles, zero_shot
+from .common import (ABSENT, ORDINARY_SCENES, ROI_MIN_SIDE, SRC_CLIP, SRC_EXIF, leader,
+                     reading, roi, spec, window_name, zero_shot)
 
 PHASE = 6
 SRC_PIX = "measured from the pixels"
-_TILE_NAMES = {(0.0, 0.0): "top-left", (0.5, 0.0): "top-right",
-               (0.0, 0.5): "bottom-left", (0.5, 0.5): "bottom-right"}
-
-
-def _tile_name(box) -> str:
-    return _TILE_NAMES.get((round(box[0], 2), round(box[1], 2)), "a tile")
 
 
 def _unavailable(sp, why: str) -> Finding:
@@ -49,42 +45,50 @@ def _unavailable(sp, why: str) -> Finding:
 
 @technique(id=73, key="tiling_roi", name="Image tiling / region-of-interest (ROI) analysis",
            phase=PHASE, needs=("embedding", "pixels"),
-           fusion_note="Reports what each quarter of the frame shows that the "
-                       "whole-image view did not. Unmeasured as a fusion input.")
+           fusion_note="Gives the most detailed half of the frame its own look "
+                       "at twice the resolution and reports what it shows that "
+                       "the whole-image view did not. One extra encoder pass, "
+                       "not a grid: on a CPU each costs seconds. Unmeasured as "
+                       "a fusion input.")
 def tiling_roi(ctx: Context) -> Finding:
     sp = spec(73)
-    tl = tiles(ctx, 2)
-    ext = getattr(ctx.engine, "evidence_extractor", None)
-    if not tl or ext is None:
-        return _unavailable(sp, "the image encoder is not available for tiles")
-    global_ev = ctx.evidence
-    extra, regions, per_tile = [], [], []
-    for box, emb in tl:
-        ev = ext.score_embedding(emb)
-        notes = []
-        for rd in ev.readings:
-            if rd.confidence < 0.5 or rd.margin < 0.15:
-                continue
-            g = global_ev.by_group(rd.group_key) if global_ev is not None else None
-            if g is not None and g.option_key == rd.option_key:
-                continue                       # the whole image saw it too
-            if rd.option_key in ("none", "urban_flat"):
-                continue
-            notes.append(f"{rd.group_title.lower()}: {rd.option_label} "
-                         f"({rd.confidence:.0%})")
-        per_tile.append({"tile": _tile_name(box), "box": list(box), "notes": notes})
-        if notes:
-            extra.append(f"{_tile_name(box)} — " + "; ".join(notes[:3]))
-            regions.append(Region(*box, label=_tile_name(box)))
-    if not extra:
+    side = max(ctx.image.size)
+    if side < ROI_MIN_SIDE:
         return Finding.nothing_found(
-            sp, "Each quarter of the frame, examined on its own, shows nothing "
-                "the whole-image reading missed.")
+            sp, f"The frame is small ({side} px): the whole-image view already "
+                f"sees it at close to full detail.")
+    r = roi(ctx)
+    ext = getattr(ctx.engine, "evidence_extractor", None)
+    if r is None or ext is None:
+        return _unavailable(sp, "the image encoder is not available")
+    box, emb = r
+    ev = ext.score_embedding(emb)
+    global_ev = ctx.evidence
+    notes = []
+    for rd in ev.readings:
+        if rd.confidence < 0.5 or rd.margin < 0.15 or rd.option_key in ABSENT:
+            continue
+        g = global_ev.by_group(rd.group_key) if global_ev is not None else None
+        if g is not None and g.option_key == rd.option_key:
+            continue                           # the whole image saw it too
+        notes.append(f"{rd.group_title.lower()}: {rd.option_label} "
+                     f"({rd.confidence:.0%})")
+    where = window_name(box)
+    detail = {"box": list(box), "window": where, "notes": notes}
+    region = Region(*box, label="region of interest")
+    if not notes:
+        return Finding(technique=73, key=sp.key, name=sp.name, phase=PHASE,
+                       ran=True, found=False, detail=detail, regions=[region],
+                       summary=(f"The most detailed part of the frame ({where}), "
+                                f"examined at twice the resolution, shows nothing "
+                                f"the whole-image reading missed."),
+                       sources=[SRC_CLIP, SRC_PIX])
     return Finding(technique=73, key=sp.key, name=sp.name, phase=PHASE, ran=True,
-                   found=True,
-                   summary="Seen only up close: " + " | ".join(extra) + ".",
-                   detail={"tiles": per_tile}, confidence=0.5, regions=regions,
-                   sources=[SRC_CLIP])
+                   found=True, detail=detail, confidence=0.5, regions=[region],
+                   summary=(f"Up close, {where} of the frame shows "
+                            + "; ".join(notes[:4])
+                            + " — which the whole-image view did not."),
+                   sources=[SRC_CLIP, SRC_PIX])
 
 
 # ---------------------------------------------------------------- 74
@@ -120,9 +124,16 @@ def color_texture(ctx: Context) -> Finding:
         cent = np.array([sample[lab == k].mean(0) if (lab == k).any() else cent[k]
                          for k in range(5)])
     share = np.bincount(lab, minlength=5) / len(lab)
-    order = np.argsort(-share)
-    palette = [(_name(cent[k]), round(float(share[k]), 3),
-                [int(v) for v in cent[k]]) for k in order]
+    # Two clusters can carry the same colour name; report each name once.
+    named: dict[str, list] = {}
+    for k in np.argsort(-share):
+        n = _name(cent[k])
+        if n in named:
+            named[n][1] += float(share[k])
+        else:
+            named[n] = [n, float(share[k]), [int(v) for v in cent[k]]]
+    palette = sorted(((n, round(s, 3), rgb) for n, s, rgb in named.values()),
+                     key=lambda t: -t[1])
     g = graphic_stats(ctx.image)
     word = ("muted" if colourful < 25 else "moderately colourful" if colourful < 55
             else "highly colourful")
@@ -150,43 +161,55 @@ _OBJECTS = {
 }
 
 
-def _objects_per_tile(ctx: Context):
+def _object_views(ctx: Context):
+    """[(label, box or None, embedding, presence)] for the whole frame and
+    the region of interest, computed once per run."""
     if "objects" in ctx.memo:
         return ctx.memo["objects"]
     out = []
-    for box, emb in tiles(ctx, 2):
-        p = zero_shot(ctx, _OBJECTS, "objects", embedding=emb)
-        if p:
-            out.append((box, p))
+    p = zero_shot(ctx, _OBJECTS, "objects")
+    if p:
+        out.append(("the whole frame", None, ctx.embedding, p))
+    r = roi(ctx)
+    if r is not None:
+        box, emb = r
+        q = zero_shot(ctx, _OBJECTS, "objects", embedding=emb)
+        if q:
+            out.append((f"{window_name(box)}, up close", box, emb, q))
     ctx.memo["objects"] = out
     return out
 
 
 @technique(id=75, key="objects", name="Object detection & segmentation",
            phase=PHASE, needs=("embedding", "pixels"),
-           fusion_note="Coarse zero-shot presence per quarter of the frame -- "
-                       "not bounding-box detection or segmentation, which "
-                       "need a detector model this project does not ship.")
+           fusion_note="Coarse zero-shot presence in the whole frame and in "
+                       "its most detailed region -- not bounding-box detection "
+                       "or segmentation, which need a detector model this "
+                       "project does not ship.")
 def objects(ctx: Context) -> Finding:
     sp = spec(75)
-    per = _objects_per_tile(ctx)
-    if not per:
-        return _unavailable(sp, "the image encoder is not available for tiles")
+    views = _object_views(ctx)
+    if not views:
+        return _unavailable(sp, "the image encoder is not available")
     rows, regions = [], []
-    for box, p in per:
+    for label, box, _emb, p in views:
         top = sorted(((k, v) for k, v in p.items() if k != "nothing"),
-                     key=lambda kv: -kv[1])[:2]
-        if top and top[0][1] >= 0.30:
-            rows.append(f"{_tile_name(box)}: " + ", ".join(
-                f"{k} {v:.0%}" for k, v in top if v >= 0.15))
-            regions.append(Region(*box, label=top[0][0]))
+                     key=lambda kv: -kv[1])[:3]
+        shown = [(k, v) for k, v in top if v >= 0.15]
+        if shown and shown[0][1] >= 0.30:
+            rows.append(f"{label}: " + ", ".join(f"{k} {v:.0%}" for k, v in shown))
+            if box is not None:
+                regions.append(Region(*box, label=shown[0][0]))
     if not rows:
-        return Finding.nothing_found(sp, "No object stands out in any quarter.")
+        return Finding.nothing_found(sp, "No object stands out, in the whole frame "
+                                         "or up close.")
     return Finding(technique=75, key=sp.key, name=sp.name, phase=PHASE, ran=True,
                    found=True,
-                   summary="What is where (coarse, zero-shot): " + "; ".join(rows) + ".",
-                   detail={"tiles": [{"box": list(b), "presence": {k: round(v, 3)
-                                      for k, v in p.items()}} for b, p in per]},
+                   summary="What is there (coarse, zero-shot presence, not "
+                           "detection): " + "; ".join(rows) + ".",
+                   detail={"views": [{"view": label, "box": list(box) if box else None,
+                                      "presence": {k: round(v, 3) for k, v in p.items()}}
+                                     for label, box, _e, p in views]},
                    confidence=0.4, regions=regions, sources=[SRC_CLIP])
 
 
@@ -203,34 +226,35 @@ _VEHICLES = {
 
 @technique(id=76, key="fine_grained", name="Fine-grained object recognition",
            phase=PHASE, needs=("embedding", "pixels"),
-           fusion_note="Vehicle type on the quarter where vehicles are most "
-                       "present. Region-typical vehicles are already scored "
-                       "by technique 22; this reports, and does not add weight.")
+           fusion_note="Vehicle type, in whichever view shows vehicles most. "
+                       "Region-typical vehicles are already scored by "
+                       "technique 22; this reports, and does not add weight.")
 def fine_grained(ctx: Context) -> Finding:
     sp = spec(76)
-    per = _objects_per_tile(ctx)
-    if not per:
-        return _unavailable(sp, "the image encoder is not available for tiles")
+    views = _object_views(ctx)
+    if not views:
+        return _unavailable(sp, "the image encoder is not available")
     veh = ("car", "motorcycle", "bus", "truck", "rickshaw")
-    best = max(per, key=lambda bp: sum(bp[1].get(k, 0) for k in veh))
-    if sum(best[1].get(k, 0) for k in veh) < 0.35:
-        return Finding.nothing_found(sp, "No quarter of the frame shows vehicles "
-                                         "clearly enough to identify their type.")
-    emb = next(e for b, e in tiles(ctx, 2) if b == best[0])
+    label, box, emb, presence = max(views, key=lambda v: sum(v[3].get(k, 0) for k in veh))
+    if sum(presence.get(k, 0) for k in veh) < 0.35:
+        return Finding.nothing_found(sp, "No vehicles are visible clearly enough to "
+                                         "identify their type.")
     p = zero_shot(ctx, _VEHICLES, "vehicle-types", embedding=emb) or {}
     ranked = sorted(p.items(), key=lambda kv: -kv[1])
     if not ranked:
         return _unavailable(sp, "the encoder could not score vehicle types")
+    decisive = ranked[0][1] >= 0.3
     return Finding(technique=76, key=sp.key, name=sp.name, phase=PHASE, ran=True,
-                   found=ranked[0][1] >= 0.3,
-                   summary=(f"In the {_tile_name(best[0])} quarter the vehicles read "
-                            f"as {ranked[0][0]} ({ranked[0][1]:.0%}), then "
+                   found=decisive,
+                   summary=(f"In {label} the vehicles read as {ranked[0][0]} "
+                            f"({ranked[0][1]:.0%}), then "
                             + ", ".join(f"{k} {v:.0%}" for k, v in ranked[1:3])
                             + " — reported only"),
-                   detail={"tile": list(best[0]), "ranked": [(k, round(v, 3))
-                                                             for k, v in ranked[:6]]},
-                   confidence=ranked[0][1],
-                   regions=[Region(*best[0], label=ranked[0][0])], sources=[SRC_CLIP])
+                   detail={"view": label, "box": list(box) if box else None,
+                           "ranked": [(k, round(v, 3)) for k, v in ranked[:6]]},
+                   confidence=ranked[0][1] if decisive else 0.0,
+                   regions=[Region(*box, label=ranked[0][0])] if box else [],
+                   sources=[SRC_CLIP])
 
 
 # ------------------------------------------------------------- 77, 78
@@ -256,37 +280,82 @@ def enhancement(ctx: Context) -> Finding:
                        found=False, detail=detail, confidence=0.0,
                        summary="Well exposed; no enhancement needed.",
                        sources=[SRC_PIX])
+    # A re-read is an OCR pass -- seconds on a CPU for a whole frame -- so
+    # it is aimed. Fragments the first reading could not make out are
+    # re-read in a crop around them; the whole frame is re-read only when
+    # the signage reading sees script and the first reading found nothing.
+    first = getattr(ctx.ocr, "lines", None) or []
+    weak = [l for l in first if l.confidence < 0.5 and l.box]
+    script = reading(ctx, "signage_script")
+    script_seen = (script is not None and script.option_key not in ABSENT
+                   and script.confidence >= 0.35)
+    state = "dark" if dark else "flat"
+    if weak:
+        x0, y0 = min(l.box[0] for l in weak), min(l.box[1] for l in weak)
+        x1, y1 = max(l.box[2] for l in weak), max(l.box[3] for l in weak)
+        px, py = max(0.05, (x1 - x0) * 0.5), max(0.05, (y1 - y0) * 0.5)
+        box = (max(0.0, x0 - px), max(0.0, y0 - py), min(1.0, x1 + px), min(1.0, y1 + py))
+        target = "around the text the first reading could not make out"
+    elif script_seen and not first:
+        box = (0.0, 0.0, 1.0, 1.0)
+        target = "across the frame, where the signage reading sees script"
+    else:
+        reason = ("the first reading was already confident" if first else
+                  "neither the text reader nor the signage reading found any "
+                  "sign of text")
+        return Finding(technique=77, key=sp.key, name=sp.name, phase=PHASE, ran=True,
+                       found=False, detail=detail, confidence=0.0,
+                       summary=f"The frame is {state}, but {reason}, so it was not re-read.",
+                       sources=[SRC_PIX])
+    detail["reread_box"] = [round(v, 3) for v in box]
     ocr_engine = getattr(ctx.engine, "ocr", None)
     if ocr_engine is None:
         return Finding(technique=77, key=sp.key, name=sp.name, phase=PHASE, ran=True,
                        found=False, detail=detail, confidence=0.0,
-                       summary=("The frame is " + ("dark" if dark else "flat")
-                                + "; text could be re-read after equalising, but "
-                                  "OCR is not running."), sources=[SRC_PIX])
+                       summary=(f"The frame is {state}; text could be re-read after "
+                                f"equalising, but OCR is not running."),
+                       sources=[SRC_PIX])
     import cv2
-    arr = np.asarray(ctx.image.convert("RGB"))
-    lab = cv2.cvtColor(arr, cv2.COLOR_RGB2LAB)
+    w, h = ctx.image.size
+    crop = ctx.image.crop((int(box[0] * w), int(box[1] * h),
+                           int(box[2] * w), int(box[3] * h))).convert("RGB")
+    lab = cv2.cvtColor(np.asarray(crop), cv2.COLOR_RGB2LAB)
     lab[:, :, 0] = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(8, 8)).apply(lab[:, :, 0])
     enhanced = Image.fromarray(cv2.cvtColor(lab, cv2.COLOR_LAB2RGB))
+    if max(enhanced.size) < 800:               # small crops read better larger
+        s = 800 / max(enhanced.size)
+        enhanced = enhanced.resize((max(1, int(enhanced.width * s)),
+                                    max(1, int(enhanced.height * s))),
+                                   Image.Resampling.LANCZOS)
     try:
         again = ocr_engine.read(enhanced)
     except Exception as exc:
         return _unavailable(sp, f"re-reading failed ({type(exc).__name__})")
-    before = {l.text.strip().lower() for l in (getattr(ctx.ocr, "lines", None) or [])}
+    # A fragment re-read with confidence counts as recovered; only text the
+    # first reading already read confidently is not new.
+    before = {l.text.strip().lower() for l in first if l.confidence >= 0.5}
     new = [l for l in again.lines if l.confidence >= 0.4
            and l.text.strip().lower() not in before]
-    detail["new_lines"] = [l.as_dict() for l in new[:20]]
+
+    def to_frame(b):
+        return (box[0] + b[0] * (box[2] - box[0]), box[1] + b[1] * (box[3] - box[1]),
+                box[0] + b[2] * (box[2] - box[0]), box[1] + b[3] * (box[3] - box[1]))
+
+    detail["new_lines"] = [{"text": l.text, "confidence": round(l.confidence, 3),
+                            "box": [round(v, 4) for v in to_frame(l.box)] if l.box else None}
+                           for l in new[:20]]
     if not new:
         return Finding(technique=77, key=sp.key, name=sp.name, phase=PHASE, ran=True,
                        found=False, detail=detail, confidence=0.0,
-                       summary="Equalised and re-read: no text the first reading missed.",
+                       summary=f"Equalised and re-read {target}: nothing the first "
+                               f"reading missed.",
                        sources=[SRC_PIX, "EasyOCR (Apache-2.0)"])
     return Finding(technique=77, key=sp.key, name=sp.name, phase=PHASE, ran=True,
                    found=True, detail=detail, confidence=0.5,
-                   summary=(f"Equalising the {'dark' if dark else 'flat'} frame "
-                            f"revealed {len(new)} more line(s) of text: "
+                   summary=(f"Equalising the {state} frame and re-reading {target} "
+                            f"recovered {len(new)} line(s) of text: "
                             + " | ".join(l.text for l in new[:5])),
-                   regions=[Region(*l.box, label="text after enhancement")
+                   regions=[Region(*to_frame(l.box), label="text after enhancement")
                             for l in new[:8] if l.box],
                    sources=[SRC_PIX, "EasyOCR (Apache-2.0)"])
 
@@ -327,7 +396,7 @@ _REFLECT = {"window": ["a scene reflected in a shop window or glass facade"],
             "mirror": ["a reflection in a mirror"],
             "water": ["buildings reflected in calm water"],
             "wet_road": ["reflections on a wet road at night"],
-            "none": ["a scene with no reflections"]}
+            "none": ORDINARY_SCENES}
 
 
 @technique(id=79, key="reflections", name="Reflections & mirror-surface analysis",
@@ -340,7 +409,7 @@ def reflections(ctx: Context) -> Finding:
     if p is None:
         return _unavailable(sp, "the image encoder is not available")
     best = max(p.items(), key=lambda kv: kv[1])
-    if best[0] == "none" or best[1] < 0.4:
+    if best[0] == "none" or best[1] < 0.6:
         return Finding.nothing_found(sp, "No clear reflective surface.")
     return Finding(technique=79, key=sp.key, name=sp.name, phase=PHASE, ran=True,
                    found=True,
@@ -468,27 +537,60 @@ def _horizon(ctx: Context):
     return g if g.horizon_y is not None and g.focal_px else None
 
 
-@technique(id=85, key="relative_distance", name="Relative-distance estimation",
-           phase=PHASE, needs=("pixels",),
-           fusion_note="Single-view metrology from the horizon and an assumed "
-                       "1.6 m camera height. Rough by construction; stated so.")
-def relative_distance(ctx: Context) -> Finding:
-    sp = spec(85)
+# Single-view metrology assumes a roughly level camera and a horizon in
+# view. Outside that it returns numbers -- a horizon "139% above the
+# frame", the tallest thing in Shibuya "0.2 m high" -- that are artefacts
+# of the method, not measurements.
+_MAX_TILT_DEG = 20.0
+
+
+def _level_view(ctx: Context):
+    """(geometry, copy height, pitch-down radians), or (None, why not)."""
     g = _horizon(ctx)
     if g is None:
-        return Finding.nothing_found(sp, "The horizon could not be located, so "
-                                         "distances cannot be estimated.")
+        return None, "the horizon could not be located"
+    if not 0.1 <= g.horizon_y <= 0.9:
+        return None, (f"the horizon estimate ({g.horizon_y:.0%} down the frame) "
+                      f"is outside the frame or at its edge")
     # The geometry ran on a copy scaled to at most 1000 px; its focal
     # length is in that copy's pixels, so the height must be too.
     w, h = ctx.image.size
     h_copy = h * min(1.0, 1000.0 / max(w, h))
+    if g.pitch_deg is not None:
+        # Two independent estimates of the same thing: the horizon drawn
+        # through the horizontal vanishing points, and the one the
+        # verticals' tilt implies. When they disagree, neither is trusted.
+        implied = 0.5 + math.tan(math.radians(g.pitch_deg)) * g.focal_px / h_copy
+        if abs(implied - g.horizon_y) > 0.15:
+            return None, (f"the horizon line ({g.horizon_y:.0%} down the frame) and "
+                          f"the camera tilt from the verticals ({implied:.0%}) disagree")
+    pitch = math.atan((0.5 - g.horizon_y) * h_copy / g.focal_px)
+    if abs(math.degrees(pitch)) > _MAX_TILT_DEG:
+        return None, (f"the camera is tilted about {abs(math.degrees(pitch)):.0f}°, "
+                      f"too far for level-camera geometry")
+    return (g, h_copy, pitch), None
+
+
+@technique(id=85, key="relative_distance", name="Relative-distance estimation",
+           phase=PHASE, needs=("pixels",),
+           fusion_note="Single-view metrology from the horizon and an assumed "
+                       "1.6 m camera height. Rough by construction; stated so, "
+                       "and only attempted with the horizon in view and the "
+                       "camera near level.")
+def relative_distance(ctx: Context) -> Finding:
+    sp = spec(85)
+    view, why = _level_view(ctx)
+    if view is None:
+        return Finding.nothing_found(sp, f"Distances are not estimated: {why}.")
+    g, h_copy, pitch = view
     f = g.focal_px
-    below = (1.0 - g.horizon_y) * h_copy
-    if below <= 1:
-        return Finding.nothing_found(sp, "The horizon sits at or below the bottom "
-                                         "of the frame: no ground to measure.")
-    angle = math.atan(below / f)
-    d = CAMERA_HEIGHT_M / math.tan(angle) if angle > 1e-3 else float("inf")
+    # The bottom row's angle below the horizon: its angle below the optical
+    # axis plus the axis's own pitch below the horizon.
+    angle = math.atan((h_copy / 2) / f) + pitch
+    if angle <= 1e-3:
+        return Finding.nothing_found(sp, "The frame does not reach below the "
+                                         "horizon: no ground to measure.")
+    d = CAMERA_HEIGHT_M / math.tan(angle)
     return Finding(technique=85, key=sp.key, name=sp.name, phase=PHASE, ran=True,
                    found=True,
                    summary=(f"The bottom edge of the frame is roughly {d:.0f} m "
@@ -505,14 +607,16 @@ def relative_distance(ctx: Context) -> Finding:
 @technique(id=86, key="object_height", name="Object-height / scale estimation",
            phase=PHASE, needs=("pixels",),
            fusion_note="Height of the tallest standing vertical edge, from the "
-                       "horizon and an assumed camera height. Rough; stated so.")
+                       "horizon and an assumed camera height. Rough; stated so. "
+                       "Only edges that rise past eye level are reported: a "
+                       "shorter one is usually a fragment of a taller edge.")
 def object_height(ctx: Context) -> Finding:
     from ..forensics.geometry import _segments
     sp = spec(86)
-    g = _horizon(ctx)
-    if g is None:
-        return Finding.nothing_found(sp, "The horizon could not be located, so "
-                                         "heights cannot be estimated.")
+    view, why = _level_view(ctx)
+    if view is None:
+        return Finding.nothing_found(sp, f"Heights are not estimated: {why}.")
+    g = view[0]
     segs, w, h = _segments(ctx.image)
     yh = g.horizon_y * h
     best = None
@@ -523,12 +627,14 @@ def object_height(ctx: Context) -> Finding:
         yb, yt = max(y1, y2), min(y1, y2)
         if yb <= yh + 5 or yb < 0.6 * h:
             continue                    # must stand on the ground below the horizon
+        if yt >= yh:
+            continue                    # stops below eye level: likely a fragment
         height = CAMERA_HEIGHT_M * (yb - yt) / (yb - yh)
         if best is None or height > best[0]:
             best = (height, (min(x1, x2) / w, yt / h, max(x1, x2) / w + 0.01, yb / h))
     if best is None:
         return Finding.nothing_found(sp, "No vertical edge stands on visible ground "
-                                         "below the horizon.")
+                                         "and rises past eye level.")
     return Finding(technique=86, key=sp.key, name=sp.name, phase=PHASE, ran=True,
                    found=True,
                    summary=(f"The tallest vertical edge standing on the ground rises "
