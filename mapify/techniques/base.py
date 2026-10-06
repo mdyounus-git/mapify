@@ -66,6 +66,26 @@ NEEDS = frozenset({
 })
 
 
+def _plain(value: Any) -> Any:
+    """JSON-safe all the way down: numpy scalars and arrays become Python
+    numbers and lists, sets become sorted lists.
+
+    A finding's detail is filled by measurement code that works in numpy,
+    and one float32 left in it is enough to make json.dumps raise -- which
+    on the streaming endpoint costs the whole analysis, not one finding.
+    So every finding is made plain on its way out, in one place.
+    """
+    if isinstance(value, dict):
+        return {str(k): _plain(v) for k, v in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_plain(v) for v in value]
+    if isinstance(value, (set, frozenset)):
+        return sorted((_plain(v) for v in value), key=str)
+    if hasattr(value, "tolist") and callable(value.tolist):
+        return _plain(value.tolist())           # numpy arrays and scalars
+    return value
+
+
 @dataclass(frozen=True)
 class Region:
     """A rectangle in the image, normalised 0..1, for the evidence map."""
@@ -142,22 +162,22 @@ class Finding:
                    summary=summary or "Nothing of this kind in the image.")
 
     def as_dict(self) -> dict[str, Any]:
-        return {
+        return _plain({
             "technique": self.technique,
             "key": self.key,
             "name": self.name,
             "phase": self.phase,
-            "ran": self.ran,
-            "found": self.found,
+            "ran": bool(self.ran),
+            "found": bool(self.found),
             "summary": self.summary,
             "detail": self.detail,
-            "confidence": round(self.confidence, 3),
+            "confidence": round(float(self.confidence), 3),
             "regions": [r.as_dict() for r in self.regions],
             "constraint": self.constraint.as_dict() if self.constraint else None,
             "sources": self.sources,
             "skipped_because": self.skipped_because,
-            "elapsed_ms": round(self.elapsed_ms, 1),
-        }
+            "elapsed_ms": round(float(self.elapsed_ms), 1),
+        })
 
 
 @dataclass(frozen=True)

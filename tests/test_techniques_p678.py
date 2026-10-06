@@ -113,6 +113,25 @@ def test_techniques_73_to_131_are_registered_as_specified():
         assert REGISTRY[tid].phase == phase_of(tid), tid
 
 
+def test_a_finding_is_plain_json_whatever_the_measurement_code_used():
+    # One numpy float32 in a detail made json.dumps raise, which on the
+    # streaming endpoint costs the whole analysis (technique 86's height).
+    import json
+    f = Finding(technique=86, key="k", name="n", phase=6, found=np.bool_(True),
+                confidence=np.float32(0.25),
+                detail={"height_m": np.float32(3.5), "ids": np.arange(3), "set": {2, 1}},
+                regions=[common.Region(np.float32(0.1), 0.2, 0.3, 0.4, "edge")])
+    d = json.loads(json.dumps(f.as_dict()))
+    assert d["detail"] == {"height_m": 3.5, "ids": [0, 1, 2], "set": [1, 2]}
+    assert d["found"] is True and d["regions"][0]["box"][0] == pytest.approx(0.1)
+
+
+def test_every_finding_on_a_photograph_serialises():
+    import json
+    findings = run_all(_ctx(make_jpeg(800, 600)))
+    json.dumps([f.as_dict() for f in findings])
+
+
 def test_no_technique_in_73_to_131_raises_on_a_bare_image():
     findings = run_all(_ctx(make_jpeg(800, 600)), phases=[6, 7, 8])
     assert len(findings) == 131 - 72
