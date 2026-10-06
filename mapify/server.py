@@ -428,6 +428,34 @@ def create_app(cfg: Config | None = None, token: str | None = None,
         data, name = _read_approved(payload.get("path", ""))
         return await asyncio.to_thread(_run, data, name)
 
+    @app.get("/api/preview")
+    async def preview(path: str) -> Response:
+        """An upright, downscaled copy of a file chosen in the native dialog.
+
+        The window cannot read file:// URLs, so without this an image
+        opened through the dialog had no thumbnail and the evidence map
+        nothing to draw on. Same rule as analysis: only a path the dialog
+        handed out, and the copy is made in memory and never stored.
+        """
+        data, _name = _read_approved(path)
+
+        def shrink() -> bytes:
+            from io import BytesIO
+            from PIL import Image, ImageOps
+            img = Image.open(BytesIO(data))
+            img = ImageOps.exif_transpose(img) or img
+            img.thumbnail((1600, 1600))
+            out = BytesIO()
+            img.convert("RGB").save(out, "JPEG", quality=88)
+            return out.getvalue()
+
+        try:
+            body = await asyncio.to_thread(shrink)
+        except Exception as exc:
+            raise HTTPException(status_code=415, detail=f"Cannot preview: {exc}") from exc
+        return Response(body, media_type="image/jpeg",
+                        headers={"Cache-Control": "no-store"})
+
     # Streaming variants: the window's progress card reflects the stage the
     # pipeline is actually in, rather than an animation that guesses.
     def _stream(data: bytes, filename: str | None) -> StreamingResponse:

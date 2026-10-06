@@ -1579,11 +1579,14 @@ function showSource(source) {
     el.sourceThumb.src = state.previewUrl;
     el.sourceName.textContent = source.file.name;
     el.sourceDims.textContent = `${(source.file.size / 1024).toFixed(0)} KB`;
-  } else {
-    // The WebView cannot read file:// under this policy, so name it instead
-    // of showing a broken thumbnail.
-    el.sourceThumb.removeAttribute("src");
+  } else if (source.path) {
+    // The WebView cannot read file:// under this policy; the server hands
+    // back an upright copy of a file the dialog approved, made in memory.
+    el.sourceThumb.src = `/api/preview?path=${encodeURIComponent(source.path)}`;
     el.sourceName.textContent = source.name || source.path;
+  } else {
+    el.sourceThumb.removeAttribute("src");
+    el.sourceName.textContent = source.name || "";
   }
 }
 
@@ -2035,6 +2038,10 @@ function renderReport(report) {
             .map((r) => `<span class="tag">${esc(r)}</span>`).join("")}</div>` : "")));
   }
 
+  /* the 153 techniques -------------------------------------------------- */
+  const techniques = renderTechniques(report);
+  if (techniques) out.push(techniques);
+
   /* file --------------------------------------------------------------- */
   const exif = report.exif || {};
   const img = report.image || {};
@@ -2082,10 +2089,215 @@ function renderReport(report) {
   for (const btn of el.report.querySelectorAll("[data-export]")) {
     btn.addEventListener("click", () => exportGeo(btn.dataset.export, btn));
   }
+  wireTechniques(report);
   const attrib = (report.attribution || []).join("   ·   ");
   el.attribution.textContent = attrib;
   el.attribution.title = (report.attribution || []).join("\n");
 }
+
+/* ─────────────────────── the 153 techniques ─────────────────────── */
+
+/* Every technique reports, including the ones that could not run on this
+   image and why: "no GPS tag in the file" and "GPS not checked" support
+   different conclusions, and a list of only the hits would read as though
+   everything else was looked for and absent. The default view shows what
+   was found; "All" and "Could not run" are one click away. */
+
+const PHASE_TITLES = {
+  1: "Metadata & image forensics", 2: "Scene & infrastructure",
+  3: "Sun, shadow & sky", 4: "Vision & geometry", 5: "History & time",
+  6: "The pixels in depth", 7: "Places, sky & weather records",
+  8: "Regional clues", 9: "Provenance & other images", 10: "Putting it together",
+};
+
+let techFilter = (() => {
+  try { return localStorage.getItem("mapify.techFilter") || "found"; }
+  catch { return "found"; }
+})();
+
+function techState(t) {
+  if (t.skipped_because === "the technique raised") return "failed";
+  if (!t.ran) return "na";
+  return t.found ? "found" : "ran";
+}
+
+const TECH_STATE_WORDS = {
+  found: "found something", ran: "looked, found nothing",
+  na: "could not run", failed: "failed",
+};
+
+function techRow(t) {
+  const s = techState(t);
+  const why = t.ran ? "" : (t.skipped_because || "");
+  const sources = (t.sources || []).map((x) => `<li>${esc(x)}</li>`).join("");
+  const conf = t.found && t.confidence
+    ? `Its own confidence: ${Math.round(t.confidence * 100)}%` : "";
+  const cost = t.elapsed_ms >= 1 ? `${Math.round(t.elapsed_ms)} ms` : "";
+  return `<div class="tq-row ${s}" data-tid="${t.technique}">
+    <button type="button" class="tq-head" aria-expanded="false">
+      <span class="tq-id">${t.technique}</span>
+      <span class="tq-name">${esc(t.name)}</span>
+      <span class="tq-mark" title="${TECH_STATE_WORDS[s]}"
+            aria-label="${TECH_STATE_WORDS[s]}"></span>
+    </button>
+    <p class="tq-sum">${esc(t.summary || why)}</p>
+    <div class="tq-more" hidden>
+      ${conf || cost ? `<p class="muted">${[conf, cost].filter(Boolean).join(" · ")}</p>` : ""}
+      ${sources ? `<p class="muted">Rests on:</p><ul class="plain tq-src">${sources}</ul>` : ""}
+      ${(t.regions || []).length ? `<button type="button" class="btn small"
+          data-evmap="${t.technique}">Show on the photograph</button>` : ""}
+    </div>
+  </div>`;
+}
+
+function renderTechniques(report) {
+  const ts = (report.techniques || []).filter((t) => t.technique <= 153);
+  if (!ts.length) return "";
+  const by = new Map(ts.map((t) => [t.technique, t]));
+  const ran = ts.filter((t) => t.ran).length;
+  const found = ts.filter((t) => t.found).length;
+
+  // The synthesis first: what the evidence adds up to, before the list.
+  const notes = [];
+  const contradictions = by.get(145);
+  if (contradictions?.found) {
+    notes.push(`<div class="note warn"><div><strong>Contradictions.</strong> ${
+      esc(contradictions.summary)}</div></div>`);
+  }
+  const cross = by.get(144);
+  if (cross?.found) {
+    const solid = (cross.detail?.independent_support || 0) > 1;
+    notes.push(`<div class="note ${solid ? "ok" : "info"}"><div>${
+      esc(cross.summary)}</div></div>`);
+  }
+  for (const id of [148, 149, 150]) {
+    const t = by.get(id);
+    if (t?.found) notes.push(`<div class="note info"><div>${esc(t.summary)}</div></div>`);
+  }
+  const regions = by.get(151)?.detail?.regions || [];
+
+  const phases = [...new Set(ts.map((t) => t.phase))].sort((a, b) => a - b);
+  const groups = phases.map((p) => {
+    const items = ts.filter((t) => t.phase === p);
+    const f = items.filter((t) => t.found).length;
+    const r = items.filter((t) => t.ran).length;
+    return `<details class="tq-phase" data-phase="${p}">
+      <summary>
+        <span class="tq-pn">${p}</span>
+        <span class="tq-pt">${esc(PHASE_TITLES[p] || `Phase ${p}`)}</span>
+        <span class="tq-pc">${f} found · ${r}/${items.length} ran</span>
+      </summary>
+      <div class="tq-list">${items.map(techRow).join("")}</div>
+    </details>`;
+  }).join("");
+
+  return block(`Techniques · ${ran} of ${ts.length} ran · ${found} found something`, `
+    <p class="tq-lede">${esc(by.get(153)?.summary || "")}</p>
+    ${notes.join("")}
+    <div class="tq-tools">
+      <div class="seg" role="group" aria-label="Which techniques to list">
+        <button type="button" data-tqf="found">Found</button>
+        <button type="button" data-tqf="all">All</button>
+        <button type="button" data-tqf="na" title="Could not run on this image">Not run</button>
+      </div>
+      ${regions.length ? `<button type="button" class="btn small" data-evmap="">
+        Evidence map · ${regions.length}</button>` : ""}
+    </div>
+    <div class="tq" data-filter="${techFilter}">${groups}</div>`);
+}
+
+function wireTechniques(report) {
+  const box = el.report.querySelector(".tq");
+  if (!box) return;
+  const setFilter = (f) => {
+    techFilter = f;
+    box.dataset.filter = f;
+    for (const b of el.report.querySelectorAll("[data-tqf]")) {
+      b.setAttribute("aria-pressed", String(b.dataset.tqf === f));
+    }
+    // Open the phases that have something to show under this filter.
+    for (const d of box.querySelectorAll(".tq-phase")) {
+      d.open = f !== "all" && !!d.querySelector(
+        f === "found" ? ".tq-row.found" : ".tq-row.na, .tq-row.failed");
+    }
+    try { localStorage.setItem("mapify.techFilter", f); } catch { /* private mode */ }
+  };
+  for (const b of el.report.querySelectorAll("[data-tqf]")) {
+    b.addEventListener("click", () => setFilter(b.dataset.tqf));
+  }
+  setFilter(techFilter);
+  box.addEventListener("click", (e) => {
+    const head = e.target.closest(".tq-head");
+    if (!head) return;
+    const row = head.parentElement;
+    const more = row.querySelector(".tq-more");
+    const open = more.hidden;
+    more.hidden = !open;
+    row.classList.toggle("open", open);
+    head.setAttribute("aria-expanded", String(open));
+  });
+  for (const b of el.report.querySelectorAll("[data-evmap]")) {
+    b.addEventListener("click", (e) => {
+      e.stopPropagation();
+      openEvidenceMap(report, b.dataset.evmap ? Number(b.dataset.evmap) : null);
+    });
+  }
+}
+
+/* The evidence map: the regions technique 151 collected, drawn over the
+   picture already on screen. Coloured by phase, numbered by technique. */
+function openEvidenceMap(report, only) {
+  const ts = report.techniques || [];
+  let regions = ts.find((t) => t.technique === 151)?.detail?.regions || [];
+  if (only) {
+    regions = regions.filter((r) => r.technique === only);
+    if (!regions.length) {          // 151 did not run: use the technique's own
+      const t = ts.find((x) => x.technique === only);
+      regions = (t?.regions || []).map((r) => ({
+        ...r, technique: t.technique, name: t.name, phase: t.phase }));
+    }
+  }
+  const src = state.previewUrl || el.sourceThumb.getAttribute("src");
+  if (!src || !regions.length) return;
+  const ov = $("evmap");
+  $("evmap-img").src = src;
+  $("evmap-sub").textContent = only
+    ? `Technique ${only} · ${regions.length} region(s)`
+    : `${regions.length} region(s) from ${
+        new Set(regions.map((r) => r.technique)).size} technique(s)`;
+  $("evmap-boxes").innerHTML = regions.map((r) => {
+    const [x0, y0, x1, y1] = r.box;
+    const tip = `${r.technique} · ${r.name}${r.label ? ` — ${r.label}` : ""}`;
+    return `<div class="evbox ph-${r.phase}" title="${esc(tip)}" style="left:${
+      (x0 * 100).toFixed(2)}%;top:${(y0 * 100).toFixed(2)}%;width:${
+      ((x1 - x0) * 100).toFixed(2)}%;height:${((y1 - y0) * 100).toFixed(2)}%">
+      <span>${r.technique}</span></div>`;
+  }).join("");
+  const legend = new Map();
+  for (const r of regions) {
+    if (!legend.has(r.technique)) legend.set(r.technique, { ...r, n: 0 });
+    legend.get(r.technique).n += 1;
+  }
+  $("evmap-legend").innerHTML = [...legend.values()]
+    .sort((a, b) => a.technique - b.technique)
+    .map((r) => `<li><i class="sw ph-${r.phase}"></i>${r.technique} ${esc(r.name)}${
+      r.n > 1 ? ` · ${r.n}` : ""}</li>`).join("");
+  ov.hidden = false;
+  $("evmap-close").focus();
+}
+
+function closeEvidenceMap() {
+  const ov = $("evmap");
+  if (ov && !ov.hidden) ov.hidden = true;
+}
+
+$("evmap-close")?.addEventListener("click", closeEvidenceMap);
+$("evmap")?.addEventListener("click", (e) => {
+  if (e.target.id === "evmap") closeEvidenceMap();     // the backdrop
+});
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") closeEvidenceMap();
+});
 
 function row(label, value, mono = false) {
   if (value == null || value === "" || value === "—") return "";

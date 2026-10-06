@@ -1174,3 +1174,128 @@ ul.plain li { margin: 2px 0; }
 .btn.small { padding: 5px 10px; font-size: 11.5px; }
 .export-result { margin-top: 8px; }
 .export-result .btn.small { margin-left: 6px; }
+
+/* ═══════════════════════════ techniques ════════════════════════════
+   All 153, grouped by the specification's ten phases. The dot says what
+   happened: filled green found something, hollow looked and found
+   nothing, dashed could not run on this image, red failed. */
+.tq-lede {
+  margin: 0 0 8px; font-size: 11px; line-height: 1.5; color: var(--ink-3);
+}
+.tq-tools {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 8px; margin: 9px 0 8px;
+}
+.seg {
+  display: inline-flex; border: 1px solid var(--line-2);
+  border-radius: var(--r-md); overflow: hidden;
+}
+.seg button {
+  font: inherit; font-size: 10.5px; color: var(--ink-3);
+  background: var(--sunken); border: 0; padding: 4px 9px; cursor: pointer;
+}
+.seg button + button { border-left: 1px solid var(--line-2); }
+.seg button:hover { color: var(--ink-1); }
+.seg button[aria-pressed="true"] { color: var(--ink-1); background: var(--raised-2); }
+
+.tq-phase {
+  border: 1px solid var(--line-1); border-radius: var(--r-md);
+  margin-bottom: 6px; background: var(--sunken);
+}
+.tq-phase > summary {
+  display: flex; align-items: baseline; gap: 8px;
+  padding: 7px 9px; cursor: pointer; list-style: none;
+  font-size: 11.5px; color: var(--ink-1);
+}
+.tq-phase > summary::-webkit-details-marker { display: none; }
+.tq-phase[open] > summary { border-bottom: 1px solid var(--line-1); }
+.tq-pn { font-family: var(--mono); font-size: 10px; color: var(--ink-4); width: 14px; }
+.tq-pt { flex: 1 1 auto; }
+.tq-pc {
+  font-family: var(--mono); font-size: 9.5px; color: var(--ink-4);
+  white-space: nowrap; font-variant-numeric: tabular-nums;
+}
+.tq-list { padding: 0 9px 4px; }
+.tq-row { padding: 6px 0; border-top: 1px solid var(--line-1); }
+.tq-row:first-child { border-top: 0; }
+.tq-head {
+  display: grid; grid-template-columns: 24px minmax(0, 1fr) 10px;
+  gap: 6px; align-items: baseline; width: 100%;
+  background: none; border: 0; padding: 0; margin: 0;
+  color: inherit; font: inherit; text-align: left; cursor: pointer;
+}
+.tq-id {
+  font-family: var(--mono); font-size: 10px; color: var(--ink-4);
+  font-variant-numeric: tabular-nums;
+}
+.tq-name { font-size: 11.5px; color: var(--ink-1); }
+.tq-mark {
+  width: 7px; height: 7px; border-radius: 50%; align-self: center;
+  box-sizing: border-box;
+}
+.tq-row.found  .tq-mark { background: var(--ok); }
+.tq-row.ran    .tq-mark { border: 1px solid var(--ink-3); }
+.tq-row.na     .tq-mark { border: 1px dashed var(--ink-4); }
+.tq-row.failed .tq-mark { background: var(--risk); }
+.tq-sum {
+  margin: 2px 0 0 30px; font-size: 10.5px; line-height: 1.5; color: var(--ink-3);
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  overflow: hidden; user-select: text;
+}
+.tq-row.open .tq-sum { display: block; -webkit-line-clamp: unset; }
+.tq-row.na .tq-sum, .tq-row.ran .tq-sum { color: var(--ink-4); }
+.tq-more { margin: 5px 0 2px 30px; }
+.tq-more .muted { margin: 2px 0; font-size: 10.5px; }
+.tq-src { margin: 2px 0 6px; padding-left: 14px; font-size: 10.5px; color: var(--ink-3); }
+
+.tq[data-filter="found"] .tq-row:not(.found) { display: none; }
+.tq[data-filter="found"] .tq-phase:not(:has(.tq-row.found)) { display: none; }
+.tq[data-filter="na"] .tq-row:not(.na):not(.failed) { display: none; }
+.tq[data-filter="na"] .tq-phase:not(:has(.tq-row.na, .tq-row.failed)) { display: none; }
+
+/* ── evidence map ─────────────────────────────────────────────── */
+.evmap {
+  position: fixed; inset: 0; z-index: 80;
+  display: grid; place-items: center;
+  background: rgba(5, 7, 11, .80); backdrop-filter: blur(3px);
+}
+.evmap[hidden] { display: none; }
+.evmap-card {
+  width: min(1120px, 94vw); max-height: 92vh;
+  display: flex; flex-direction: column; gap: 10px; padding: 14px;
+  background: var(--panel); border: 1px solid var(--line-2);
+  border-radius: var(--r-lg); box-shadow: var(--shadow-3);
+}
+.evmap-head { display: flex; align-items: baseline; gap: 10px; }
+.evmap-head h2 { margin: 0; font-size: 14px; font-weight: 640; color: var(--ink-1); }
+.evmap-head .btn { margin-left: auto; }
+.evmap-stage {
+  flex: 1 1 auto; min-height: 0; overflow: auto;
+  display: grid; place-items: center;
+}
+.evmap-frame { position: relative; display: inline-block; line-height: 0; }
+.evmap-frame img {
+  display: block; max-width: 100%; max-height: 70vh; border-radius: var(--r-md);
+}
+.evbox {
+  position: absolute; border: 1.5px solid var(--c, var(--accent));
+  border-radius: 2px; box-shadow: 0 0 0 1px rgba(0, 0, 0, .5);
+}
+.evbox span {
+  position: absolute; left: -1.5px; top: -1.5px; transform: translateY(-100%);
+  padding: 0 3px; border-radius: 2px 2px 0 0;
+  font: 600 9px/1.5 var(--mono); color: #05070b; background: var(--c, var(--accent));
+}
+.evmap-legend {
+  list-style: none; margin: 0; padding: 0; max-height: 16vh; overflow: auto;
+  display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 10.5px; color: var(--ink-3);
+}
+.evmap-legend .sw {
+  display: inline-block; width: 8px; height: 8px; border-radius: 2px;
+  margin-right: 5px; background: var(--c);
+}
+/* One hue per phase: here colour means "which kind of technique". */
+.ph-1  { --c: #a78bfa; }  .ph-2  { --c: #5ab8f0; }  .ph-3  { --c: #dfa53c; }
+.ph-4  { --c: #58c98d; }  .ph-5  { --c: #e08a4a; }  .ph-6  { --c: #7dd3fc; }
+.ph-7  { --c: #c4b5fd; }  .ph-8  { --c: #f0abfc; }  .ph-9  { --c: #e2685f; }
+.ph-10 { --c: #e8eef7; }

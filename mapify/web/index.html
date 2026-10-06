@@ -283,6 +283,29 @@
     </aside>
   </main>
 
+  <!-- ═══════════════════════ evidence map ════════════════════════
+       Every region a technique marked, drawn over the photograph in the
+       browser. Nothing here is written to disk: the boxes are data from
+       technique 151 and the picture is the copy already on screen.
+  -->
+  <div id="evmap" class="evmap" hidden role="dialog" aria-modal="true"
+       aria-labelledby="evmap-title">
+    <div class="evmap-card">
+      <div class="evmap-head">
+        <h2 id="evmap-title">Evidence map</h2>
+        <span id="evmap-sub" class="muted"></span>
+        <button type="button" class="btn small" id="evmap-close">Close</button>
+      </div>
+      <div class="evmap-stage">
+        <div class="evmap-frame">
+          <img id="evmap-img" alt="The photograph, with the regions each technique marked" />
+          <div id="evmap-boxes"></div>
+        </div>
+      </div>
+      <ul id="evmap-legend" class="evmap-legend"></ul>
+    </div>
+  </div>
+
   <!-- ════════════════════════ first run ══════════════════════════
        Shown once, before anything is downloaded. The number comes first
        because it is the only part of this screen a person needs in order

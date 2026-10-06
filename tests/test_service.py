@@ -104,6 +104,25 @@ class TestLocalPathReads:
         r = client.post("/api/analyse/local", json={"path": sneaky})
         assert r.status_code == 403
 
+    def test_a_preview_is_served_only_for_an_approved_path(self, tmp_path):
+        good = tmp_path / "photo.jpg"
+        good.write_bytes(make_jpeg(2400, 1800))
+        secret = tmp_path / "private.jpg"
+        secret.write_bytes(make_jpeg())
+        app = create_app(config(), bridge=FakeBridge(approved={str(good.resolve())}))
+        client = TestClient(app)
+        assert client.get("/api/preview", params={"path": str(secret)}).status_code == 403
+        r = client.get("/api/preview", params={"path": str(good)})
+        assert r.status_code == 200 and r.headers["content-type"] == "image/jpeg"
+        assert "no-store" in r.headers["cache-control"]
+        from io import BytesIO
+        from PIL import Image
+        assert max(Image.open(BytesIO(r.content)).size) == 1600     # downscaled copy
+
+    def test_no_preview_without_a_desktop_bridge(self, open_client):
+        r = open_client.get("/api/preview", params={"path": "C:/Windows/win.ini"})
+        assert r.status_code == 400
+
     def test_an_approved_path_is_read(self, tmp_path):
         good = tmp_path / "photo.jpg"
         good.write_bytes(make_jpeg())
