@@ -325,12 +325,51 @@ accuracy boost, and the benchmark says so rather than implying otherwise.
      ├─ OCR ────────────── if installed; feeds script detection and gazetteer
      │                     matching in ~30 languages
      │
+     ├─ gate ───────────── is this a photograph of a place at all? A poster, a
+     │                     screenshot or a close-up gets no coordinate — not a
+     │                     low-confidence one, none
+     │
      ├─ fusion ─────────── candidates re-ranked in log space, every adjustment
      │                     recorded with its reason
      │
-     └─ enrichment ─────── Natural Earth always; Nominatim and Overpass only if
-                           you allowed them
+     ├─ enrichment ─────── Natural Earth always; Nominatim and Overpass only if
+     │                     you allowed them
+     │
+     └─ techniques ─────── the 153 numbered techniques, in ten phases, over
+                           everything above; then a case file on this machine
 ```
+
+### The 153 techniques
+
+Every analysis runs the 153 techniques of the specification, in its ten
+phases — metadata and forensics, scene and infrastructure, sun and sky,
+geometry, history and time, the pixels in depth, weather and map records,
+regional clues read from text, provenance, and the synthesis. The
+Techniques panel in the Assessment rail shows each one: what it found, or
+why it could not run on this image ("the file carries no GPS tag" is not
+the same as "GPS not checked"), its confidence and what it rests on. The
+evidence map draws every region a technique marked over the photograph.
+
+A few rules hold throughout:
+
+- **Reporting a clue and steering the answer are different.** Only clues
+  measured on the benchmark to improve the estimate move it; everything
+  else is reported with weight zero, and says so.
+- **Uncertainty is measured.** The error intervals are how far the
+  benchmark's answers in each confidence band really were from the truth —
+  a "high" answer within 0.8 km half the time and 23.5 km nine times in
+  ten — with the sample size beside them.
+- **Agreement counts by independent line, not by finding.** Text read off a
+  sign, the file's metadata, the sun, the map and the image model are
+  separate lines; twelve readings from the same image model are one.
+- **Nothing is invented.** A technique that needs data this project cannot
+  license (Street View, reverse image search, 3D city models) is listed and
+  says why it did not run.
+
+Each analysis writes a case file to `data/cases/` — the findings and how
+they were reached, never the image — so re-analysing a photograph, or a
+resized copy of it, is recognised. `records.case_files = false` keeps no
+record.
 
 ### What the confidence band is built from
 
