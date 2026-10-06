@@ -93,9 +93,53 @@ _IN_MOBILE = re.compile(r"(?<![\d+])[6-9]\d{4}[\s\-]\d{5}(?!\d)")
 # Trunk-dialled "080-23456789". Weak alone: Germany writes "040 1234567".
 _IN_STD = re.compile(r"(?<![\d+])0(\d{2,4})[\s\-]\d{6,8}(?!\d)")
 
+# National formats distinctive enough to name a country or a few. A number
+# written without its calling code is nearly always local -- a shop prints
+# the number its customers dial -- but formats collide, and every known
+# collision is in the list rather than left out to look sharper.
+_NANP = ["US", "CA", "PR", "JM", "TT", "BS", "BB", "DO"]
+_NATIONAL = [
+    # (212) 555-0123, 212-555-0123, 212.555.0123. Not "312 555 0123" with
+    # spaces: Italian and Colombian mobiles are written exactly so.
+    ("a North American number", _NANP, re.compile(
+        r"(?<![\d+])(?:\([2-9]\d{2}\)\s?|[2-9]\d{2}[\-.])\d{3}[\-.]\d{4}(?!\d)")),
+    # 01 23 45 67 89 -- also how Morocco and Cote d'Ivoire write theirs.
+    ("a French-format number", ["FR", "MA", "CI"], re.compile(
+        r"(?<![\d+])0[1-9](?:[\s.]\d{2}){4}(?!\d)")),
+    # (11) 91234-5678: a Brazilian mobile. The landline shape, (11) 2345-6789,
+    # is also Argentina's.
+    ("a Brazilian mobile number", ["BR"], re.compile(r"\(\d{2}\)\s?9\d{4}-\d{4}(?!\d)")),
+    ("a Brazilian or Argentine number", ["BR", "AR"],
+     re.compile(r"\(\d{2}\)\s?[2-8]\d{3}-\d{4}(?!\d)")),
+    # (02) 9876 5432, 0412 345 678.
+    ("an Australian number", ["AU"], re.compile(
+        r"(?<!\d)(?:\(0[2378]\)\s?\d{4}\s?\d{4}|04\d{2}\s\d{3}\s\d{3})(?!\d)")),
+    # 03-1234-5678, 090-1234-5678, 0120-123-456. Korea's Seoul numbers are
+    # 02-, its mobiles 010-, so neither collides.
+    ("a Japanese number", ["JP"], re.compile(
+        r"(?<![\d+])(?:0[3-9]-\d{4}-\d{4}|0[789]0-\d{4}-\d{4}|0120-\d{3}-\d{3})(?!\d)")),
+    ("a Korean mobile number", ["KR"], re.compile(r"(?<![\d+])010-\d{4}-\d{4}(?!\d)")),
+    # 138 0013 8000 -- with separators: a bare eleven-digit run could be anything.
+    ("a Chinese mobile number", ["CN"], re.compile(
+        r"(?<![\d+])1[3-9]\d[\s\-]\d{4}[\s\-]\d{4}(?!\d)")),
+    # Tel. 612 345 678: Spain, Portugal and Poland all write nine digits so
+    # -- and so does a price ("Rp 750 000 000"), hence the phone word.
+    ("a Spanish, Portuguese or Polish number", ["ES", "PT", "PL"], re.compile(
+        r"(?i)(?:\btel[ée]?f?\.?|\btlf\.?|\btfno\.?|\bm[óo]vil|\btelem\.?|\bkom\.?"
+        r"|\bphone|☎|📞)\s*:?\s*[5-9]\d{2}\s\d{3}\s\d{3}(?!\d)")),
+]
+
+
+def _small_family(countries: list[str]) -> bool:
+    """A clue naming a few countries -- or one dialling plan, as +1 and
+    North American numbers do: eight entries, but the US and Canada plus
+    small islands, which separates candidates as well as one country."""
+    s = set(countries)
+    return len(s) <= 3 or s <= set(_NANP)
+
 
 def phone_clue(lines) -> TextClue | None:
-    """Calling codes; for India, mobile number shapes and trunk codes."""
+    """Calling codes, distinctive national formats, Indian trunk codes."""
     strong, weak, countries, cities, hits = [], [], [], [], []
     for line in _lines(lines):
         t = line.text
@@ -113,6 +157,14 @@ def phone_clue(lines) -> TextClue | None:
             strong.append("an Indian-style mobile number")
             countries.append("IN")
             hits.append(Hit(line, "mobile number"))
+            intl = True
+        if not intl:
+            for label, isos, rx in _NATIONAL:
+                if rx.search(t):
+                    strong.append(label)
+                    countries += isos
+                    hits.append(Hit(line, label))
+                    break
         for m in _IN_STD.finditer(t):
             code = m.group(1)
             for n in (4, 3, 2):
@@ -129,7 +181,7 @@ def phone_clue(lines) -> TextClue | None:
         return TextClue("phone", weak, ["IN"], narrow=False, strength=0.15,
                         hits=hits, extra={**extra, "weak_only": True})
     return TextClue("phone", strong + weak, countries,
-                    narrow=len(set(countries)) <= 3, strength=1.0, hits=hits,
+                    narrow=_small_family(countries), strength=1.0, hits=hits,
                     extra=extra)
 
 

@@ -233,7 +233,14 @@ def main() -> int:
     ap.add_argument("--dump", action="store_true")
     ap.add_argument("--search", action="store_true")
     ap.add_argument("--limit", type=int, default=0)
+    ap.add_argument("--set", choices=("benchmark", "text"), default="benchmark",
+                    help="the 163-photograph benchmark, or the text-bearing set "
+                         "built by fetch_text_samples.py")
     args = ap.parse_args()
+    if args.set == "text":
+        global SAMPLES, DUMP
+        SAMPLES = ROOT / "samples" / "text"
+        DUMP = ROOT / "bench" / "text-clue-features-textset.jsonl"
     if args.dump:
         return dump(args.limit)
     if args.search:
