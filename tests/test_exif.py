@@ -129,6 +129,26 @@ class TestCameraFields:
         assert report.software == "Ver.3.50"
         assert report.captured_at == "2026:03:14 09:26:53"
 
+    def test_the_shutter_time_beats_the_last_modified_time(self):
+        # A camera keeps DateTimeOriginal in the Exif sub-IFD; IFD0's
+        # DateTime is rewritten by every editor. Taken in February, edited
+        # in July, the photograph was taken in February.
+        from PIL import Image
+        exif = Image.Exif()
+        exif[0x0132] = "2011:07:20 08:30:31"                 # IFD0 DateTime
+        exif[0x8769] = {0x9003: "2011:02:27 13:40:31",       # DateTimeOriginal
+                        0x9004: "2011:02:27 13:40:32"}       # DateTimeDigitized
+        report = read_bytes(make_jpeg(exif=exif))
+        assert report.captured_at == "2011:02:27 13:40:31"
+        assert report.other["DateTime"] == "2011:07:20 08:30:31"
+
+    def test_the_digitised_time_is_the_next_best(self):
+        from PIL import Image
+        exif = Image.Exif()
+        exif[0x0132] = "2011:07:20 08:30:31"
+        exif[0x8769] = {0x9004: "2011:02:27 13:40:32"}
+        assert read_bytes(make_jpeg(exif=exif)).captured_at == "2011:02:27 13:40:32"
+
     def test_serialises_without_losing_the_fix(self):
         report = read_bytes(make_jpeg(exif=gps_exif(35.6762, 139.6503)))
         d = report.as_dict()

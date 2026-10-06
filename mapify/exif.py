@@ -242,17 +242,32 @@ def read_exif(image: Image.Image) -> ExifReport:
         exif_ifd = exif.get_ifd(0x8769) or {}
     except Exception:
         exif_ifd = {}
+    original = digitized = None
     for key, value in exif_ifd.items():
         name = ExifTags.TAGS.get(key, str(key))
         if name in {"LensModel", "LensMake"}:
             report.lens = _clean(value) or report.lens
-        elif name == "DateTimeOriginal" and not report.captured_at:
-            report.captured_at = _clean(value)
+        elif name == "DateTimeOriginal":
+            original = _clean(value) or None
+        elif name == "DateTimeDigitized":
+            digitized = _clean(value) or None
         elif name in {
             "FNumber", "ExposureTime", "ISOSpeedRatings",
             "FocalLength", "FocalLengthIn35mmFilm",
         }:
             report.other[name] = _clean(value)
+
+    # The capture time is when the shutter fired (DateTimeOriginal), else
+    # when the image was digitised. IFD0's DateTime is when the file was
+    # last *changed* -- every editor rewrites it -- and it was being taken
+    # as the capture time whenever the original sat in the Exif sub-IFD,
+    # which is where cameras put it: a photograph taken in February and
+    # edited in July was being timed, and its sun and weather checked, in
+    # July.
+    modified = named.get("DateTime") or None
+    report.captured_at = original or digitized or report.captured_at
+    if modified and modified != report.captured_at:
+        report.other["DateTime"] = modified
 
     for key in ("Artist", "Copyright", "ImageDescription", "HostComputer"):
         if named.get(key):
