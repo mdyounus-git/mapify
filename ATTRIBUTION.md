@@ -191,6 +191,40 @@ Earth vectors instead.
 
 ---
 
+## Weather, air and terrain records (the time and terrain techniques)
+
+| Source | Terms | How it is met |
+|---|---|---|
+| **Open-Meteo** historical weather API — the **ERA5** reanalysis (Copernicus Climate Change Service) — techniques 61, 95, 96 | Free for **non-commercial** use, no key, under 10,000 calls a day; data **CC BY 4.0**, credited as "Weather data by Open-Meteo.com" | Credited in every finding that uses it. One request a second at most, every answer cached on disk, so re-analysing an image asks nothing |
+| **Open-Meteo** air-quality API — **CAMS** (Copernicus Atmosphere Monitoring Service), from 2013 — technique 97 | As above | As above |
+| **Open-Meteo** elevation API — the **Copernicus DEM GLO-90**, © DLR e.V. 2010-2014 and © Airbus Defence and Space GmbH 2014-2018, provided under COPERNICUS by the European Union and ESA — techniques 127, 128 | As above for the service; the DEM's own credit line is required | The full DEM credit is carried by both findings |
+
+Only a coordinate and a date go out — the leading candidate's, never the
+photograph and never anything read from it. A **commercial** user of Mapify
+needs Open-Meteo's paid plan; `network.weather_history_enabled = false`
+switches all three off, and the techniques then say "no data" rather than
+guess.
+
+## Regional facts (techniques 111-131)
+
+`mapify/data/regional.py` — ITU calling codes, country-code top-level
+domains, currency signs, mile-using countries, postcode shapes, Indian
+registration state codes, where a handful of brands operate, and sign
+conventions — is a table of public facts typed in by hand. None of it is
+copied from a dataset, and its coverage is partial: a missing entry proves
+nothing, only a match is evidence.
+
+## Case files (technique 152)
+
+Each analysis writes a case file to `data/cases/` on this machine: the
+findings, the prediction and the provenance record (input hash, models,
+data sources, versions). It never contains the image. The index beside the
+case files holds, per image, the estimate, a 64-bit difference hash and the
+encoder's embedding, so a later analysis can recognise the same photograph.
+`records.case_files = false` keeps no record at all.
+
+---
+
 ## Software
 
 | Component | Licence |
