@@ -311,3 +311,46 @@ class TestEscaping:
         assert "<img src=x" not in html
         assert "&lt;img src=x" in html
         assert "&quot;&gt;" in html
+
+
+def _with_techniques(report: dict) -> dict:
+    report = dict(report)
+    report["techniques"] = [
+        {"technique": 6, "name": "OCR / text extraction", "phase": 1, "ran": True,
+         "found": True, "summary": "2 lines: SALE | <b>OPEN</b>", "regions": [],
+         "skipped_because": ""},
+        {"technique": 2, "name": "GPS coordinate extraction", "phase": 1, "ran": False,
+         "found": False, "summary": "Not applicable: the file carries no GPS tag",
+         "skipped_because": "the file carries no GPS tag"},
+        {"technique": 145, "name": "Contradiction detection between clues", "phase": 10,
+         "ran": True, "found": True, "summary": "1 contradiction(s): 59 Season",
+         "skipped_because": ""},
+        {"technique": 151, "name": "Final evidence map", "phase": 10, "ran": True,
+         "found": True, "summary": "1 marked region", "skipped_because": "",
+         "detail": {"regions": [{"technique": 6, "name": "OCR / text extraction",
+                                 "phase": 1, "box": [0.1, 0.2, 0.4, 0.3],
+                                 "label": "SALE"}]}},
+    ]
+    return report
+
+
+class TestTechniquesTravel:
+    def test_every_technique_is_listed_with_what_happened(self):
+        html = build_single(_with_techniques(confident_report()), None)
+        assert "Techniques" in html and "1. Metadata" in html and "10. Putting" in html
+        assert "not run" in html and "the file carries no GPS tag" in html
+        assert "&lt;b&gt;OPEN&lt;/b&gt;" in html          # escaped, never markup
+
+    def test_contradictions_are_called_out(self):
+        html = build_single(_with_techniques(confident_report()), None)
+        assert 'class="note warn">1 contradiction(s)' in html
+
+    def test_the_evidence_map_is_drawn_over_the_embedded_image(self):
+        html = build_single(_with_techniques(confident_report()), make_jpeg())
+        assert "evidence map" in html
+        assert 'class="evbox ph-1"' in html and "left:10.00%" in html
+
+    def test_still_self_contained_with_techniques(self):
+        html = build_single(_with_techniques(confident_report()), make_jpeg())
+        for ref in re.findall(r'(?:src|href)="([^"]*)"', html):
+            assert ref.startswith("data:")

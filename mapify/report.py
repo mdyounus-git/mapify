@@ -236,6 +236,30 @@ tr:last-child th, tr:last-child td { border-bottom:0; }
 pre.ocr { background:var(--panel); border:1px solid var(--line);
   border-radius:6px; padding:10px 12px; font-size:12px; white-space:pre-wrap;
   overflow-wrap:anywhere; margin:0; }
+/* evidence map: the regions techniques marked, over the photograph */
+.evframe { position:relative; display:inline-block; line-height:0; }
+.evframe .source { max-height:420px; }
+.evbox { position:absolute; border:1.5px solid var(--c,#2c6fae); border-radius:2px;
+  box-shadow:0 0 0 1px rgba(255,255,255,.7); }
+.evbox span { position:absolute; left:-1.5px; top:-1.5px; transform:translateY(-100%);
+  padding:0 3px; font:600 9px/1.5 "Cascadia Mono",Consolas,monospace; color:#fff;
+  background:var(--c,#2c6fae); border-radius:2px 2px 0 0; }
+.legend { font-size:11px; color:var(--ink3); margin:6px 0 0; line-height:1.8; }
+.legend i { display:inline-block; width:8px; height:8px; border-radius:2px;
+  background:var(--c); margin:0 4px 0 10px; }
+.ph-1 { --c:#7a56c2; } .ph-2 { --c:#2c6fae; } .ph-3 { --c:#b07a12; }
+.ph-4 { --c:#1f7a44; } .ph-5 { --c:#c2622a; } .ph-6 { --c:#1d8fb3; }
+.ph-7 { --c:#8a6fd1; } .ph-8 { --c:#b04aa6; } .ph-9 { --c:#c0392b; }
+.ph-10 { --c:#16202b; }
+/* techniques */
+table.tq th { width:34px; font-family:"Cascadia Mono",Consolas,monospace; }
+table.tq td.n { width:230px; color:var(--ink); }
+table.tq td.s { color:var(--ink2); font-size:12px; }
+table.tq tr.na td, table.tq tr.ran td.s { color:var(--ink3); }
+.st { font-size:10px; letter-spacing:.06em; text-transform:uppercase; white-space:nowrap; }
+.st.found { color:#1f7a44; } .st.ran { color:var(--ink3); } .st.na { color:var(--ink3); }
+.st.failed { color:#c0392b; }
+h3 { font-size:12px; margin:18px 0 4px; color:var(--ink2); font-weight:650; }
 footer { margin-top:38px; padding-top:14px; border-top:1px solid var(--line);
   font-size:11px; color:var(--ink3); line-height:1.65; }
 footer strong { color:var(--ink2); }
@@ -291,6 +315,68 @@ def _rows(pairs: list[tuple[str, Any]], numeric: set[str] | None = None) -> str:
         cls = ' class="num"' if label in numeric else ""
         out.append(f"<tr><th>{esc(label)}</th><td{cls}>{esc(value)}</td></tr>")
     return f"<table>{''.join(out)}</table>" if out else ""
+
+
+_PHASE_TITLES = {
+    1: "Metadata & image forensics", 2: "Scene & infrastructure",
+    3: "Sun, shadow & sky", 4: "Vision & geometry", 5: "History & time",
+    6: "The pixels in depth", 7: "Places, sky & weather records",
+    8: "Regional clues", 9: "Provenance & other images", 10: "Putting it together",
+}
+_STATE_WORD = {"found": "found", "ran": "nothing", "na": "not run", "failed": "failed"}
+
+
+def _technique_state(t: dict[str, Any]) -> str:
+    if t.get("skipped_because") == "the technique raised":
+        return "failed"
+    if not t.get("ran"):
+        return "na"
+    return "found" if t.get("found") else "ran"
+
+
+def _evidence_regions(report: dict[str, Any]) -> list[dict[str, Any]]:
+    """The regions technique 151 collected, if it ran."""
+    for t in report.get("techniques") or []:
+        if t.get("technique") == 151:
+            return [r for r in (t.get("detail") or {}).get("regions") or []
+                    if len(r.get("box") or []) == 4]
+    return []
+
+
+def _techniques_section(report: dict[str, Any]) -> list[str]:
+    """Every technique, found or not, and why the rest could not run.
+
+    A report listing only the hits would read as though everything else
+    was looked for and absent; most of it could not be attempted on this
+    image, and the reason is printed beside each.
+    """
+    ts = [t for t in report.get("techniques") or [] if t.get("technique", 999) <= 153]
+    if not ts:
+        return []
+    by = {t["technique"]: t for t in ts}
+    ran = sum(1 for t in ts if t.get("ran"))
+    found = sum(1 for t in ts if t.get("found"))
+    out = [f"<h2>Techniques &mdash; {ran} of {len(ts)} ran, {found} found something</h2>"]
+    if by.get(153, {}).get("summary"):
+        out.append(f'<p class="reason">{esc(by[153]["summary"])}</p>')
+    for tid, kind in ((145, "warn"), (144, "info"), (148, "info"), (149, "info"),
+                      (150, "info")):
+        t = by.get(tid)
+        if t and t.get("found"):
+            out.append(f'<div class="note {kind}">{esc(t.get("summary"))}</div>')
+    for phase in sorted({t.get("phase", 0) for t in ts}):
+        rows = []
+        for t in sorted((t for t in ts if t.get("phase") == phase),
+                        key=lambda t: t["technique"]):
+            state = _technique_state(t)
+            text = t.get("summary") or t.get("skipped_because") or ""
+            rows.append(f'<tr class="{state}"><th>{t["technique"]}</th>'
+                        f'<td class="n">{esc(t.get("name"))}</td>'
+                        f'<td class="st {state}">{_STATE_WORD[state]}</td>'
+                        f'<td class="s">{esc(text)}</td></tr>')
+        out.append(f"<h3>{phase}. {esc(_PHASE_TITLES.get(phase, f'Phase {phase}'))}</h3>")
+        out.append(f'<table class="tq">{"".join(rows)}</table>')
+    return out
 
 
 def build_single(report: dict[str, Any], image_bytes: bytes | None = None,
@@ -370,11 +456,26 @@ def build_single(report: dict[str, Any], image_bytes: bytes | None = None,
     img = report.get("image") or {}
     if image_bytes:
         encoded = base64.b64encode(image_bytes).decode("ascii")
-        parts.append("<h2>Source image</h2>")
+        regions = _evidence_regions(report)
+        parts.append("<h2>Source image" + (" and evidence map" if regions else "")
+                     + "</h2>")
+        boxes = "".join(
+            f'<div class="evbox ph-{int(r.get("phase", 0))}" title="{esc(r.get("technique"))} '
+            f'{esc(r.get("name"))}: {esc(r.get("label"))}" style="left:{r["box"][0] * 100:.2f}%;'
+            f'top:{r["box"][1] * 100:.2f}%;width:{(r["box"][2] - r["box"][0]) * 100:.2f}%;'
+            f'height:{(r["box"][3] - r["box"][1]) * 100:.2f}%"><span>{esc(r.get("technique"))}'
+            f'</span></div>' for r in regions)
         parts.append(
-            f'<img class="source" alt="The photograph analysed" '
-            f'src="data:{esc(image_mime)};base64,{encoded}">'
+            f'<div class="evframe"><img class="source" alt="The photograph analysed" '
+            f'src="data:{esc(image_mime)};base64,{encoded}">{boxes}</div>'
         )
+        if regions:
+            seen: dict[int, dict] = {}
+            for r in regions:
+                seen.setdefault(int(r.get("technique", 0)), r)
+            parts.append('<p class="legend">Marked by technique:' + "".join(
+                f'<span class="ph-{int(r.get("phase", 0))}"><i></i>{t} '
+                f'{esc(r.get("name"))}</span>' for t, r in sorted(seen.items())) + "</p>")
 
     # ---- embedded GPS, held apart -----------------------------------------
     gps = pred.get("embedded_gps")
@@ -501,6 +602,9 @@ def build_single(report: dict[str, Any], image_bytes: bytes | None = None,
             for i, c in enumerate(candidates)
         )
         parts.append(f"<table>{body}</table>")
+
+    # ---- the 153 techniques -------------------------------------------------
+    parts.extend(_techniques_section(report))
 
     # ---- file --------------------------------------------------------------
     exif = report.get("exif") or {}
