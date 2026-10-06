@@ -179,8 +179,11 @@ class FusionConfig:
     w_region_hint: float = 0.50
     # Narrow clues read off the image as text -- a calling code, a
     # country-code domain, a currency sign, a postcode, miles
-    # (evidence/text_clues.py). Zero until the benchmark has measured
-    # whether letting them steer helps: scripts/measure_text_clues.py.
+    # (evidence/text_clues.py). Zero until measured. Measured 2026-10-06
+    # (scripts/measure_text_clues.py, PHASES/Implemented Phases/PHASE-27):
+    # none of the 163 benchmark photographs carries such a clue, so no
+    # weight changes any answer there and none can be fitted. It needs a
+    # text-bearing benchmark before it may be anything but zero.
     w_text_clue: float = 0.0
     max_total_adjustment: float = 2.5
     # ---- Confidence banding -------------------------------------------

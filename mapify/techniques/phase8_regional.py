@@ -48,6 +48,11 @@ from .common import (ORDINARY_SCENES, SRC_CLIP, SRC_EXIF, SRC_OCR, SRC_OSM_LOCAL
 PHASE = 8
 SRC_TABLE = "hand-maintained table of public regional facts"
 SRC_PIX = "measured from the pixels"
+# What the measurement of the text clues as fusion inputs found, stated
+# beside each one so the next person does not have to rediscover it.
+_MEASURED = (" Measured as a fusion input on 2026-10-06 (PHASE-27): none of the "
+             "163 benchmark photographs carries this kind of text, so its weight "
+             "could not be fitted and stays zero -- it reports, and does not steer.")
 
 
 def _lines(ctx: Context, min_conf: float = 0.35):
@@ -266,7 +271,7 @@ def _brand_finding(tid: int, ctx: Context, kinds: set[str], what: str) -> Findin
 @technique(id=117, key="retail_chains", name="Retail-chain geographic distribution matching",
            phase=PHASE, needs=("ocr",),
            fusion_note="Retail chains named in the text, against where they "
-                       "trade. Unmeasured as a fusion input.")
+                       "trade." + _MEASURED)
 def retail_chains(ctx: Context) -> Finding:
     return _brand_finding(117, ctx, {"retail"}, "retail chains")
 
@@ -275,7 +280,7 @@ def retail_chains(ctx: Context) -> Finding:
            phase=PHASE, needs=("ocr",),
            fusion_note="Fuel and banking brands named in the text. Logos "
                        "themselves are not recognised: no logo dataset has a "
-                       "licence this project can use.")
+                       "licence this project can use." + _MEASURED)
 def brands(ctx: Context) -> Finding:
     return _brand_finding(118, ctx, {"fuel", "bank"}, "fuel and banking brands")
 
@@ -289,8 +294,8 @@ def brands(ctx: Context) -> Finding:
 @technique(id=119, key="phone_numbers", name="Telephone-number / area-code extraction",
            phase=PHASE, needs=("ocr",),
            fusion_note="Country calling codes and, for India, mobile number "
-                       "shapes and trunk codes. Independent of the encoder; "
-                       "unmeasured as a fusion input.")
+                       "shapes and trunk codes. Independent of the encoder."
+                       + _MEASURED)
 def phone_numbers(ctx: Context) -> Finding:
     sp = spec(119)
     clue = phone_clue(_ocr_lines(ctx))
@@ -319,7 +324,7 @@ def phone_numbers(ctx: Context) -> Finding:
            phase=PHASE, needs=("ocr",),
            fusion_note="Country-code top-level domains in web and email "
                        "addresses. Generic and resold codes (.com, .io, .co, "
-                       ".tv, .me) are ignored.")
+                       ".tv, .me) are ignored." + _MEASURED)
 def domains(ctx: Context) -> Finding:
     sp = spec(120)
     clue = domain_clue(_ocr_lines(ctx))
@@ -334,7 +339,7 @@ def domains(ctx: Context) -> Finding:
            phase=PHASE, needs=("ocr",),
            fusion_note="Currency signs and codes in prices. Codes count only "
                        "beside a number; \"$\" alone is dozens of countries "
-                       "and is reported as weak.")
+                       "and is reported as weak." + _MEASURED)
 def currency(ctx: Context) -> Finding:
     sp = spec(121)
     clue = currency_clue(_ocr_lines(ctx))
@@ -389,7 +394,7 @@ def date_format(ctx: Context) -> Finding:
 @technique(id=123, key="units", name="Measurement-unit identification",
            phase=PHASE, needs=("ocr",),
            fusion_note="Miles and degrees Fahrenheit narrow the world sharply; "
-                       "kilometres and Celsius hardly at all.")
+                       "kilometres and Celsius hardly at all." + _MEASURED)
 def units(ctx: Context) -> Finding:
     sp = spec(123)
     clue = units_clue(_ocr_lines(ctx))
@@ -412,7 +417,7 @@ def units(ctx: Context) -> Finding:
            phase=PHASE, needs=("ocr",),
            fusion_note="Postcode shapes distinctive enough to name a country, "
                        "and only in the context they are written in. Bare "
-                       "four-, five- and six-digit numbers are skipped.")
+                       "four-, five- and six-digit numbers are skipped." + _MEASURED)
 def postcodes(ctx: Context) -> Finding:
     sp = spec(124)
     clue = postcode_clue(_ocr_lines(ctx))
