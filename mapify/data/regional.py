@@ -69,34 +69,59 @@ GENERIC_TLDS = frozenset({
     "me", "ly", "app", "dev", "xyz", "online", "site", "store", "shop", "tech",
 })
 
+def _code(c: str) -> str:
+    """An ISO 4217 code, counted only beside a number: "TRY 20", "20 SAR".
+
+    As bare words several are English -- "TRY OUR NEW MENU", "PHP" on a
+    programming poster, "Hong Kong SAR" -- and would name a country from
+    a slogan.
+    """
+    return rf"\b{c}\s?\d|\d\s?{c}\b"
+
+
 # Currency signs and codes -> countries; "narrow" marks the ones worth
-# acting on.
+# acting on. Codes count only beside a number (see _code).
 CURRENCIES: list[tuple[str, list[str], bool]] = [
-    (r"₹|\bINR\b|\bRs\.?\s?\d", ["IN"], True),
-    (r"৳|\bBDT\b|\bTk\.?\s?\d", ["BD"], True),
-    (r"\bPKR\b", ["PK"], True), (r"\bLKR\b|රු", ["LK"], True),
-    (r"\bNPR\b", ["NP"], True),
-    (r"€|\bEUR\b", ["DE", "FR", "IT", "ES", "NL", "BE", "AT", "PT", "IE", "FI",
-                   "GR", "SK", "SI", "LT", "LV", "EE", "HR", "LU", "MT", "CY"], False),
-    (r"£|\bGBP\b", ["GB", "GI", "FK"], True),
-    (r"¥|\bJPY\b|円", ["JP"], True), (r"\bCNY\b|\bRMB\b|元", ["CN"], True),
-    (r"₩|\bKRW\b|원", ["KR"], True), (r"₱|\bPHP\b", ["PH"], True),
-    (r"฿|\bTHB\b|บาท", ["TH"], True), (r"₫|\bVND\b", ["VN"], True),
-    (r"\bRM\s?\d|\bMYR\b", ["MY"], True), (r"\bRp\.?\s?\d|\bIDR\b", ["ID"], True),
-    (r"R\$|\bBRL\b", ["BR"], True), (r"₺|\bTRY\b|\bTL\b", ["TR"], True),
-    (r"₽|\bRUB\b|руб", ["RU"], True), (r"₴|\bUAH\b|грн", ["UA"], True),
-    (r"zł|\bPLN\b", ["PL"], True), (r"Kč|\bCZK\b", ["CZ"], True),
-    (r"\bCHF\b|\bFr\.\s?\d", ["CH", "LI"], True),
-    (r"\bAED\b|د\.إ", ["AE"], True), (r"\bSAR\b|ر\.س", ["SA"], True),
-    (r"\bKSh\b|\bKES\b", ["KE"], True), (r"₦|\bNGN\b", ["NG"], True),
-    (r"\bGH₵|₵|\bGHS\b", ["GH"], True), (r"\bZAR\b|\bR\s?\d+[.,]\d{2}\b", ["ZA"], False),
-    (r"E£|\bEGP\b|ج\.م", ["EG"], True), (r"₪|\bILS\b|\bNIS\b", ["IL"], True),
-    (r"\bMXN\b", ["MX"], True), (r"\bAUD\b|A\$", ["AU"], True),
-    (r"\bCAD\b|C\$", ["CA"], True), (r"\bNZD\b|NZ\$", ["NZ"], True),
-    (r"\bSGD\b|S\$", ["SG"], True), (r"\bHKD\b|HK\$", ["HK"], True),
-    (r"\bUSD\b|US\$", ["US"], False),
+    (r"₹|" + _code("INR"), ["IN"], True),
+    # "Rs" is the rupee of India, Pakistan, Sri Lanka, Nepal, Mauritius
+    # and the Seychelles alike.
+    (r"\bRs\.?\s?\d", ["IN", "PK", "LK", "NP", "MU", "SC"], False),
+    (r"৳|\bTk\.?\s?\d|" + _code("BDT"), ["BD"], True),
+    (_code("PKR"), ["PK"], True), (r"රු|" + _code("LKR"), ["LK"], True),
+    (_code("NPR"), ["NP"], True),
+    (r"€|" + _code("EUR"), ["DE", "FR", "IT", "ES", "NL", "BE", "AT", "PT", "IE",
+                            "FI", "GR", "SK", "SI", "LT", "LV", "EE", "HR", "LU",
+                            "MT", "CY"], False),
+    (r"£|" + _code("GBP"), ["GB", "GI", "FK"], True),
+    # The yen sign is written for the Chinese yuan too.
+    (r"¥", ["JP", "CN"], True), (r"円|" + _code("JPY"), ["JP"], True),
+    (r"元", ["CN", "TW"], True), (_code("CNY") + "|" + _code("RMB"), ["CN"], True),
+    (r"₩|원|" + _code("KRW"), ["KR"], True), (r"₱|" + _code("PHP"), ["PH"], True),
+    (r"฿|บาท|" + _code("THB"), ["TH"], True), (r"₫|" + _code("VND"), ["VN"], True),
+    (r"\bRM\s?\d|" + _code("MYR"), ["MY"], True),
+    (r"\bRp\.?\s?\d|" + _code("IDR"), ["ID"], True),
+    (r"(?<![A-Za-z])R\$|" + _code("BRL"), ["BR"], True),
+    (r"₺|" + _code("TRY") + "|" + _code("TL"), ["TR"], True),
+    (r"₽|руб|" + _code("RUB"), ["RU"], True), (r"₴|грн|" + _code("UAH"), ["UA"], True),
+    (r"zł|" + _code("PLN"), ["PL"], True), (r"Kč|" + _code("CZK"), ["CZ"], True),
+    (r"\bFr\.\s?\d|" + _code("CHF"), ["CH", "LI"], True),
+    (r"د\.إ|" + _code("AED"), ["AE"], True), (r"ر\.س|" + _code("SAR"), ["SA"], True),
+    (r"\bKSh\s?\d|" + _code("KES"), ["KE"], True), (r"₦|" + _code("NGN"), ["NG"], True),
+    (r"₵|" + _code("GHS"), ["GH"], True),
+    (_code("ZAR") + r"|\bR\s?\d+[.,]\d{2}\b", ["ZA"], False),
+    (r"E£|ج\.م|" + _code("EGP"), ["EG"], True),
+    (r"₪|" + _code("ILS") + "|" + _code("NIS"), ["IL"], True),
+    # A letter before the sign makes it another dollar: "US$" is not "S$".
+    (_code("MXN"), ["MX"], True), (r"(?<![A-Za-z])A\$|" + _code("AUD"), ["AU"], True),
+    (r"(?<![A-Za-z])C\$|" + _code("CAD"), ["CA"], True),
+    (r"\bNZ\$|" + _code("NZD"), ["NZ"], True),
+    (r"(?<![A-Za-z])S\$|" + _code("SGD"), ["SG"], True),
+    (r"\bHK\$|" + _code("HKD"), ["HK"], True),
+    # Dollar prices are also how much of the world quotes tourists.
+    (r"\bUS\$|" + _code("USD"), ["US"], False),
     (r"\$\s?\d", ["US", "CA", "AU", "NZ", "SG", "HK", "MX", "AR", "CL", "CO"], False),
-    (r"\bkr\.?\s?\d|\bSEK\b|\bNOK\b|\bDKK\b", ["SE", "NO", "DK", "IS"], False),
+    (r"\bkr\.?\s?\d|\d\s?kr\b|" + _code("SEK") + "|" + _code("NOK") + "|"
+     + _code("DKK"), ["SE", "NO", "DK", "IS"], False),
 ]
 
 # Countries that post road speeds and distances in miles.
@@ -107,15 +132,27 @@ MPH_COUNTRIES = frozenset({"US", "GB", "LR", "MM", "PR", "GU", "VI", "AS", "MP",
 # Postcode shapes distinctive enough to name a country. Five-digit and
 # four-digit codes are left out: too many countries use them.
 POSTCODES: list[tuple[str, str, re.Pattern[str]]] = [
-    ("IN", "PIN (6 digits)", re.compile(r"(?<!\d)[1-8]\d{2}\s?\d{3}(?!\d)")),
-    ("GB", "UK postcode", re.compile(r"\b[A-Z]{1,2}\d[A-Z\d]?\s?\d[A-Z]{2}\b")),
+    # India's six-digit PIN only where it is labelled or ends an address
+    # line ("Bengaluru - 560001"): a bare six-digit number is also a
+    # postcode in China, Russia, Singapore, Romania and Vietnam, or a price.
+    ("IN", "PIN code", re.compile(
+        r"(?i)(?:\bpin(?:\s?code)?\s?[:.\-]?\s?|[a-z]{3,}\s?[-–]\s?)[1-8]\d{2}\s?\d{3}(?!\d)")),
+    ("GB", "UK postcode", re.compile(r"\b[A-Z]{1,2}\d[A-Z\d]?\s\d[A-Z]{2}\b")),
     ("CA", "Canadian postal code", re.compile(r"\b[A-Z]\d[A-Z]\s?\d[A-Z]\d\b")),
-    ("NL", "Dutch postcode", re.compile(r"\b[1-9]\d{3}\s?[A-Z]{2}\b")),
-    ("JP", "Japanese postal code", re.compile(r"〒\s?\d{3}-\d{4}|\b\d{3}-\d{4}\b")),
-    ("BR", "Brazilian CEP", re.compile(r"\b\d{5}-\d{3}\b")),
-    ("PL", "Polish postcode", re.compile(r"\b\d{2}-\d{3}\b")),
-    ("PT", "Portuguese postcode", re.compile(r"\b\d{4}-\d{3}\b")),
-    ("IE", "Eircode", re.compile(r"\b[AC-FHKNPRTV-Y]\d{2}\s?[AC-FHKNPRTV-Y\d]{4}\b")),
+    # Not "1030 AM", "1500 KM", "2019 BC": units and eras that look alike.
+    ("NL", "Dutch postcode", re.compile(
+        r"\b[1-9]\d{3}\s?(?!AM|PM|KM|CM|MM|KG|ML|AD|BC|HP|CC|MB|GB|KB|TB|HZ|FT|IN|RS|SA|SD|SS)"
+        r"[A-Z]{2}\b")),
+    # The postal mark, or it is a phone number ("555-1234").
+    ("JP", "Japanese postal code", re.compile(r"〒\s?\d{3}-\d{4}")),
+    ("BR", "Brazilian CEP", re.compile(r"(?i)\bCEP\s?:?\s?\d{5}-?\d{3}\b")),
+    # Followed by the town, as written: "00-950 Warszawa", "1000-001 Lisboa".
+    ("PL", "Polish postcode", re.compile(r"\b\d{2}-\d{3}\s+[A-ZĆŁŚŻŹ][a-ząćęłńóśźż]{2,}")),
+    ("PT", "Portuguese postcode", re.compile(r"\b\d{4}-\d{3}\s+[A-Z][a-zà-ú]{2,}")),
+    # An Eircode's last four always hold a letter.
+    ("IE", "Eircode", re.compile(
+        r"\b[AC-FHKNPRTV-Y]\d{2}\s?(?=[\dAC-FHKNPRTV-Y]*[AC-FHKNPRTV-Y])"
+        r"[AC-FHKNPRTV-Y\d]{4}\b")),
 ]
 
 # Indian registration-plate state and territory codes.
