@@ -27,8 +27,34 @@
  * photograph was taken.
  */
 
+import { BuildingIndex, EYE_HEIGHT_M, Walker, floorLines, groundLayers,
+         nearestRoadPoint, streetLabels } from "./walk.js";
+
 const DECK_SRC = "vendor/deck/dist.min.js";
 let deckLoading = null;
+
+/** The sun's elevation in degrees (NOAA's approximation, good to ~1°). */
+function sunElevation(lat, lon, ms) {
+  const d = (ms / 86400000) - 10957.5;             // days since J2000.0
+  const g = ((357.529 + 0.98560028 * d) % 360) * Math.PI / 180;
+  const q = (280.459 + 0.98564736 * d) % 360;
+  const L = (q + 1.915 * Math.sin(g) + 0.020 * Math.sin(2 * g)) * Math.PI / 180;
+  const e = (23.439 - 0.00000036 * d) * Math.PI / 180;
+  const dec = Math.asin(Math.sin(e) * Math.sin(L));
+  const ra = Math.atan2(Math.cos(e) * Math.sin(L), Math.cos(L));
+  const gmst = (18.697374558 + 24.06570982441908 * d) % 24;
+  const ha = ((gmst * 15 + lon) * Math.PI / 180) - ra;
+  const la = lat * Math.PI / 180;
+  return Math.asin(Math.sin(la) * Math.sin(dec)
+    + Math.cos(la) * Math.cos(dec) * Math.cos(ha)) * 180 / Math.PI;
+}
+
+/** Today at about 10:30 local solar time at a longitude, in UTC ms. */
+function lateMorning(lon) {
+  const now = new Date();
+  const midnight = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+  return midnight + (10.5 - lon / 15) * 3600000;
+}
 
 function loadDeck() {
   if (window.deck) return Promise.resolve(window.deck);
@@ -57,6 +83,15 @@ const BUILDING_COLOUR = {
   published: [226, 228, 232, 255],    // OpenMapTiles' number: near white
   assumed: [120, 134, 152, 235],      // nothing recorded: muted slate
   gob: [196, 160, 112, 235],          // a Google detection: sand
+};
+
+/* At street level the same distinction in daylight colours: stone and
+   render where a height is known, plain concrete -- still the darker --
+   where it is nominal. */
+const WALK_COLOUR = {
+  measured: [236, 226, 208, 255], levels: [222, 226, 232, 255],
+  published: [228, 228, 230, 255], assumed: [184, 186, 190, 255],
+  gob: [210, 186, 150, 255],
 };
 
 const ROAD_COLOUR = {
@@ -127,6 +162,16 @@ export class Ground3D {
     this.orbiting = false;
     this.viewState = null;
     this.target = null;
+    this.walking = false;
+    this.index = null;
+    this._floors = null;
+    this.walker = new Walker({
+      getState: () => this.viewState,
+      setState: (v) => { this.viewState = v; this.deck?.setProps({ viewState: v }); },
+      index: () => this._buildingIndex(),
+      onMove: (lon, lat) => this._walkMoved(lon, lat),
+      onExit: () => this.exitWalk(),
+    });
     this._reset();
     this._build();
   }
@@ -156,6 +201,8 @@ export class Ground3D {
           <button type="button" data-act="tilt" title="Change tilt (T)">Tilt</button>
           <button type="button" data-act="north" title="Face north (N)">N</button>
           <button type="button" data-act="orbit" title="Orbit the centre (O)">Orbit</button>
+          <button type="button" data-act="walk" class="g3d-walk"
+                  title="Walk around at eye level (F)">Walk</button>
           <label class="g3d-imagery-label">Ground
             <select class="g3d-imagery" aria-label="Ground imagery"></select>
           </label>
@@ -167,7 +214,20 @@ export class Ground3D {
       <div class="g3d-legend" aria-label="Legend"></div>
       <div class="g3d-notes"></div>
       <div class="g3d-status" role="status"></div>
-      <div class="g3d-hint">Drag to pan &middot; right-drag or Ctrl-drag to rotate and tilt &middot; scroll to zoom &middot; zoom out to return to the globe</div>
+      <div class="g3d-hint">Drag to pan &middot; right-drag or Ctrl-drag to rotate and tilt &middot; scroll to zoom &middot; zoom out to return to the globe &middot; F to walk</div>
+      <div class="g3d-walkhud" hidden>
+        <div class="g3d-walk-where">
+          <span class="g3d-eyebrow">Walking &middot; eye height 1.7 m</span>
+          <strong class="g3d-walk-street">—</strong>
+          <span class="g3d-walk-meta"></span>
+        </div>
+        <div class="g3d-walk-keys">
+          <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> or arrows to move &middot;
+          <kbd>Q</kbd><kbd>E</kbd> turn &middot; drag to look &middot;
+          <kbd>Shift</kbd> run &middot; <kbd>Esc</kbd> stop walking
+        </div>
+        <div class="g3d-walk-light"></div>
+      </div>
       <div class="g3d-attrib"></div>`;
     this.el = {
       canvas: this.host.querySelector(".g3d-canvas"),
@@ -180,6 +240,12 @@ export class Ground3D {
       imagery: this.host.querySelector(".g3d-imagery"),
       overlay: this.host.querySelector(".g3d-overlay"),
       orbit: this.host.querySelector('[data-act="orbit"]'),
+      walk: this.host.querySelector('[data-act="walk"]'),
+      hint: this.host.querySelector(".g3d-hint"),
+      walkHud: this.host.querySelector(".g3d-walkhud"),
+      walkStreet: this.host.querySelector(".g3d-walk-street"),
+      walkMeta: this.host.querySelector(".g3d-walk-meta"),
+      walkLight: this.host.querySelector(".g3d-walk-light"),
     };
     this.host.querySelector(".g3d-tools").addEventListener("click", (e) => {
       const act = e.target.closest("button")?.dataset.act;
@@ -194,10 +260,10 @@ export class Ground3D {
       this._render();
     });
     this._keys = (e) => {
-      if (this.host.hidden) return;
+      if (this.host.hidden || this.walking) return;     // the walker has the keys
       if (e.target.closest("input, select, textarea")) return;
       const map = { q: "left", e: "right", t: "tilt", n: "north", o: "orbit",
-                    Escape: "close" };
+                    f: "walk", Escape: "close" };
       const act = map[e.key] || map[e.key?.toLowerCase?.()];
       if (act) { e.preventDefault(); this._act(act); }
     };
@@ -249,7 +315,11 @@ export class Ground3D {
 
     await this._loadImageryChoices(target);
     this._render();
-    if (how.fromAltitudeKm) {
+    if (how.walk) {
+      // Straight into the street: load around the point, then stand in it.
+      await this._maybeLoad(true);
+      await this.enterWalk({ lon: target.lon, lat: target.lat });
+    } else if (how.fromAltitudeKm) {
       // The dive: down to street level, tilting as it goes.
       this._status("Descending…");
       this._animateTo({ zoom: 15.6, pitch: 52, bearing: -18 }, 2600);
@@ -259,6 +329,7 @@ export class Ground3D {
   }
 
   close(handBack = true) {
+    if (this.walking) this.exitWalk(false);
     this._stopOrbit();
     this.host.hidden = true;
     const v = this.viewState || {};
@@ -278,17 +349,10 @@ export class Ground3D {
   /* ───────────────────────────── deck ───────────────────────────── */
 
   _createDeck(deck) {
-    const { Deck, MapView, LightingEffect, AmbientLight, DirectionalLight } = deck;
-    // Fixed, readable daylight. Lighting by the sun at the moment the
-    // photograph was taken is a verification tool in its own right and
-    // belongs with the solar techniques, where the time is established.
-    const lighting = new LightingEffect({
-      ambient: new AmbientLight({ color: [255, 255, 255], intensity: 1.15 }),
-      key: new DirectionalLight({ color: [255, 246, 232], intensity: 1.6,
-                                  direction: [-2, -3, -4] }),
-      fill: new DirectionalLight({ color: [200, 214, 255], intensity: 0.55,
-                                   direction: [3, 2, -1] }),
-    });
+    const { Deck, MapView } = deck;
+    // Fixed, readable daylight from above. Walking is lit by the sun where
+    // and when the photograph was taken (_walkLighting).
+    const lighting = this._overviewLighting(deck);
     this.deck = new Deck({
       parent: this.el.canvas,
       views: new MapView({ repeat: false }),
@@ -313,6 +377,10 @@ export class Ground3D {
 
   _onMove() {
     const v = this.viewState;
+    if (this.walking) {                 // looking around: nothing to load or hand back
+      this._walkMoved(v.longitude, v.latitude);
+      return;
+    }
     if (v.zoom < ZOOM_HANDBACK && !this._animating) {
       // Zoomed out past city scale: the globe is the better instrument.
       this.close(true);
@@ -328,15 +396,15 @@ export class Ground3D {
     this._loadTimer = setTimeout(() => this._maybeLoad(), delayMs);
   }
 
-  async _maybeLoad() {
+  async _maybeLoad(force = false) {
     if (!this.isOpen || !this.viewState) return;
     const v = this.viewState;
-    if (v.zoom < ZOOM_BUILDINGS) {
+    if (!this.walking && !force && v.zoom < ZOOM_BUILDINGS) {
       if (!this.data.buildings.size) this._status("Zoom in to see buildings.");
       return;
     }
     const center = [v.longitude, v.latitude];
-    const radius = radiusForZoom(v.zoom);
+    const radius = this.walking || force ? 700 : radiusForZoom(v.zoom);
     // Already covered: the new view sits well inside an area loaded before.
     const covered = this.loaded.some((a) =>
       metresBetween(a.center, center) + radius * 0.55 <= a.radius);
@@ -363,7 +431,8 @@ export class Ground3D {
       this._status(n
         ? `${this.data.buildings.size.toLocaleString()} buildings loaded (${secs} s)`
         : "No buildings are recorded for this area in any source.", !n);
-      if (!this._orbitedOnce && n && this.target?.origin !== "camera") {
+      if (!this._orbitedOnce && n && this.target?.origin !== "camera"
+          && !this.walking && !force) {
         this._orbitedOnce = true;
         this._startOrbit(9000);    // one slow look around, then hands off
       }
@@ -388,6 +457,8 @@ export class Ground3D {
     put(this.data.pois, around.pois);
     for (const s of around.sources || []) this.sources.set(s.name, s);
     for (const n of around.notes || []) this.notes.add(n);
+    this.index = null;                  // walls changed: rebuild on next step
+    this._floors = null;
 
     // Bound memory: past the cap, forget the buildings farthest from here.
     if (this.data.buildings.size > MAX_BUILDINGS) {
@@ -453,6 +524,10 @@ export class Ground3D {
 
   _render() {
     if (!this.deck) return;
+    if (this.walking) {
+      this._renderWalk();
+      return;
+    }
     const deck = window.deck;
     const d = this.data;
     const layers = [];
@@ -540,6 +615,215 @@ export class Ground3D {
       collisionTestProps: { sizeScale: 1.6 },
     }));
 
+    this.deck.setProps({ layers });
+    this._attrib();
+  }
+
+  /* ─────────────────────────── walking ─────────────────────────── */
+
+  _buildingIndex() {
+    if (!this.index) this.index = new BuildingIndex(this.data.buildings.values());
+    return this.index;
+  }
+
+  /**
+   * Stand in the street at a point and walk.
+   *
+   * If the point is inside a building -- an estimate often is -- start on
+   * the nearest street instead, facing along it; failing a street, start
+   * where asked and let the walker out of that one building.
+   */
+  async enterWalk(at = null) {
+    const deck = window.deck;
+    if (!deck || !this.deck) return;
+    this._stopOrbit();
+    this._cancelAnimation();
+    const v = this.viewState;
+    let lon = at?.lon ?? v.longitude, lat = at?.lat ?? v.latitude;
+    let bearing = v.bearing || 0;
+    const index = this._buildingIndex();
+    const inside = index.hit(lon, lat);
+    this.walker.ghostOf = null;
+    if (inside) {
+      const road = nearestRoadPoint(this.data.roads.values(), lon, lat, 160);
+      if (road && !index.hit(road.lon, road.lat)) {
+        ({ lon, lat, bearing } = road);
+      } else {
+        this.walker.ghostOf = inside.id;
+      }
+    }
+    this.walking = true;
+    this.host.classList.add("walking");
+    this.el.walk.textContent = "Stop walking";
+    this.el.walk.classList.add("on");
+    this.el.walkHud.hidden = false;
+    this.el.hint.hidden = true;
+    this.viewState = { longitude: lon, latitude: lat, position: [0, 0, EYE_HEIGHT_M],
+                       bearing, pitch: 0, minPitch: -80, maxPitch: 80 };
+    this._walkOrigin = [lon, lat];
+    this._lastLoadAt = [lon, lat];
+    this.deck.setProps({
+      views: new deck.FirstPersonView({ id: "walk", fovy: 72, near: 0.1, far: 6000 }),
+      controller: { dragRotate: true, dragPan: false, scrollZoom: false,
+                    keyboard: false, inertia: false, touchRotate: true },
+      viewState: this.viewState,
+      effects: [this._walkLighting(deck, lon, lat)],
+    });
+    this._render();
+    this._walkMoved(lon, lat, true);
+    this.walker.start();
+    this._status("");
+  }
+
+  exitWalk(render = true) {
+    if (!this.walking) return;
+    this.walker.stop();
+    this.walking = false;
+    this.host.classList.remove("walking");
+    this.el.walk.textContent = "Walk";
+    this.el.walk.classList.remove("on");
+    this.el.walkHud.hidden = true;
+    this.el.hint.hidden = false;
+    const v = this.viewState;
+    const deck = window.deck;
+    this.viewState = { longitude: v.longitude, latitude: v.latitude, zoom: 17.6,
+                       pitch: 60, bearing: v.bearing || 0,
+                       minZoom: ZOOM_HANDBACK - 0.4, maxZoom: 20, maxPitch: 80 };
+    if (deck && this.deck) {
+      this.deck.setProps({
+        views: new deck.MapView({ repeat: false }),
+        controller: { dragRotate: true, touchRotate: true, keyboard: false,
+                      inertia: 300 },
+        viewState: this.viewState,
+        effects: [this._overviewLighting(deck)],
+      });
+    }
+    if (render) this._render();
+  }
+
+  /** The sun where and when the photograph was taken, if that is known. */
+  _walkLighting(deck, lon, lat) {
+    const { LightingEffect, AmbientLight } = deck;
+    const SunLight = deck._SunLight || deck.SunLight;
+    const asked = this.target?.capturedAt ? Date.parse(this.target.capturedAt) : NaN;
+    let ts = Number.isFinite(asked) ? asked : lateMorning(lon);
+    let note;
+    if (Number.isFinite(asked) && sunElevation(lat, lon, asked) < 5) {
+      ts = lateMorning(lon);
+      note = "The photograph was taken with the sun down; lit at 10:30 local solar time instead.";
+    } else if (Number.isFinite(asked)) {
+      note = `Lit by the sun as it was when the photograph was taken (${
+        new Date(asked).toISOString().slice(0, 16).replace("T", " ")} UTC).`;
+    } else {
+      note = "Lit by the sun at 10:30 local solar time today; the photograph's time is not known.";
+    }
+    this._lightNote = note;
+    if (!SunLight) return this._overviewLighting(deck);
+    // No cast shadows: deck.gl's shadow maps are experimental, and over a
+    // few kilometres of city they darkened every wall rather than casting.
+    // The sun's direction still lights each face by the hour.
+    return new LightingEffect({
+      ambient: new AmbientLight({ color: [255, 255, 255], intensity: 1.55 }),
+      sun: new SunLight({ timestamp: ts, color: [255, 246, 230], intensity: 1.6 }),
+    });
+  }
+
+  _overviewLighting(deck) {
+    const { LightingEffect, AmbientLight, DirectionalLight } = deck;
+    return new LightingEffect({
+      ambient: new AmbientLight({ color: [255, 255, 255], intensity: 1.15 }),
+      key: new DirectionalLight({ color: [255, 246, 232], intensity: 1.6,
+                                  direction: [-2, -3, -4] }),
+      fill: new DirectionalLight({ color: [200, 214, 255], intensity: 0.55,
+                                   direction: [3, 2, -1] }),
+    });
+  }
+
+  /** As the walker moves: the HUD, floor lines, and more of the city. */
+  _walkMoved(lon, lat, force = false) {
+    const now = performance.now();
+    if (!force && now - (this._hudAt || 0) < 180) return;
+    this._hudAt = now;
+    const road = nearestRoadPoint(this.data.roads.values(), lon, lat, 40);
+    const v = this.viewState;
+    const dirs = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"];
+    const b = ((v.bearing % 360) + 360) % 360;
+    this.el.walkStreet.textContent = road?.road?.name
+      || (road ? `an unnamed ${road.road.class || "street"}` : "off the street network");
+    this.el.walkMeta.textContent = `facing ${dirs[Math.round(b / 45) % 8]} ${Math.round(b)}°`
+      + ` · ${lat.toFixed(5)}, ${lon.toFixed(5)}`
+      + (this.walker.running ? " · running" : "");
+    this.el.walkLight.textContent = this._lightNote || "";
+
+    // Floor lines follow the walker; recomputed every ~120 m.
+    const moved = this._floorsAt ? metresBetween(this._floorsAt, [lon, lat]) : Infinity;
+    if (moved > 120 || !this._floors) {
+      this._floorsAt = [lon, lat];
+      this._floors = null;
+      this._render();
+    }
+    // More of the city as the walker leaves what has been loaded.
+    if (metresBetween(this._lastLoadAt || [lon, lat], [lon, lat]) > 280) {
+      this._lastLoadAt = [lon, lat];
+      this._scheduleLoad(0);
+    }
+  }
+
+  _renderWalk() {
+    const deck = window.deck;
+    const d = this.data;
+    const v = this.viewState;
+    const here = [v.longitude, v.latitude];
+    const buildings = [...d.buildings.values()];
+    if (!this._floors) this._floors = floorLines(buildings, here[0], here[1]);
+    const layers = groundLayers(deck, d, this._walkOrigin || here);
+    layers.push(new deck.SolidPolygonLayer({
+      id: "buildings", data: buildings, extruded: true,
+      getPolygon: (b) => b.polygon.map((ring) =>
+        ring.map((p) => [p[0], p[1], b.base || 0])),
+      getElevation: (b) => Math.max(0.6, (b.height || 3) - (b.base || 0)),
+      getFillColor: (b) => (b.source === "gob" ? WALK_COLOUR.gob
+        : WALK_COLOUR[b.height_source] || WALK_COLOUR.assumed),
+      material: { ambient: 0.42, diffuse: 0.58, shininess: 10,
+                  specularColor: [40, 44, 50] },
+      pickable: true,
+    }));
+    layers.push(new deck.PathLayer({
+      id: "walk-floors", data: this._floors,
+      getPath: (f) => f.path, widthUnits: "pixels", getWidth: 2,
+      getColor: [44, 50, 62, 190],
+    }));
+    const labels = streetLabels(d.roads.values(), here[0], here[1]);
+    layers.push(new deck.TextLayer({
+      id: "walk-streets", data: labels, characterSet: "auto",
+      getPosition: (l) => l.position, getText: (l) => l.name,
+      getSize: 13, sizeUnits: "pixels", billboard: true,
+      getColor: [250, 252, 255, 240], background: true,
+      getBackgroundColor: [28, 74, 132, 215], backgroundPadding: [5, 2],
+      fontFamily: '"Segoe UI", "Nirmala UI", "Microsoft YaHei", sans-serif',
+      getTextAnchor: "middle", getAlignmentBaseline: "bottom",
+    }));
+    const named = [...d.pois.values()].filter((p) => p.name)
+      .map((p) => ({ p, dist: metresBetween(here, p.position) }))
+      .filter((n) => n.dist < 350).sort((a, b) => a.dist - b.dist).slice(0, 30);
+    layers.push(new deck.TextLayer({
+      id: "pois", data: named, characterSet: "auto",
+      getPosition: (n) => [n.p.position[0], n.p.position[1], 4.5],
+      getText: (n) => n.p.name, getSize: 12, sizeUnits: "pixels",
+      getColor: [236, 242, 250, 235], background: true,
+      getBackgroundColor: [12, 16, 24, 175], backgroundPadding: [3, 1],
+      fontFamily: '"Segoe UI", "Nirmala UI", "Microsoft YaHei", sans-serif',
+      getTextAnchor: "middle", getAlignmentBaseline: "bottom",
+      billboard: true, pickable: true,
+    }));
+    const t = this.target;
+    if (t && t.origin !== "camera") {
+      layers.push(new deck.ColumnLayer({
+        id: "target-beam", data: [t], diskResolution: 16, radius: 0.6,
+        extruded: true, getPosition: (p) => [p.lon, p.lat],
+        getElevation: 40, getFillColor: [90, 184, 240, 170],
+      }));
+    }
     this.deck.setProps({ layers });
     this._attrib();
   }
@@ -672,6 +956,11 @@ export class Ground3D {
   _act(act) {
     if (act === "close") return this.close(true);
     if (!this.deck || !this.viewState) return;
+    if (act === "walk") {
+      if (this.walking) this.exitWalk();
+      else this.enterWalk();
+      return;
+    }
     const v = { ...this.viewState };
     if (act === "left") v.bearing -= 30;
     if (act === "right") v.bearing += 30;

@@ -1068,6 +1068,9 @@ ul.plain li { margin: 2px 0; }
 }
 .finding-3d:hover { background: rgba(90, 184, 240, .18); }
 .finding-3d[hidden] { display: none; }
+.finding-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+.finding-walk { background: rgba(88, 201, 141, .10); border-color: rgba(88, 201, 141, .45); }
+.finding-walk:hover { background: rgba(88, 201, 141, .2); }
 
 .globe-3d {
   position: absolute; right: 20px; bottom: 54px; z-index: 12;
@@ -1163,6 +1166,43 @@ ul.plain li { margin: 2px 0; }
   border-radius: var(--r-sm);
 }
 .g3d-warn { color: var(--warn); }
+
+/* ── walking, at eye level ──────────────────────────────────────────
+   A daylight sky behind the street: the canvas is transparent, so what
+   shows above the rooftops is this. */
+.ground3d.walking {
+  background: linear-gradient(180deg, #4f86c6 0%, #86b4e3 38%, #c9def2 56%,
+                              #e6eef6 64%, #9a9a90 64.2%, #8e8d84 100%);
+}
+.g3d-walkhud {
+  position: absolute; left: 14px; bottom: 44px; z-index: 2;
+  display: flex; flex-direction: column; gap: 5px; max-width: 520px;
+  padding: 9px 12px; border-radius: var(--r-md);
+  background: rgba(8, 11, 16, .78); border: 1px solid var(--line-2);
+  backdrop-filter: blur(6px); color: var(--ink-2); font-size: 11px;
+  pointer-events: none;
+}
+.g3d-walkhud[hidden] { display: none; }
+.g3d-walk-where { display: flex; flex-direction: column; gap: 1px; }
+.g3d-walk-street { font-size: 15px; font-weight: 640; color: var(--ink-1); }
+.g3d-walk-meta { font-family: var(--mono); font-size: 10.5px; color: var(--ink-3); }
+.g3d-walk-keys { line-height: 1.9; }
+.g3d-walk-keys kbd {
+  display: inline-block; min-width: 18px; padding: 0 4px; margin: 0 1px;
+  font: 600 10px/16px var(--mono); text-align: center; color: var(--ink-1);
+  background: var(--raised-2); border: 1px solid var(--line-3); border-radius: 3px;
+}
+.g3d-walk-light { font-size: 10.5px; color: var(--ink-4); }
+.g3d-walk-light:empty { display: none; }
+/* In the street the HUD owns the bottom-left; the notes move up beside
+   the toolbar, and the sources shrink to one line (full text on hover). */
+.ground3d.walking .g3d-legend { display: none; }
+.ground3d.walking .g3d-notes { top: 128px; bottom: auto; }
+.ground3d.walking .g3d-attrib {
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.ground3d.walking .g3d-attrib:hover { white-space: normal; }
+
 .ground3d .deck-tooltip {
   font: 12px var(--ui) !important; white-space: pre-line;
   background: rgba(8, 11, 16, .95) !important; color: var(--ink-1) !important;

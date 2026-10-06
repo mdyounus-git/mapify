@@ -61,6 +61,7 @@ const el = {
   findingSpread: $("finding-spread"),
   findingWhy: $("finding-why"),
   finding3d: $("finding-3d"),
+  findingWalk: $("finding-walk"),
   globe3d: $("globe-3d"),
   ground3d: $("ground3d"),
   askMore: $("ask-more"),
@@ -234,6 +235,9 @@ async function boot() {
   });
   el.finding3d.addEventListener("click", () => {
     if (state.view3d) openGround(state.view3d);
+  });
+  el.findingWalk.addEventListener("click", () => {
+    if (state.view3d) openGround(state.view3d, { walk: true });
   });
   el.globe3d.addEventListener("click", () => {
     const c = state.camera;
@@ -627,8 +631,16 @@ function groundTargetAt(lat, lon) {
 
 /** What "View in 3D" should open, given the result and the selection. */
 function set3dTarget(target) {
+  if (target && !target.capturedAt) {
+    // The capture instant, when the analysis established one, so walking
+    // is lit by the sun as it was when the photograph was taken.
+    const t68 = (state.report?.techniques || []).find((t) => t.technique === 68);
+    const utc = t68?.detail?.capture_time?.utc;
+    if (utc) target = { ...target, capturedAt: utc };
+  }
   state.view3d = target;
   el.finding3d.hidden = !target;
+  el.findingWalk.hidden = !target;
 }
 
 function showFinding(report) {
