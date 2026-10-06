@@ -28,6 +28,7 @@ from . import phase5_temporal          # noqa: F401  techniques 57-72
 from . import phase6_pixels            # noqa: F401  techniques 73-90
 from . import phase7_geo               # noqa: F401  techniques 91-110
 from . import phase8_regional          # noqa: F401  techniques 111-131
+from . import phase9_provenance        # noqa: F401  techniques 132-142
 
 __all__ = [
     "REGISTRY", "Constraint", "Context", "Finding", "Region", "Technique",
