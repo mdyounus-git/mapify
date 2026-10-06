@@ -659,6 +659,19 @@ class AnalysisEngine:
         except Exception:                               # pragma: no cover
             log.exception("the technique pass failed")
             return []
+        records = getattr(self.cfg, "records", None)
+        if getattr(records, "case_files", False):
+            # The persistent case file: findings and provenance, never the
+            # image. A failure to write it costs the record, not the answer.
+            try:
+                from .techniques.casefile import record_run
+                f152 = ctx.finding(152)
+                record_run(data, filename, findings, prediction, image=image,
+                           embedding=embedding,
+                           provenance=f152.detail if f152 is not None and f152.ran
+                           else None)
+            except Exception:                           # pragma: no cover
+                log.exception("could not write the case file")
         return [f.as_dict() for f in findings]
 
     def _choose_ocr_group(self, evidence: VisualEvidence

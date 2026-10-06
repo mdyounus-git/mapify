@@ -243,11 +243,24 @@ class ServerConfig:
 
 
 @dataclass
+class RecordsConfig:
+    # The persistent case file the specification asks for: every
+    # technique's finding and the provenance of each, written per image to
+    # data/cases/<content hash>.json, and a small index (the estimate, a
+    # 64-bit image hash and the encoder's embedding) that lets a later
+    # analysis recognise the same photograph or the same place. The image
+    # itself is never stored, and nothing leaves the machine. Switch off
+    # to keep no record at all.
+    case_files: bool = True
+
+
+@dataclass
 class Config:
     network: NetworkConfig = field(default_factory=NetworkConfig)
     models: ModelConfig = field(default_factory=ModelConfig)
     fusion: FusionConfig = field(default_factory=FusionConfig)
     server: ServerConfig = field(default_factory=ServerConfig)
+    records: RecordsConfig = field(default_factory=RecordsConfig)
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -265,7 +278,7 @@ def load_config(path: str | os.PathLike[str] | None = None) -> Config:
     if candidate.exists():
         with candidate.open("rb") as fh:
             raw = tomllib.load(fh)
-        for name in ("network", "models", "fusion", "server"):
+        for name in ("network", "models", "fusion", "server", "records"):
             if isinstance(raw.get(name), dict):
                 _merge(getattr(cfg, name), raw[name])
     if os.environ.get("MAPIFY_OFFLINE") in {"1", "true", "yes"}:

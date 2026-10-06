@@ -24,8 +24,10 @@ reach the wrong one.
 
 from __future__ import annotations
 
+import base64
 import hashlib
 import json
+import os
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -33,11 +35,16 @@ from typing import Any
 
 from ..paths import state_dir
 
-__all__ = ["CaseFile", "case_dir"]
+__all__ = ["CaseFile", "case_dir", "load_index", "record_run", "dhash",
+           "hamming", "encode_embedding", "decode_embedding"]
 
 
 def case_dir() -> Path:
-    path = state_dir() / "cases"
+    """Where case files live: the state directory, or ``MAPIFY_CASE_DIR``
+    (tests point it at a temporary folder; nobody's real cases should be
+    written by a test run)."""
+    override = os.environ.get("MAPIFY_CASE_DIR")
+    path = Path(override).expanduser() if override else state_dir() / "cases"
     path.mkdir(parents=True, exist_ok=True)
     return path
 
@@ -143,3 +150,100 @@ class CaseFile:
             "techniques_skipped": last.get("techniques_skipped", 0),
             "path": str(self.path),
         }
+
+
+# ------------------------------------------------------------- the index
+
+# One small file listing every case, so the techniques that compare an
+# image with earlier ones (132-134) read a few kilobytes per case rather
+# than every case file whole. It holds only what those comparisons need:
+# never the image -- its 64-bit difference hash and the encoder's
+# embedding, both derived numbers, plus the estimate it was given.
+INDEX_NAME = "index.json"
+_INDEX_LOCK = __import__("threading").Lock()
+
+
+def load_index() -> dict[str, dict[str, Any]]:
+    path = case_dir() / INDEX_NAME
+    if not path.is_file():
+        return {}
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+    return data if isinstance(data, dict) else {}
+
+
+def _write_index(index: dict[str, dict[str, Any]]) -> None:
+    path = case_dir() / INDEX_NAME
+    tmp = path.with_suffix(".json.tmp")
+    tmp.write_text(json.dumps(index, ensure_ascii=False), encoding="utf-8")
+    tmp.replace(path)
+
+
+def dhash(image, size: int = 8) -> str:
+    """A 64-bit difference hash, as 16 hex digits.
+
+    It survives resizing and recompression, so two copies of one
+    photograph land a few bits apart, while different photographs of the
+    same street land far apart -- which is the line between 134 (the same
+    image) and 133 (the same scene).
+    """
+    import numpy as np
+    from PIL import Image
+    g = image.convert("L").resize((size + 1, size), Image.Resampling.BILINEAR)
+    a = np.asarray(g, dtype=np.int16)
+    bits = (a[:, 1:] > a[:, :-1]).flatten()
+    return f"{int(''.join('1' if b else '0' for b in bits), 2):016x}"
+
+
+def hamming(a: str, b: str) -> int:
+    return bin(int(a, 16) ^ int(b, 16)).count("1")
+
+
+def encode_embedding(vec) -> str | None:
+    """An embedding as base64 float16: 1.5 KB for 768 dimensions."""
+    if vec is None:
+        return None
+    import numpy as np
+    return base64.b64encode(np.asarray(vec, dtype=np.float16).tobytes()).decode("ascii")
+
+
+def decode_embedding(text: str | None):
+    if not text:
+        return None
+    import numpy as np
+    try:
+        return np.frombuffer(base64.b64decode(text), dtype=np.float16).astype(np.float32)
+    except (ValueError, TypeError):
+        return None
+
+
+def record_run(data: bytes, filename: str | None, findings: list[Any],
+               prediction: dict[str, Any] | None, *, image=None, embedding=None,
+               provenance: dict[str, Any] | None = None) -> Path:
+    """Write one analysis into the image's case file, and index it."""
+    case = CaseFile.for_image(data, filename)
+    if not case.image:
+        case.image = {"sha256": hashlib.sha256(data).hexdigest(),
+                      "bytes": len(data)}
+        if image is not None:
+            case.image["analysed_size"] = [image.width, image.height]
+    run = case.add_run(findings, prediction, provenance)
+    path = case.save()
+    est = (prediction or {}).get("estimated") or {}
+    entry = {
+        "filename": filename,
+        "at": run["at"],
+        "lat": est.get("latitude"),
+        "lon": est.get("longitude"),
+        "confidence": (prediction or {}).get("confidence"),
+        "determinate": bool((prediction or {}).get("determinate")),
+        "dhash": dhash(image) if image is not None else None,
+        "embedding": encode_embedding(embedding),
+    }
+    with _INDEX_LOCK:
+        index = load_index()
+        index[case.case_id] = entry
+        _write_index(index)
+    return path

@@ -25,6 +25,19 @@ requires_geodata = pytest.mark.skipif(
 )
 
 
+@pytest.fixture(autouse=True, scope="session")
+def _isolated_case_files(tmp_path_factory):
+    """No test run writes into anyone's real case store."""
+    import os
+    old = os.environ.get("MAPIFY_CASE_DIR")
+    os.environ["MAPIFY_CASE_DIR"] = str(tmp_path_factory.mktemp("cases"))
+    yield
+    if old is None:
+        os.environ.pop("MAPIFY_CASE_DIR", None)
+    else:
+        os.environ["MAPIFY_CASE_DIR"] = old
+
+
 @pytest.fixture(scope="session")
 def geocoder():
     from mapify.geo.offline import OfflineGeocoder

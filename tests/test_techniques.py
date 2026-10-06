@@ -427,7 +427,7 @@ def test_a_case_file_keeps_skipped_techniques_and_survives_a_round_trip(
         tmp_path, monkeypatch):
     import mapify.techniques.casefile as cf
 
-    monkeypatch.setattr(cf, "state_dir", lambda: tmp_path)
+    monkeypatch.setenv("MAPIFY_CASE_DIR", str(tmp_path))
 
     raw = make_jpeg()
     img = Image.open(io.BytesIO(raw))
@@ -455,7 +455,7 @@ def test_a_case_file_keeps_skipped_techniques_and_survives_a_round_trip(
 def test_the_same_image_under_a_new_name_is_the_same_case(tmp_path, monkeypatch):
     import mapify.techniques.casefile as cf
 
-    monkeypatch.setattr(cf, "state_dir", lambda: tmp_path)
+    monkeypatch.setenv("MAPIFY_CASE_DIR", str(tmp_path))
     raw = make_jpeg()
 
     first = cf.CaseFile.for_image(raw, "a.jpg")
