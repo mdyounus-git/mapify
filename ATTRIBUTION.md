@@ -223,6 +223,26 @@ case files holds, per image, the estimate, a 64-bit difference hash and the
 encoder's embedding, so a later analysis can recognise the same photograph.
 `records.case_files = false` keeps no record at all.
 
+## Pinpoint: reference photographs
+
+Pinpoint runs only when you press **Pinpoint exact spot**. It compares your
+photograph, on this machine, with geotagged photographs taken near the
+analysis's candidates, and adopts a location only when enough points match
+under one pair of camera positions (see `mapify/pinpoint/engine.py` for the
+measured thresholds).
+
+| Source | Terms | How it is met |
+|---|---|---|
+| **Wikimedia Commons** — the MediaWiki Action API (geo search, image details) and thumbnails from upload.wikimedia.org | Each photograph is under **its own free licence** (CC0, CC BY, CC BY-SA, public domain...), chosen by its author; Commons hosts no other kind. The [Wikimedia robot policy](https://wikitech.wikimedia.org/wiki/Robot_policy) and User-Agent policy govern automated access | Only files whose licence Mapify recognises as free are used. The matching photograph is always shown with its **author, licence and description page**. Requests carry a User-Agent naming the project and its repository; API calls go one at a time, a second apart, waiting as asked when told to slow down; thumbnails are fetched at a standard width (960 px), at most two at once |
+| **Mapillary** (optional) — street-level images through the Mapillary API | Imagery **CC BY-SA 4.0**; API use under Mapillary's terms, with **your own** free access token | Off unless you put a token in `network.mapillary_token`. The token stays in your config file and is never part of a cache key or written anywhere else. Matches are credited to their contributor |
+
+Only coordinates and a radius go out, never the photograph and never
+anything read from it. Search answers are cached for 30 days, and the
+thumbnails and their matching features are kept under `data/pinpoint/`
+(git-ignored), capped by `network.pinpoint_cache_mb` (2 GB by default, the
+files used longest ago removed first). Nothing from them is redistributed.
+`network.pinpoint_enabled = false` switches the search off.
+
 ---
 
 ## Software
