@@ -56,6 +56,19 @@ class NetworkConfig:
     # non-commercial use; a commercial deployment needs Open-Meteo's paid
     # plan, or this switched off.
     weather_history_enabled: bool = True
+    # Pinpoint (mapify/pinpoint): asks Wikimedia Commons which freely
+    # licensed geotagged photographs exist near the candidates, downloads
+    # their thumbnails and matches them locally. Coordinates go out; the
+    # photograph never does. Runs only when asked for.
+    pinpoint_enabled: bool = True
+    # Pinpoint keeps reference thumbnails and their matching features so a
+    # second search nearby costs nothing; past this size the ones used
+    # longest ago are deleted.
+    pinpoint_cache_mb: int = 2048
+    # A Mapillary access token, from your own free Mapillary account, adds
+    # its street-level imagery (CC BY-SA 4.0) to Pinpoint. Empty: Commons
+    # only. Kept in your config file; never written anywhere else.
+    mapillary_token: str = ""
     overpass_endpoint: str = "https://overpass-api.de/api/interpreter"
     overpass_min_interval_s: float = 2.0
     overpass_timeout_s: float = 25.0

@@ -19,12 +19,14 @@ import json
 import logging
 import secrets
 import sys
+import threading
 import time
 from pathlib import Path
 from typing import Any
 
-from fastapi import FastAPI, File, HTTPException, Request, UploadFile
+from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import (
+    FileResponse,
     HTMLResponse,
     JSONResponse,
     PlainTextResponse,
@@ -39,6 +41,11 @@ from .paths import apply_model_cache_env, read_root, state_dir
 from .pipeline import AnalysisEngine, ImageRejected
 
 log = logging.getLogger("mapify.server")
+
+
+class _PinpointCancelled(Exception):
+    """The page that asked for a Pinpoint search has gone away."""
+
 
 WEB_DIR = Path(__file__).resolve().parent / "web"
 ROOT = read_root()
@@ -516,6 +523,124 @@ def create_app(cfg: Config | None = None, token: str | None = None,
     async def analyse_local_stream(payload: dict[str, str]) -> StreamingResponse:
         data, name = _read_approved(payload.get("path", ""))
         return _stream(data, name)
+
+    # ----------------------------------------------------------- pinpoint
+    #
+    # On request only: matching against reference photographs takes from
+    # seconds (cached) to several minutes, and asks Commons which
+    # photographs exist near the candidates, so it is not part of every
+    # analysis. Closing the request stops the search at its next step.
+
+    def _pinpoint_engine():
+        from .paths import state_dir
+        from .pinpoint.engine import PinpointEngine
+        net = cfg.network
+        return PinpointEngine(state_dir() / "pinpoint",
+                              online=not net.offline_only and net.pinpoint_enabled,
+                              mapillary_token=net.mapillary_token,
+                              cache_mb=net.pinpoint_cache_mb)
+
+    def _areas(items: Any) -> list:
+        from .pinpoint.engine import Area
+        if isinstance(items, str):
+            try:
+                items = json.loads(items or "[]")
+            except json.JSONDecodeError as exc:
+                raise HTTPException(status_code=400, detail="areas must be JSON") from exc
+        out = []
+        for a in (items or [])[:4]:
+            try:
+                lat, lon = float(a["lat"]), float(a["lon"])
+                radius = float(a.get("radius_m", 1500))
+            except (KeyError, TypeError, ValueError) as exc:
+                raise HTTPException(status_code=400, detail="bad area") from exc
+            if not (-90 <= lat <= 90 and -180 <= lon <= 180):
+                raise HTTPException(status_code=400, detail="area out of range")
+            out.append(Area(lat, lon, max(100.0, min(10000.0, radius)),
+                            str(a.get("label") or "the estimate")[:60]))
+        return out
+
+    def _budget(value: Any) -> int:
+        from .pinpoint.engine import BUDGET, MAX_BUDGET
+        try:
+            return max(50, min(MAX_BUDGET, int(value or BUDGET)))
+        except (TypeError, ValueError) as exc:
+            raise HTTPException(status_code=400, detail="bad budget") from exc
+
+    def _pinpoint_stream(data: bytes, areas: list, budget: int) -> StreamingResponse:
+        queue: asyncio.Queue[str | None] = asyncio.Queue()
+        loop = asyncio.get_running_loop()
+        gone = threading.Event()
+
+        def progress(key: str, message: str) -> None:
+            if gone.is_set():
+                raise _PinpointCancelled
+            loop.call_soon_threadsafe(queue.put_nowait, json.dumps(
+                {"type": "progress", "stage": key, "message": message}))
+
+        def work() -> dict:
+            from io import BytesIO
+            from PIL import Image
+            with Image.open(BytesIO(data)) as img:
+                img.load()
+                return _pinpoint_engine().run(img, areas, progress, budget=budget)
+
+        async def run() -> None:
+            try:
+                result = await asyncio.to_thread(work)
+                await queue.put(json.dumps({"type": "result", "pinpoint": result}))
+            except _PinpointCancelled:
+                log.info("pinpoint stopped: the page went away")
+            except Exception as exc:  # pragma: no cover - guard
+                log.exception("pinpoint failed")
+                await queue.put(json.dumps({"type": "result", "pinpoint": {
+                    "verdict": "unavailable",
+                    "message": f"Pinpoint failed: {type(exc).__name__}: {exc}"}}))
+            finally:
+                await queue.put(None)
+
+        task = loop.create_task(run())
+
+        async def body():
+            try:
+                while True:
+                    item = await queue.get()
+                    if item is None:
+                        break
+                    yield item + "\n"
+            finally:
+                gone.set()
+
+        return StreamingResponse(body(), media_type="application/x-ndjson",
+                                 headers={"Cache-Control": "no-store",
+                                          "X-Accel-Buffering": "no"})
+
+    @app.post("/api/pinpoint/stream")
+    async def pinpoint_stream(image: UploadFile = File(...),
+                              areas: str = Form("[]"),
+                              budget: str = Form("")) -> StreamingResponse:
+        data = await image.read()
+        _check_size(cfg, len(data))
+        return _pinpoint_stream(data, _areas(areas), _budget(budget))
+
+    @app.post("/api/pinpoint/local/stream")
+    async def pinpoint_local_stream(payload: dict[str, Any]) -> StreamingResponse:
+        data, _name = _read_approved(str(payload.get("path", "")))
+        return _pinpoint_stream(data, _areas(payload.get("areas", [])),
+                                _budget(payload.get("budget")))
+
+    @app.get("/api/pinpoint/thumb/{key}")
+    async def pinpoint_thumb(key: str) -> Response:
+        """A matched reference's cached thumbnail (the page may load only
+        its own images, so Commons thumbnails are served from the cache)."""
+        import re as _re
+        from .paths import state_dir
+        if not _re.fullmatch(r"[0-9a-f]{20}", key):
+            raise HTTPException(status_code=404, detail="no such thumbnail")
+        path = state_dir() / "pinpoint" / "thumbs" / f"{key}.jpg"
+        if not path.is_file():
+            raise HTTPException(status_code=404, detail="no such thumbnail")
+        return FileResponse(path, media_type="image/jpeg")
 
     # ------------------------------------------------------------- batch
     #
