@@ -30,7 +30,7 @@ from datetime import datetime, timedelta, timezone
 from ..chrono.capture_time import resolve
 from ..chrono.solar import sun_position, sun_times
 from ..data.countries import get_table
-from ..data.regional import BRANDS, SIGN_CONVENTION
+from ..data.regional import SIGN_CONVENTION
 from ..evidence import prompts as P
 from ..paths import cache_dir
 from .base import Context, Finding, Region, technique
@@ -634,14 +634,9 @@ def transit_match(ctx: Context) -> Finding:
 
 
 def _brand_hits(ctx: Context, kinds: set[str]):
-    text = _ocr_text(ctx).lower()
-    hits = []
-    for brand, (kind, countries) in BRANDS.items():
-        if kind not in kinds:
-            continue
-        if re.search(r"(?<![a-z])" + re.escape(brand) + r"(?![a-z])", text):
-            hits.append((brand, kind, countries))
-    return hits
+    """Brands named in the text: the shared reader in evidence/text_clues."""
+    from ..evidence.text_clues import brand_hits
+    return brand_hits(_ocr_text(ctx), kinds)
 
 
 @technique(id=110, key="telecom", name="Telecom / ISP infrastructure clues",

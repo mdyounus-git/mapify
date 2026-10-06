@@ -38,8 +38,9 @@ import math
 import re
 
 from ..data.countries import get_table
-from ..data.regional import (CALLING_CODES, CURRENCIES, GENERIC_TLDS, INDIA_PLATE_STATES,
-                             INDIA_STD, MPH_COUNTRIES, POSTCODES)
+from ..data.regional import INDIA_PLATE_STATES
+from ..evidence.text_clues import (brand_clue, currency_clue, domain_clue, phone_clue,
+                                    postcode_clue, units_clue)
 from .base import Context, Finding, technique
 from .common import (ORDINARY_SCENES, SRC_CLIP, SRC_EXIF, SRC_OCR, SRC_OSM_LOCAL,
                      box_region, describe_reading, leader, reading, spec, zero_shot)
@@ -245,22 +246,21 @@ def cultural_clues(ctx: Context) -> Finding:
 
 # ---------------------------------------------------------- 117, 118
 
+def _ocr_lines(ctx: Context) -> list:
+    return getattr(ctx.ocr, "lines", None) or []
+
+
+def _regions(clue) -> list:
+    """The evidence-map rectangles of a text clue's matches."""
+    return [r for h in clue.hits for r in box_region(h.line, h.label)]
+
+
 def _brand_finding(tid: int, ctx: Context, kinds: set[str], what: str) -> Finding:
-    from .phase7_geo import _brand_hits
-    hits = _brand_hits(ctx, kinds)
-    if not hits:
+    clue = brand_clue(_ocr_lines(ctx), kinds)
+    if clue is None:
         return Finding.nothing_found(spec(tid), f"No {what} appear in the text.")
-    sets = [set(c) for _, _, c in hits]
-    countries = set.intersection(*sets) or set.union(*sets)
-    regions = []
-    for line in _lines(ctx):
-        low = line.text.lower()
-        for b, _, _ in hits:
-            if re.search(r"(?<![a-z])" + re.escape(b) + r"(?![a-z])", low):
-                regions += box_region(line, b)
-    return _text_finding(tid, ctx, what.capitalize(), sorted(countries),
-                         [b for b, _, _ in hits], narrow=len(countries) <= 4,
-                         regions=regions)
+    return _text_finding(tid, ctx, what.capitalize(), clue.countries, clue.matches,
+                         narrow=clue.narrow, regions=_regions(clue))
 
 
 @technique(id=117, key="retail_chains", name="Retail-chain geographic distribution matching",
@@ -281,15 +281,10 @@ def brands(ctx: Context) -> Finding:
 
 
 # ---------------------------------------------------------- 119-124
-
-# "+44 20 7946 0958", "0044 ...": a country code, then at least six more
-# digits. Not "1.00 44" -- a price -- and not "00" inside a word.
-_INTL = re.compile(r"(?:\+|(?<![\w.,])00)\s?(\d{1,3})(?:[\s\-.()]*\d){6,}")
-# Indian mobile numbers as Indians write them: "98450 12345".
-_IN_MOBILE = re.compile(r"(?<![\d+])[6-9]\d{4}[\s\-]\d{5}(?!\d)")
-# Trunk-dialled "080-23456789". Weak alone: Germany writes "040 1234567".
-_IN_STD = re.compile(r"(?<![\d+])0(\d{2,4})[\s\-]\d{6,8}(?!\d)")
-
+#
+# The matchers live in mapify/evidence/text_clues.py, shared with the
+# fusion, so "a calling code" means the same thing in a report as in a
+# score. These techniques turn what it reads into findings.
 
 @technique(id=119, key="phone_numbers", name="Telephone-number / area-code extraction",
            phase=PHASE, needs=("ocr",),
@@ -298,73 +293,26 @@ _IN_STD = re.compile(r"(?<![\d+])0(\d{2,4})[\s\-]\d{6,8}(?!\d)")
                        "unmeasured as a fusion input.")
 def phone_numbers(ctx: Context) -> Finding:
     sp = spec(119)
-    strong, weak, countries, cities, regions = [], [], [], [], []
-    for line in _lines(ctx):
-        t = line.text
-        intl = False
-        for m in _INTL.finditer(t):
-            digits = m.group(1)
-            for n in (3, 2, 1):
-                if digits[:n] in CALLING_CODES:
-                    strong.append(f"+{digits[:n]}")
-                    countries += CALLING_CODES[digits[:n]]
-                    regions += box_region(line, f"+{digits[:n]}")
-                    intl = True
-                    break
-        if not intl and _IN_MOBILE.search(t):
-            strong.append("an Indian-style mobile number")
-            countries.append("IN")
-            regions += box_region(line, "mobile number")
-        for m in _IN_STD.finditer(t):
-            code = m.group(1)
-            for n in (4, 3, 2):
-                if code[:n] in INDIA_STD:
-                    weak.append(f"0{code[:n]} ({INDIA_STD[code[:n]]}?)")
-                    cities.append(INDIA_STD[code[:n]])
-                    regions += box_region(line, f"0{code[:n]}")
-                    break
-    if not strong and not weak:
+    clue = phone_clue(_ocr_lines(ctx))
+    if clue is None:
         return Finding.nothing_found(sp, "No telephone number in the text.")
-    if not strong:
+    regions = _regions(clue)
+    cities = clue.extra.get("cities", [])
+    if clue.extra.get("weak_only"):
         return Finding(technique=119, key=sp.key, name=sp.name, phase=PHASE,
                        ran=True, found=True, confidence=0.15,
                        summary=(f"Numbers written like Indian trunk-dialled numbers "
-                                f"({', '.join(weak[:3])}); other countries write "
-                                f"numbers the same way, so this is weak."),
-                       detail={"matches": weak, "cities": sorted(set(cities)),
+                                f"({', '.join(clue.matches[:3])}); other countries "
+                                f"write numbers the same way, so this is weak."),
+                       detail={"matches": clue.matches, "cities": cities,
                                "narrow": False},
                        regions=regions, sources=[SRC_OCR, SRC_TABLE])
-    f = _text_finding(119, ctx, "Telephone numbers", countries, strong + weak,
-                      narrow=len(set(countries)) <= 3, regions=regions)
-    if cities and "IN" in countries:
-        f.detail["cities"] = sorted(set(cities))
-        f.summary += f" The trunk code suggests {', '.join(sorted(set(cities)))}."
+    f = _text_finding(119, ctx, "Telephone numbers", clue.countries, clue.matches,
+                      narrow=clue.narrow, regions=regions)
+    if cities and "IN" in clue.countries:
+        f.detail["cities"] = cities
+        f.summary += f" The trunk code suggests {', '.join(cities)}."
     return f
-
-
-def _host_of(token: str) -> str | None:
-    """The host name in a web or email address, or None.
-
-    Without "www.", "http" or "@", only an all-lowercase token counts:
-    "Dr.In" and "St.Mary" are abbreviations, not addresses.
-    """
-    tok = token.strip("()[]{}<>,;:!?\"'")
-    if "@" in tok:
-        host = tok.rsplit("@", 1)[1]
-    else:
-        explicit = tok.lower().startswith(("http://", "https://", "www."))
-        host = re.sub(r"(?i)^https?://", "", tok).split("/", 1)[0]
-        if not explicit and (host != host.lower() or len(host) < 6):
-            return None
-    host = host.lower().rstrip(".")
-    if not re.fullmatch(r"(?:[a-z0-9][a-z0-9\-]*\.)+[a-z]{2,6}", host):
-        return None
-    labels = host.split(".")
-    if labels[0] == "www":
-        labels = labels[1:]
-    if len(labels) < 2 or len(labels[-2]) < 2:
-        return None
-    return ".".join(labels)
 
 
 @technique(id=120, key="domains", name="Domain-name / URL geographic clues",
@@ -374,25 +322,12 @@ def _host_of(token: str) -> str | None:
                        ".tv, .me) are ignored.")
 def domains(ctx: Context) -> Finding:
     sp = spec(120)
-    table = get_table()
-    hosts, countries, regions = [], [], []
-    for line in _lines(ctx):
-        for tok in line.text.split():
-            host = _host_of(tok)
-            if host is None:
-                continue
-            tld = host.rsplit(".", 1)[1]
-            iso = "GB" if tld == "uk" else tld.upper()
-            if tld in GENERIC_TLDS or len(tld) != 2 or table.get(iso) is None:
-                continue
-            hosts.append(host)
-            countries.append(iso)
-            regions += box_region(line, host)
-    if not hosts:
+    clue = domain_clue(_ocr_lines(ctx))
+    if clue is None:
         return Finding.nothing_found(sp, "No country-code web or email address in "
                                          "the text.")
-    return _text_finding(120, ctx, "Country-code domains", countries, hosts,
-                         narrow=len(set(countries)) <= 2, regions=regions)
+    return _text_finding(120, ctx, "Country-code domains", clue.countries,
+                         clue.matches, narrow=clue.narrow, regions=_regions(clue))
 
 
 @technique(id=121, key="currency", name="Currency / price-format identification",
@@ -402,22 +337,11 @@ def domains(ctx: Context) -> Finding:
                        "and is reported as weak.")
 def currency(ctx: Context) -> Finding:
     sp = spec(121)
-    hits, regions = [], []
-    for line in _lines(ctx):
-        for pat, cs, narrow in CURRENCIES:
-            m = re.search(pat, line.text)
-            if m:
-                hits.append((m.group(0).strip(), cs, narrow))
-                regions += box_region(line, m.group(0).strip())
-    if not hits:
+    clue = currency_clue(_ocr_lines(ctx))
+    if clue is None:
         return Finding.nothing_found(sp, "No currency in the text.")
-    narrow_hits = [h for h in hits if h[2]]
-    use = narrow_hits or hits
-    countries = [c for _, cs, _ in use for c in cs]
-    seen = list(dict.fromkeys(s for s, _, _ in use))
-    return _text_finding(121, ctx, "Currency", countries, seen,
-                         narrow=bool(narrow_hits) and len(set(countries)) <= 3,
-                         regions=regions)
+    return _text_finding(121, ctx, "Currency", clue.countries, clue.matches,
+                         narrow=clue.narrow, regions=_regions(clue))
 
 
 # Same separator twice: "25/12/2023", "2023-12-25". Not "1.2.3" (a
@@ -462,44 +386,26 @@ def date_format(ctx: Context) -> Finding:
                    detail={"styles": styles}, regions=regions, sources=[SRC_OCR])
 
 
-# Units only beside a number: "Miles" alone is a surname.
-_UNITS = {"miles": re.compile(r"(?i)\b\d+(?:[.,]\d+)?\s?(?:mph|miles?)\b"),
-          "kilometres": re.compile(r"(?i)\b\d+(?:[.,]\d+)?\s?(?:km/?h|kmph|kms?)\b"),
-          "fahrenheit": re.compile(r"\d\s?°\s?F\b"),
-          "celsius": re.compile(r"\d\s?°\s?C\b")}
-_FAHRENHEIT = ["US", "BS", "BZ", "KY", "LR", "PW", "PR", "GU", "VI", "AS", "MP"]
-
-
 @technique(id=123, key="units", name="Measurement-unit identification",
            phase=PHASE, needs=("ocr",),
            fusion_note="Miles and degrees Fahrenheit narrow the world sharply; "
                        "kilometres and Celsius hardly at all.")
 def units(ctx: Context) -> Finding:
     sp = spec(123)
-    seen, regions = [], []
-    for line in _lines(ctx):
-        for k, rx in _UNITS.items():
-            m = rx.search(line.text)
-            if m:
-                seen.append(k)
-                regions += box_region(line, m.group(0))
-    if not seen:
+    clue = units_clue(_ocr_lines(ctx))
+    if clue is None:
         return Finding.nothing_found(sp, "No measurement unit beside a number in "
                                          "the text.")
-    seen = list(dict.fromkeys(seen))
-    if "miles" in seen or "fahrenheit" in seen:
-        # A long list, but of small territories: miles are the US, the UK,
-        # Liberia and Myanmar, which is narrow.
-        majors = ["US", "GB", "LR", "MM"]
-        countries = (majors + sorted(MPH_COUNTRIES - set(majors)) if "miles" in seen
-                     else _FAHRENHEIT)
-        return _text_finding(123, ctx, "Imperial units", countries, seen,
-                             narrow=True, regions=regions)
-    return Finding(technique=123, key=sp.key, name=sp.name, phase=PHASE, ran=True,
-                   found=True, confidence=0.1,
-                   summary=f"Metric units ({', '.join(seen)}): used almost everywhere "
-                           f"except the few mile countries, so this narrows little.",
-                   detail={"units": seen}, regions=regions, sources=[SRC_OCR])
+    if clue.extra.get("metric"):
+        return Finding(technique=123, key=sp.key, name=sp.name, phase=PHASE, ran=True,
+                       found=True, confidence=0.1,
+                       summary=f"Metric units ({', '.join(clue.matches)}): used almost "
+                               f"everywhere except the few mile countries, so this "
+                               f"narrows little.",
+                       detail={"units": clue.matches}, regions=_regions(clue),
+                       sources=[SRC_OCR])
+    return _text_finding(123, ctx, "Imperial units", clue.countries, clue.matches,
+                         narrow=clue.narrow, regions=_regions(clue))
 
 
 @technique(id=124, key="postcodes", name="Postal-code extraction",
@@ -509,18 +415,11 @@ def units(ctx: Context) -> Finding:
                        "four-, five- and six-digit numbers are skipped.")
 def postcodes(ctx: Context) -> Finding:
     sp = spec(124)
-    hits, countries, regions = [], [], []
-    for line in _lines(ctx, 0.4):
-        for iso, label, rx in POSTCODES:
-            m = rx.search(line.text)
-            if m:
-                hits.append(f"{m.group(0).strip()} ({label})")
-                countries.append(iso)
-                regions += box_region(line, label)
-    if not hits:
+    clue = postcode_clue(_ocr_lines(ctx))
+    if clue is None:
         return Finding.nothing_found(sp, "No distinctive postcode in the text.")
-    return _text_finding(124, ctx, "Postcodes", countries, hits,
-                         narrow=len(set(countries)) <= 2, regions=regions)
+    return _text_finding(124, ctx, "Postcodes", clue.countries, clue.matches,
+                         narrow=clue.narrow, regions=_regions(clue))
 
 
 # ---------------------------------------------------------- 125-126
