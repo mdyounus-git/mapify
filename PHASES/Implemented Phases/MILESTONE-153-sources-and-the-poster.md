@@ -164,3 +164,33 @@ every zoom, the way the Phase 24 HUD already does.
 - The installed application at `E:\mapify\app` **predates Phase 24 and
   all of the accuracy work**. It needs a rebuild and reinstall before
   the user sees any of this.
+
+---
+
+## Done — 2026-10-06
+
+All three parts are implemented, tested and in the installed application
+(`E:\mapify\app`, rebuilt and reinstalled 2026-10-06, self-test passing).
+
+1. **The poster bug** — `ec4ef962`. A locatability gate before the fusion:
+   refuse only when the image-kind reading *and* drawn pixels agree;
+   withhold (list candidates, pin nothing) for doubtful readings and object
+   close-ups. Fitted with a hard constraint of no real photograph refused:
+   0 of 159 refused, 59 of 87 non-photographs refused, 3 of 87 still shown.
+2. **All 153 techniques** — phase 1 `6e61743c`; phases 2–5 `eba908e0`;
+   phases 6–8 switched on `e258e110`; phase 9 `63a95e41`; phase 10
+   `689b9c49`. Shown in the app with an evidence map (`1086097d`) and in
+   the saved report (`f39760f0`); a case file per analysis (`5644737f`).
+   Text clues as a fusion input were built and measured (`PHASE-27`): the
+   benchmark holds no photograph that carries one, so the weight stays
+   zero until a text-bearing benchmark exists.
+3. **The open geospatial sources** — `2821bb55`. OSM (Geofabrik extract,
+   local store), OpenFreeMap vector tiles worldwide, Google Open Buildings
+   by range request, deck.gl 3D view entered by zooming past the globe's
+   limit, GeoPackage and kepler.gl exports, Landsat and HLS via NASA GIBS
+   with their resolution stated. The globe itself is unchanged.
+
+Still blocked, by licence rather than effort, and each says so in the
+report: reverse image search, repost tracing, Street View, 3D reference
+models of candidate viewpoints. Not attempted by design: pixel-level AI
+detection, because a false "real" is worse than no answer.
