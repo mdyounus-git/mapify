@@ -37,7 +37,7 @@ from fastapi.staticfiles import StaticFiles
 
 from . import __version__, firstrun
 from .config import Config, load_config
-from .paths import apply_model_cache_env, read_root, state_dir
+from .paths import apply_model_cache_env, cache_dir, read_root, state_dir
 from .pipeline import AnalysisEngine, ImageRejected
 
 log = logging.getLogger("mapify.server")
@@ -892,6 +892,31 @@ def create_app(cfg: Config | None = None, token: str | None = None,
                        ) -> dict[str, Any]:
         _coord(lat, lon)
         return geo().around(lat, lon, radius)
+
+    @app.get("/api/weather/scene")
+    def weather_scene(lat: float, lon: float, at: str | None = None) -> dict[str, Any]:
+        """The weather the 3D walk is drawn in: at ``at`` (the photograph's
+        capture time, ISO 8601) or now. Only the coordinate and the time go
+        out. Off when offline or when weather history is switched off."""
+        _coord(lat, lon)
+        net = cfg.network
+        if net.offline_only or not net.weather_history_enabled:
+            return {"available": False,
+                    "reason": "offline" if net.offline_only else "weather is switched off"}
+        when = None
+        if at:
+            from datetime import datetime, timezone
+            try:
+                when = datetime.fromisoformat(at.replace("Z", "+00:00"))
+            except ValueError as exc:
+                raise HTTPException(status_code=400, detail="bad time") from exc
+            if when.tzinfo is None:
+                when = when.replace(tzinfo=timezone.utc)
+        from .geodata.weather import WeatherHistory
+        got = WeatherHistory(cache_dir()).scene(lat, lon, when)
+        if not got:
+            return {"available": False, "reason": "no weather data for this place and time"}
+        return {"available": True, **got}
 
     @app.get("/api/tiles/{source}/{z}/{x}/{y}")
     def tile(source: str, z: int, x: int, y: int, date: str | None = None):
