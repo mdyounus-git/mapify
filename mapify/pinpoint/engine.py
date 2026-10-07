@@ -117,8 +117,9 @@ ProgressFn = Callable[[str, str], None]
 LiftFn = Callable[[list[Reference]], list[float]]
 # How well each name describes the photograph (higher is better).
 NamerFn = Callable[[list[str]], list[float]]
-# Named landmarks within a radius of a point: (name, lat, lon).
-LandmarksFn = Callable[[float, float, float], list[tuple[str, float, float]]]
+# Named landmarks within a radius of a point: (name, lat, lon), optionally
+# followed by the English name when OpenStreetMap has a different one.
+LandmarksFn = Callable[[float, float, float], list[tuple]]
 
 
 @dataclass
@@ -136,13 +137,50 @@ def _fmt_m(m: float) -> str:
 def local_landmarks(online: bool = True) -> LandmarksFn:
     """Named landmarks from the map data the 3D view uses (an imported
     OpenStreetMap region, or OpenFreeMap tiles fetched once and kept)."""
-    def find(lat: float, lon: float, radius_m: float) -> list[tuple[str, float, float]]:
+    def find(lat: float, lon: float, radius_m: float) -> list[tuple]:
         from ..geodata.nearby import nearby
         from ..geodata.service import get_service
         s = nearby(get_service(online), lat, lon, radius_m, fetch=online,
                    limit=NAMED_LANDMARKS)
-        return [(f.name, f.latitude, f.longitude) for f in s.features if f.name]
+        return [(f.name, f.latitude, f.longitude, f.tags.get("name:en"))
+                for f in s.features if f.name]
     return find
+
+
+def landmark_labels(marks: list[tuple]) -> dict[str, list[str]]:
+    """What to weigh each landmark by, and what to search Commons for.
+
+    CLIP weighs the English name when there is one -- it reads "Saint
+    Basil's Cathedral" far better than "Собор Василия Блаженного" -- and
+    Commons is searched by both, since local photographers caption in the
+    local language and visitors in English. Keyed by the label weighed,
+    in the order given, at most NAMED_LANDMARKS.
+    """
+    out: dict[str, list[str]] = {}
+    for m in marks:
+        if not m or not m[0]:
+            continue
+        local = m[0]
+        english = m[3] if len(m) > 3 and m[3] else None
+        label = english or local
+        if label in out:
+            continue
+        out[label] = [english, local] if english and english != local else [local]
+        if len(out) >= NAMED_LANDMARKS:
+            break
+    return out
+
+
+def _interleave(lists: list[list[Reference]]) -> list[Reference]:
+    """Several relevance-ordered result lists as one: first of each, then
+    second of each..., each photograph once."""
+    out, seen = [], set()
+    for k in range(max((len(x) for x in lists), default=0)):
+        for x in lists:
+            if k < len(x) and x[k].key not in seen:
+                seen.add(x[k].key)
+                out.append(x[k])
+    return out
 
 
 def clip_namer(clip: Any, image: Image.Image) -> NamerFn:
@@ -199,7 +237,8 @@ class PinpointEngine:
             notes.append(f"The landmarks near {a.label} could not be read "
                          f"({type(exc).__name__}); nothing was searched by name.")
             return []
-        names = list(dict.fromkeys(m[0] for m in marks if m and m[0]))[:NAMED_LANDMARKS]
+        terms = landmark_labels(marks)
+        names = list(terms)
         if not names:
             return []
         step("names", f"Weighing {len(names)} landmark names near {a.label} "
@@ -213,12 +252,16 @@ class PinpointEngine:
         out = []
         for name in choose_names(names, scores):
             step("search", f"Looking for photographs of {name}")
-            try:
-                out.append((name, commons_search_near(name, a.lat, a.lon,
-                                                      int(a.radius_m), self.cache)))
-            except Exception as exc:
-                notes.append(f"Commons could not be searched for {name} "
-                             f"({type(exc).__name__})")
+            found = []
+            for term in terms[name]:
+                try:
+                    found.append(commons_search_near(term, a.lat, a.lon,
+                                                     int(a.radius_m), self.cache))
+                except Exception as exc:
+                    notes.append(f"Commons could not be searched for {term} "
+                                 f"({type(exc).__name__})")
+            if found:
+                out.append((name, _interleave(found)))
         return out
 
     def prune(self) -> int:

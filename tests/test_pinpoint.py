@@ -218,6 +218,45 @@ def test_only_a_name_that_clearly_fits_is_chosen():
     assert choose_names(["Kiosk"], [0.15]) == []
 
 
+def test_landmarks_are_weighed_by_their_english_name_and_searched_by_both():
+    from mapify.pinpoint.engine import landmark_labels
+    labels = landmark_labels([
+        ("Собор Василия Блаженного", 55.75, 37.62, "Saint Basil's Cathedral"),
+        ("Tower Bridge", 51.5, -0.07, None),
+        ("Tower Bridge", 51.5, -0.07),                       # a second POI, same name
+        ("Café", 51.5, -0.07, "Café")])                      # English the same
+    assert labels == {"Saint Basil's Cathedral":
+                      ["Saint Basil's Cathedral", "Собор Василия Блаженного"],
+                      "Tower Bridge": ["Tower Bridge"], "Café": ["Café"]}
+
+
+def test_a_name_search_in_two_languages_interleaves_by_relevance(tmp_path, monkeypatch):
+    monkeypatch.setattr(engine_mod, "commons_listing", lambda lat, lon, radius, cache: [])
+    asked = []
+
+    def search(text, lat, lon, radius, cache):
+        asked.append(text)
+        tag = "en" if text.startswith("Saint") else "ru"
+        return [_bare(f"{tag}-{i}", 55.7525, 37.6231) for i in range(3)]
+
+    monkeypatch.setattr(engine_mod, "commons_search_near", search)
+    marks = [("Собор Василия Блаженного", 55.7525, 37.6231, "Saint Basil's Cathedral"),
+             ("Аптека", 55.75, 37.62), ("Банк", 55.75, 37.621), ("Кафе", 55.751, 37.62),
+             ("Магазин", 55.749, 37.62)]
+    weighed = []
+
+    def namer(names):
+        weighed.extend(names)
+        return [0.30 if n.startswith("Saint") else 0.18 for n in names]
+
+    eng = PinpointEngine(tmp_path, landmarks=lambda lat, lon, r: marks)
+    named = eng._named(Area(55.7525, 37.6231, 1000), namer, lambda k, m: None, [])
+    assert "Saint Basil's Cathedral" in weighed and "Собор Василия Блаженного" not in weighed
+    assert asked == ["Saint Basil's Cathedral", "Собор Василия Блаженного"]
+    (name, refs), = named
+    assert [r.title for r in refs[:4]] == ["en-0.jpg", "ru-0.jpg", "en-1.jpg", "ru-1.jpg"]
+
+
 def _named_engine(tmp_path, monkeypatch, scores):
     crowd = [_bare(f"c-{i}", 12.97 + (i % 20) * 2e-5, 77.58 + (i // 20) * 2e-5)
              for i in range(200)]
