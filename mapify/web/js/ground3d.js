@@ -108,7 +108,11 @@ const ROAD_DEFAULT = [206, 210, 218];
 const ZOOM_BUILDINGS = 13.5;   // closer than this, buildings are worth loading
 const ZOOM_HANDBACK = 9.6;     // further than this, the globe does it better
 const MAX_BUILDINGS = 90000;   // held in memory before the farthest go
-const WALK_FOVY = 72;          // degrees top to bottom: a phone camera held upright
+const WALK_FOVY = 72;
+// Zooming in past one of these levels (district, street, close up) settles
+// the camera into a steeper view, with a pulse where it landed.
+const ZOOM_BANDS = [14, 16, 18];
+const BAND_PITCH = [45, 58, 66];          // degrees top to bottom: a phone camera held upright
 
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({
   "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
@@ -356,6 +360,7 @@ export class Ground3D {
     }
     const limits = { minZoom: ZOOM_HANDBACK - 0.4, maxZoom: 20, maxPitch: 80 };
     this.viewState = { ...start, ...limits };
+    this._band = ZOOM_BANDS.filter((z) => start.zoom >= z).length;
     if (!this.deck) this._createDeck(deck);
     else this.deck.setProps({ viewState: this.viewState });
 
@@ -404,16 +409,22 @@ export class Ground3D {
       views: new MapView({ repeat: false }),
       viewState: this.viewState,
       controller: { dragRotate: true, touchRotate: true, keyboard: false,
-                    inertia: 300 },
+                    inertia: 300, scrollZoom: { smooth: true, speed: 0.012 } },
       onViewStateChange: ({ viewState, interactionState }) => {
         if (interactionState?.isDragging || interactionState?.isZooming
             || interactionState?.isRotating) {
           this._stopOrbit();
           this._cancelAnimation();
         }
+        const zoomed = !this.walking && this.viewState
+          && Math.abs((viewState.zoom ?? 0) - (this.viewState.zoom ?? 0)) > 1e-6;
         this.viewState = viewState;
         this.deck.setProps({ viewState });
         this._onMove();
+        if (zoomed && !this._animating) {
+          clearTimeout(this._zoomTimer);
+          this._zoomTimer = setTimeout(() => this._zoomSettled(), 260);
+        }
       },
       effects: [lighting],
       getTooltip: ({ object, layer }) => this._tooltip(object, layer),
@@ -662,6 +673,7 @@ export class Ground3D {
       collisionTestProps: { sizeScale: 1.6 },
     }));
 
+    this._overviewLayers = layers;
     this.deck.setProps({ layers });
     this._attrib();
   }
@@ -1231,6 +1243,45 @@ export class Ground3D {
       }
     };
     this._animFrame = requestAnimationFrame(step);
+  }
+
+  /**
+   * After a zoom comes to rest: if it went in past a level it was not at
+   * before, ease into that level's steeper view with a slight turn, and
+   * send a ring out from where it landed. Zooming out plays nothing.
+   */
+  _zoomSettled() {
+    if (this.walking || this.orbiting || this._animating || !this.viewState) return;
+    const v = this.viewState;
+    const band = ZOOM_BANDS.filter((z) => v.zoom >= z).length;
+    const before = this._band ?? 0;
+    this._band = band;
+    if (band <= before || band === 0) return;
+    this._pulse([v.longitude, v.latitude]);
+    const pitch = Math.max(v.pitch || 0, BAND_PITCH[band - 1]);
+    this._animateTo({ pitch, bearing: (v.bearing || 0) + 14 }, 1100);
+  }
+
+  /** A ring expanding and fading from a point, over the view's own layers. */
+  _pulse(position) {
+    const deck = window.deck;
+    if (!deck || !this.deck) return;
+    cancelAnimationFrame(this._pulseFrame);
+    const t0 = performance.now();
+    const step = (now) => {
+      const k = Math.min(1, (now - t0) / 950);
+      const e = 1 - Math.pow(1 - k, 3);
+      const ring = new deck.ScatterplotLayer({
+        id: "zoom-pulse", data: [position], getPosition: (p) => p,
+        radiusUnits: "pixels", getRadius: 8 + 120 * e, stroked: true, filled: false,
+        getLineColor: [120, 200, 250, Math.round(230 * (1 - k))], lineWidthMinPixels: 2,
+        updateTriggers: { getRadius: k, getLineColor: k },
+      });
+      if (!this.walking) this.deck.setProps({ layers: [...(this._overviewLayers || []), ring] });
+      if (k < 1) this._pulseFrame = requestAnimationFrame(step);
+      else if (!this.walking) this.deck.setProps({ layers: this._overviewLayers || [] });
+    };
+    this._pulseFrame = requestAnimationFrame(step);
   }
 
   _startOrbit(durationMs = Infinity) {
