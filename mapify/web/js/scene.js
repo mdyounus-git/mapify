@@ -312,6 +312,12 @@ function box(lon, lat, heading, len, wid, sideM = 0) {
                                cy + (fy * f + ry * rr) / M_PER_DEG]);
 }
 
+const CAR_SPACING_M = 38;
+const PERSON_SPACING_M = 22;
+const MAX_CARS = 120;
+const MAX_PEOPLE = 220;
+const endKey = (q) => `${q[0].toFixed(6)},${q[1].toFixed(6)}`;
+
 const CAR_COLOURS = [[200, 202, 206], [40, 42, 48], [168, 32, 36], [30, 64, 140],
   [236, 236, 232], [120, 124, 130], [196, 160, 40], [52, 96, 64]];
 const PEOPLE_COLOURS = [[60, 70, 110], [150, 40, 50], [40, 40, 44], [190, 150, 90],
@@ -335,69 +341,102 @@ export class Ambience {
     return (this._seed - 1) / 2147483646;
   }
 
-  /** Populate the streets within ``radiusM`` of a point. */
-  build(roads, lon, lat, radiusM = 420) {
+  /**
+   * Populate the streets within ``radiusM`` of a point: vehicles about
+   * every CAR_SPACING_M of vehicular street and people about every
+   * PERSON_SPACING_M of footway or pavement, nearest streets first. Map
+   * streets come cut into short segments, so segments that share an end
+   * are linked, and at the end of one an agent carries on into another --
+   * turning back only at a dead end.
+   */
+  build(roads, lon, lat, radiusM = 280) {
     this.cars = [];
     this.people = [];
-    const near = [];
+    const segs = [];
     for (const r of roads) {
       if (!r.path || r.path.length < 2) continue;
-      const mid = r.path[Math.floor(r.path.length / 2)];
-      if (segM([lon, lat], mid) > radiusM) continue;
+      const ends = [r.path[0], r.path[Math.floor(r.path.length / 2)], r.path[r.path.length - 1]];
+      const dist = Math.min(...ends.map((q) => segM([lon, lat], q)));
+      if (dist > radiusM) continue;
       const len = pathLength(r.path);
-      if (len < 25) continue;
-      near.push({ r, len });
+      if (len < 2) continue;
+      segs.push({ path: r.path, len, cls: r.class, width: r.width || 7, dist });
     }
-    for (const { r, len } of near) {
-      if (VEHICULAR.has(r.class)) {
-        const n = Math.min(6, Math.floor(len / (r.class === "residential" ? 140 : 70)));
-        const fast = ["motorway", "trunk", "primary"].includes(r.class);
-        for (let i = 0; i < n; i += 1) {
-          const dir = this._rand() < 0.5 ? 1 : -1;
-          this.cars.push({ path: r.path, len, s: this._rand() * len, dir,
+    segs.sort((a, b) => a.dist - b.dist);
+    this.graph = new Map();
+    for (const seg of segs) {
+      for (const atStart of [true, false]) {
+        const k = endKey(atStart ? seg.path[0] : seg.path[seg.path.length - 1]);
+        if (!this.graph.has(k)) this.graph.set(k, []);
+        this.graph.get(k).push({ seg, atStart });
+      }
+    }
+    const spawn = (seg, spacing) => {
+      const expected = seg.len / spacing;
+      return Math.floor(expected) + (this._rand() < expected % 1 ? 1 : 0);
+    };
+    for (const seg of segs) {
+      if (VEHICULAR.has(seg.cls) && this.cars.length < MAX_CARS) {
+        const fast = ["motorway", "trunk", "primary"].includes(seg.cls);
+        for (let i = spawn(seg, CAR_SPACING_M); i > 0 && this.cars.length < MAX_CARS; i -= 1) {
+          this.cars.push({ seg, s: this._rand() * seg.len, dir: this._rand() < 0.5 ? 1 : -1,
                            v: (fast ? 11 : 7) + this._rand() * 4,
-                           lane: dir * Math.min(3.2, (r.width || 7) / 4),
                            colour: CAR_COLOURS[Math.floor(this._rand() * CAR_COLOURS.length)] });
         }
       }
-      if (ON_FOOT.has(r.class) || VEHICULAR.has(r.class)) {
-        const n = Math.min(5, Math.floor(len / 60));
-        for (let i = 0; i < n; i += 1) {
-          const dir = this._rand() < 0.5 ? 1 : -1;
-          const onRoad = VEHICULAR.has(r.class) && !ON_FOOT.has(r.class);
-          this.people.push({ path: r.path, len, s: this._rand() * len, dir,
-                             v: 1.1 + this._rand() * 0.5,
-                             side: onRoad ? (dir * ((r.width || 7) / 2 + 1.4)) : (this._rand() - 0.5) * 2,
+      if ((ON_FOOT.has(seg.cls) || VEHICULAR.has(seg.cls)) && this.people.length < MAX_PEOPLE) {
+        const pavement = VEHICULAR.has(seg.cls) && !ON_FOOT.has(seg.cls);
+        for (let i = spawn(seg, PERSON_SPACING_M); i > 0 && this.people.length < MAX_PEOPLE; i -= 1) {
+          const side = this._rand() < 0.5 ? 1 : -1;
+          this.people.push({ seg, s: this._rand() * seg.len, dir: this._rand() < 0.5 ? 1 : -1,
+                             v: 1.1 + this._rand() * 0.5, pavement,
+                             side: pavement ? side * (seg.width / 2 + 1.4)
+                               : (this._rand() - 0.5) * 1.6,
                              colour: PEOPLE_COLOURS[Math.floor(this._rand() * PEOPLE_COLOURS.length)] });
         }
       }
     }
-    this.cars = this.cars.slice(0, 90);
-    this.people = this.people.slice(0, 140);
+  }
+
+  /** At the end of its segment, an agent turns into a linked one if it can. */
+  _carryOn(a, vehicular) {
+    const over = a.dir > 0 ? a.s - a.seg.len : -a.s;
+    const end = a.dir > 0 ? a.seg.path[a.seg.path.length - 1] : a.seg.path[0];
+    const options = (this.graph?.get(endKey(end)) || []).filter((o) => o.seg !== a.seg
+      && (vehicular ? VEHICULAR.has(o.seg.cls) : (ON_FOOT.has(o.seg.cls) || VEHICULAR.has(o.seg.cls))));
+    if (options.length === 0) {                      // a dead end: turn back
+      a.dir = -a.dir;
+      a.s = Math.max(0, Math.min(a.seg.len, a.dir > 0 ? over : a.seg.len - over));
+      return;
+    }
+    const o = options[Math.floor(this._rand() * options.length)];
+    a.seg = o.seg;
+    a.dir = o.atStart ? 1 : -1;
+    a.s = Math.min(a.seg.len, o.atStart ? over : a.seg.len - over);
   }
 
   step(dt) {
     for (const c of this.cars) {
       c.s += c.v * dt * c.dir;
-      if (c.s > c.len) c.s -= c.len;
-      if (c.s < 0) c.s += c.len;
+      if (c.s > c.seg.len || c.s < 0) this._carryOn(c, true);
     }
     for (const p of this.people) {
       p.s += p.v * dt * p.dir;
-      if (p.s > p.len || p.s < 0) { p.dir = -p.dir; p.s = Math.max(0, Math.min(p.len, p.s)); }
+      if (p.s > p.seg.len || p.s < 0) this._carryOn(p, false);
     }
     this.frame += 1;
   }
 
   layers(deck) {
     const cars = this.cars.map((c) => {
-      const at = along(c.path, c.s);
+      const at = along(c.seg.path, c.s);
       const heading = at.heading + (c.dir < 0 ? Math.PI : 0);
       // Each keeps to the right of its own way (right-hand traffic; illustrative).
-      return { polygon: box(at.lon, at.lat, heading, 4.4, 1.8, Math.abs(c.lane)), colour: c.colour };
+      const lane = Math.min(3.2, c.seg.width / 4);
+      return { polygon: box(at.lon, at.lat, heading, 4.4, 1.8, lane), colour: c.colour };
     });
     const people = this.people.map((p) => {
-      const at = along(p.path, p.s);
+      const at = along(p.seg.path, p.s);
       const k = Math.cos((at.lat * Math.PI) / 180);
       const rx = Math.cos(at.heading), ry = -Math.sin(at.heading);
       return { position: [at.lon + (rx * p.side) / (M_PER_DEG * k), at.lat + (ry * p.side) / M_PER_DEG],

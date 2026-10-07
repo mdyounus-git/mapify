@@ -516,6 +516,14 @@ export class Ground3D {
     for (const n of around.notes || []) this.notes.add(n);
     this.index = null;                  // walls changed: rebuild on next step
     this._floors = null;
+    // Ambience switched on before the streets nearby had loaded has next to
+    // nobody in it: populate it again now that they are here.
+    if (this.ambienceOn && this.walking
+        && this.ambience.cars.length + this.ambience.people.length < 20) {
+      const v = this.viewState;
+      this.ambience.build(this.data.roads.values(), v.longitude, v.latitude);
+      this._ambienceAt = [v.longitude, v.latitude];
+    }
 
     // Bound memory: past the cap, forget the buildings farthest from here.
     if (this.data.buildings.size > MAX_BUILDINGS) {

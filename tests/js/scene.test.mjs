@@ -62,12 +62,30 @@ const amb = new Ambience();
 amb.build([street, footway, far], 77.0, 12.001, 420);
 assert.ok(amb.cars.length > 0, "vehicles on the street");
 assert.ok(amb.people.length > 0, "people on the footway and pavements");
-assert.ok(amb.cars.every((c) => c.path === street.path), "no vehicles on a footway or far away");
+assert.ok(amb.cars.every((c) => c.seg.path === street.path), "no vehicles on a footway or far away");
 const before = amb.cars.map((c) => c.s);
 amb.step(1.0);
 assert.ok(amb.cars.some((c, i) => c.s !== before[i]), "they move");
-for (const c of amb.cars) assert.ok(c.s >= 0 && c.s <= c.len, "and stay on their street");
-for (const p of amb.people) assert.ok(p.s >= 0 && p.s <= p.len);
+for (const c of amb.cars) assert.ok(c.s >= 0 && c.s <= c.seg.len, "and stay on their street");
+for (const p of amb.people) assert.ok(p.s >= 0 && p.s <= p.seg.len);
+
+// Streets come in short segments: at the end of one, a vehicle carries on
+// into the segment that shares its end, and turns back at a dead end.
+const a = { class: "residential", width: 6, path: [[77.0, 12.0], [77.0, 12.0005]] };    // ~55 m north
+const b2 = { class: "residential", width: 6, path: [[77.0, 12.0005], [77.0005, 12.0005]] };
+const net = new Ambience();
+net.build([a, b2], 77.0, 12.0, 300);
+const car = net.cars[0] || (net.cars.push({ seg: null }), net.cars[0]);
+car.seg = net.graph.get("77.000000,12.000000")[0].seg;            // segment a
+car.dir = 1; car.v = 10; car.s = car.seg.len - 1;
+net.step(0.5);                                                       // 5 m on: past a's end
+assert.equal(car.seg.path, b2.path, "into the linked segment");
+assert.equal(car.dir, 1);
+assert.ok(car.s > 0 && car.s < 5);
+car.s = car.seg.len - 1;
+net.step(0.5);                                                       // b2 ends nowhere
+assert.equal(car.seg.path, b2.path, "a dead end: same street");
+assert.equal(car.dir, -1, "turned back");
 
 // Layers build without a browser, given a stand-in for deck.gl.
 const fakeDeck = { SolidPolygonLayer: class { constructor(o) { this.o = o; } },
