@@ -214,9 +214,18 @@ def _stage_centroid_poi(obj, tags, store, counts, kind, name) -> None:
     lon = sum(p[0] for p in outer) / len(outer)
     lat = sum(p[1] for p in outer) / len(outer)
     store.stage("poi", "osm", (lon, lat, lon, lat),
-                [obj.id, kind, name, int(round(lon * 1e6)),
-                 int(round(lat * 1e6))])
+                _poi_feature(obj.id, kind, name, tags, lon, lat))
     counts["poi"] += 1
+
+
+def _poi_feature(oid, kind: str, name: str, tags, lon: float, lat: float) -> list:
+    """A point of interest as stored: id, kind, name, position -- and its
+    English name when it has one that differs (see vector_tiles)."""
+    feature = [oid, kind, name, int(round(lon * 1e6)), int(round(lat * 1e6))]
+    english = tags.get("name:en")
+    if english and english != name:
+        feature.append(english)
+    return feature
 
 
 def _way(obj, tags, store, counts) -> None:
@@ -252,6 +261,5 @@ def _node(obj, tags, store, counts) -> None:
     if not loc.valid():
         return
     store.stage("poi", "osm", (loc.lon, loc.lat, loc.lon, loc.lat),
-                [obj.id, kind, name, int(round(loc.lon * 1e6)),
-                 int(round(loc.lat * 1e6))])
+                _poi_feature(obj.id, kind, name, tags, loc.lon, loc.lat))
     counts["poi"] += 1

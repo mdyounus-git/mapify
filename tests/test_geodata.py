@@ -184,8 +184,9 @@ def _geom(rings: list[list[tuple[int, int]]], close: bool) -> list[int]:
     return out
 
 
-def _tile() -> bytes:
-    """A vector tile with a clipped building, a hole, a road and a label."""
+def _tile(english: str | None = None) -> bytes:
+    """A vector tile with a clipped building, a hole, a road and a label
+    (with an English name too, when ``english`` is given)."""
     def packed(vals):
         return b"".join(_varint(v) for v in vals)
 
@@ -212,10 +213,13 @@ def _tile() -> bytes:
             + _field(2, 2, feature(3, [0, 0], _geom([outer], True)))   # a plaza
             + _field(3, 2, b"class") + _field(4, 2, value_str("primary"))
             + _field(5, 0, 4096) + _field(15, 0, 2))
+    tags = [0, 0, 1, 1] + ([2, 2] if english else [])
     poi = (_field(1, 2, b"poi")
-           + _field(2, 2, feature(1, [0, 0, 1, 1], _geom([[(2048, 2048)]], False)[:3]))
+           + _field(2, 2, feature(1, tags, _geom([[(2048, 2048)]], False)[:3]))
            + _field(3, 2, b"name") + _field(3, 2, b"class")
+           + (_field(3, 2, b"name:en") if english else b"")
            + _field(4, 2, value_str("Test Market")) + _field(4, 2, value_str("shop"))
+           + (_field(4, 2, value_str(english)) if english else b"")
            + _field(5, 0, 4096) + _field(15, 0, 2))
     return (_field(3, 2, building) + _field(3, 2, road) + _field(3, 2, poi))
 
@@ -258,6 +262,45 @@ class TestVectorTiles:
         assert got["building"][0][1][5] == 3, "24 m is a published height"
         assert got["poi"][0][1][2] == "Test Market"
         assert n == 3
+
+    def _filed_poi(self, tmp_path, english):
+        from mapify.geodata.store import GeoStore, _tile_bounds
+        from mapify.geodata.vector_tiles import OpenFreeMap
+        st = GeoStore(tmp_path / "s.sqlite")
+        st.begin_stage()
+        OpenFreeMap(st, tmp_path)._file(_tile(english), self.X, self.Y)
+        st.finish_stage()
+        return st.query(_tile_bounds(self.Z, self.X, self.Y), ("poi",))["poi"][0][1]
+
+    def test_a_points_english_name_is_kept_beside_its_own(self, tmp_path):
+        assert self._filed_poi(tmp_path / "a", "Market Hall")[5] == "Market Hall"
+        assert len(self._filed_poi(tmp_path / "b", None)) == 5
+        assert len(self._filed_poi(tmp_path / "c", "Test Market")) == 5   # same: not kept
+
+    def test_tiles_fetched_before_a_change_are_fetched_again(self, tmp_path):
+        from mapify.geodata.store import GeoStore
+        st = GeoStore(tmp_path / "s.sqlite")
+        st.mark_fetched("ofm", 14, 1, 2)
+        assert st.was_fetched("ofm", 14, 1, 2)
+        assert st.was_fetched("ofm", 14, 1, 2, since="2000-01-01T00:00:00Z")
+        assert not st.was_fetched("ofm", 14, 1, 2, since="2999-01-01T00:00:00Z")
+        assert not st.was_fetched("ofm", 14, 9, 9)
+
+    def test_nearby_landmarks_carry_their_english_name(self, tmp_path):
+        from types import SimpleNamespace
+
+        from mapify.geodata.nearby import nearby
+        from mapify.geodata.store import GeoStore
+        st = GeoStore(tmp_path / "s.sqlite")
+        st.begin_stage()
+        st.stage("poi", "ofm", (37.6231, 55.7525, 37.6231, 55.7525),
+                 [1, "place_of_worship=christian", "Собор Василия Блаженного",
+                  37623100, 55752500, "Saint Basil's Cathedral"])
+        st.finish_stage()
+        svc = SimpleNamespace(store=st, online=False)
+        (f,) = nearby(svc, 55.7525, 37.6231, 500, fetch=False).features
+        assert f.name == "Собор Василия Блаженного"
+        assert f.tags["name:en"] == "Saint Basil's Cathedral"
 
 
 # ------------------------------------------------------------- FlatGeobuf

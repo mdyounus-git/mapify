@@ -263,10 +263,15 @@ class GeoStore:
                          time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())))
         self.db.commit()
 
-    def was_fetched(self, source: str, z: int, x: int, y: int) -> bool:
-        return self.db.execute(
-            "SELECT 1 FROM fetched WHERE source=? AND z=? AND x=? AND y=?",
-            (source, z, x, y)).fetchone() is not None
+    def was_fetched(self, source: str, z: int, x: int, y: int,
+                    since: str | None = None) -> bool:
+        """Whether the tile was fetched -- at or after ``since`` (an ISO UTC
+        time, as recorded) when given, so a change in what is kept from a
+        tile can have older tiles fetched once more."""
+        row = self.db.execute(
+            "SELECT at FROM fetched WHERE source=? AND z=? AND x=? AND y=?",
+            (source, z, x, y)).fetchone()
+        return row is not None and (since is None or (row[0] or "") >= since)
 
     # ------------------------------------------------------------ reading
 

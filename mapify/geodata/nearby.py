@@ -81,7 +81,8 @@ def nearby(service, lat: float, lon: float, radius_m: float = 1000.0,
             features.append(Feature(
                 name=f[2], kind=f[1], latitude=flat, longitude=flon,
                 distance_m=int(round(d_km * 1000.0)),
-                bearing_deg=round(bearing_deg(lat, lon, flat, flon), 1)))
+                bearing_deg=round(bearing_deg(lat, lon, flat, flon), 1),
+                tags={"name:en": f[5]} if len(f) > 5 and f[5] else {}))
         features.sort(key=lambda feat: feat.distance_m)
         out.features = features[:limit]
 

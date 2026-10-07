@@ -45,6 +45,9 @@ log = logging.getLogger("mapify.geodata")
 __all__ = ["OpenFreeMap", "OFM_ATTRIBUTION", "OFM_LICENCE", "SOURCE"]
 
 SOURCE = "ofm"
+# Tiles fetched before this were filed without the English names of points
+# of interest; they are fetched once more the next time they are needed.
+REFETCH_BEFORE = "2026-10-07T12:00:00Z"
 OFM_ATTRIBUTION = "OpenFreeMap © OpenMapTiles Data from OpenStreetMap"
 OFM_LICENCE = "ODbL 1.0 (OpenStreetMap data); OpenMapTiles schema"
 OFM_LINK = "https://openfreemap.org"
@@ -112,7 +115,8 @@ class OpenFreeMap:
         with self._lock:
             tiles = tiles_for_bbox(bbox, 14)
             missing = [t for t in tiles
-                       if not self.store.was_fetched(SOURCE, 14, *t)]
+                       if not self.store.was_fetched(SOURCE, 14, *t,
+                                                     since=REFETCH_BEFORE)]
             if not missing:
                 return {"tiles": 0, "cached": len(tiles), "features": 0}
             template = self._template()
@@ -231,8 +235,15 @@ class OpenFreeMap:
                 continue
             lon, lat = f["geometry"]
             kind = f"{p.get('class')}={p.get('subclass') or p.get('class')}"
-            self.store.stage("poi", SOURCE, (lon, lat, lon, lat),
-                             [base_id | (0xE0000 + i), kind, name,
-                              int(round(lon * 1e6)), int(round(lat * 1e6))])
+            feature = [base_id | (0xE0000 + i), kind, name,
+                       int(round(lon * 1e6)), int(round(lat * 1e6))]
+            # The English name, when OpenStreetMap has one that differs:
+            # Pinpoint weighs landmark names with CLIP, which reads
+            # "Saint Basil's Cathedral" far better than its Cyrillic name.
+            # ("name_en" is no help: it falls back to the local name.)
+            english = p.get("name:en")
+            if english and english != name:
+                feature.append(english)
+            self.store.stage("poi", SOURCE, (lon, lat, lon, lat), feature)
             n += 1
         return n
