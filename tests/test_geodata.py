@@ -585,3 +585,14 @@ class TestNearby:
     def test_public_overpass_is_off_by_default(self):
         from mapify.config import load_config
         assert load_config().network.overpass_enabled is False
+
+
+# ---------------------------------------------------------------- terrain
+
+def test_terrain_is_served_but_never_offered_as_imagery(tmp_path):
+    from mapify.geodata.tiles import SOURCES, TileCache, sources_for
+    assert "terrain" in SOURCES and "SRTM" in SOURCES["terrain"].attribution
+    assert "terrain" not in [s["key"] for s in sources_for(37.75, -122.45)]
+    cache = TileCache(tmp_path, offline=True)
+    assert cache.get("terrain", 16, 0, 0) == (None, "outside the source's range")
+    assert cache.get("terrain", 14, 2620, 6334) == (None, "offline, and not cached")

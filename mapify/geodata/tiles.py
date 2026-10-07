@@ -21,6 +21,15 @@ Sources, and what each honestly shows
   builtup  The Landsat-derived Human Built-up and Settlement Extent: an
            overlay marking where settlements are, at the same 30 m.
 
+And one that is not imagery: the ground's height.
+
+  terrain  Terrain Tiles on the Registry of Open Data on AWS (Mapzen /
+           Tilezen "terrarium" PNGs: height = R*256 + G + B/256 - 32768 m),
+           merged from SRTM, 3DEP, GMTED2010, ETOPO1 and national models.
+           Free to use with attribution (see ATTRIBUTION.md); the 3D view
+           lifts the ground, buildings and streets onto it. Never offered
+           as imagery.
+
 A tile the source does not have is remembered as missing, so a view
 over the Bay of Bengal does not ask the USGS for Chennai on every frame.
 """
@@ -44,6 +53,13 @@ __all__ = ["TileSource", "SOURCES", "TileCache", "sources_for"]
 _UA = ("Mapify/0.1 (open-source image geolocation; "
        "https://github.com/mdyounus-git/mapify)")
 _GIBS = "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best"
+TERRAIN_ATTRIBUTION = (
+    "Terrain: Terrain Tiles on AWS (Mapzen/Tilezen) -- SRTM, USGS 3DEP, "
+    "GMTED2010, ETOPO1 (public domain); EU-DEM (Copernicus); Geoscience "
+    "Australia (CC BY 4.0); LINZ (CC BY 3.0); Kartverket (CC BY 4.0); "
+    "Austria DGM (CC BY 3.0); Canada CDEM (OGL-Canada); UK EA (OGL v3); "
+    "INEGI; ArcticDEM (DigitalGlobe imagery, NSF awards 1043681, 1559691, "
+    "1542736)")
 
 
 @dataclass(frozen=True)
@@ -106,6 +122,14 @@ SOURCES: dict[str, TileSource] = {s.key: s for s in (
         licence="Public domain; GIBS: Fees none, AccessConstraints none",
         shows_buildings=False, overlay=True,
         note="Marks where settlements are; not individual buildings."),
+    TileSource(
+        key="terrain", name="Terrain Tiles (elevation)",
+        url="https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png",
+        max_zoom=15, ext="png", metres_per_pixel_equator=4.8,
+        attribution=TERRAIN_ATTRIBUTION,
+        licence="Public domain and open licences per source (see ATTRIBUTION.md)",
+        shows_buildings=False,
+        note="Ground height, not imagery."),
 )}
 
 # Bounding boxes the USGS imagery actually covers. Checked against the
