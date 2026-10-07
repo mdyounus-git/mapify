@@ -73,17 +73,26 @@ class Reference:
                 "distance_m": round(self.distance_m, 1)}
 
 
-def _get_json(url: str, timeout: float = 30.0) -> dict:
-    """One API call at a time, a second apart. Told to slow down (429/503),
-    it waits as long as the server asks -- up to a minute -- and tries
-    again, twice at most; then the error goes to the caller."""
+def _get_json(url: str, timeout: float = 30.0, data: dict | None = None) -> dict:
+    """One API call at a time, a second apart. ``data``, when given, goes as
+    a POST form instead of in the URL (fifty Cyrillic titles, percent-
+    encoded, make a 10,000-character URL the server refuses).
+
+    Told to slow down (429/503), it waits as long as the server asks -- up
+    to a minute -- and tries again; a dropped or timed-out connection is
+    tried again after 5 then 15 s. Three attempts at most, then the error
+    goes to the caller."""
+    body = urllib.parse.urlencode(data).encode("utf-8") if data is not None else None
     with _LOCK:
         for attempt in range(3):
             wait = 1.0 - (time.time() - _last_api[0])
             if wait > 0:
                 time.sleep(wait)
             try:
-                req = urllib.request.Request(url, headers={"User-Agent": UA})
+                headers = {"User-Agent": UA}
+                if body is not None:
+                    headers["Content-Type"] = "application/x-www-form-urlencoded"
+                req = urllib.request.Request(url, data=body, headers=headers)
                 with urllib.request.urlopen(req, timeout=timeout) as resp:
                     return json.load(resp)
             except urllib.error.HTTPError as exc:
@@ -94,6 +103,10 @@ def _get_json(url: str, timeout: float = 30.0) -> dict:
                 except ValueError:
                     pause = 0.0
                 time.sleep(min(60.0, max(5.0 * (attempt + 1), pause)))
+            except (urllib.error.URLError, TimeoutError, ConnectionError):
+                if attempt == 2:
+                    raise
+                time.sleep(5.0 if attempt == 0 else 15.0)
             finally:
                 _last_api[0] = time.time()
         raise RuntimeError("unreachable")
@@ -242,10 +255,10 @@ def commons_details(refs: list[Reference], cache: Path) -> list[Reference]:
             missing = [t for t in titles if t not in pages]
             for start in range(0, len(missing), 50):
                 batch = missing[start:start + 50]
-                data = _get_json(_COMMONS + "?" + urllib.parse.urlencode({
+                data = _get_json(_COMMONS, data={
                     "action": "query", "format": "json", "titles": "|".join(batch),
                     "prop": "imageinfo", "iiprop": "url|extmetadata|mime",
-                    "iiurlwidth": str(_THUMB_WIDTH)}))
+                    "iiurlwidth": str(_THUMB_WIDTH)})
                 got = {pg.get("title", ""): pg
                        for pg in ((data.get("query") or {}).get("pages") or {}).values()}
                 now = time.time()

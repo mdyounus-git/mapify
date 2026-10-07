@@ -317,6 +317,21 @@ def test_the_budget_caps_the_comparison_and_says_what_is_left(tmp_path, fake_com
     assert "2 more listed" in res["message"]
 
 
+def test_a_failed_details_fetch_is_unavailable_not_none(tmp_path, monkeypatch):
+    import urllib.error
+    monkeypatch.setattr(engine_mod, "commons_listing",
+                        lambda lat, lon, radius, cache: [_bare("x", 12.97, 77.58)])
+
+    def down(refs, cache):
+        raise urllib.error.URLError("network down")
+
+    monkeypatch.setattr(engine_mod, "commons_details", down)
+    res = PinpointEngine(tmp_path).run(_scene(1), [Area(12.97, 77.58, 800)])
+    assert res["verdict"] == "unavailable"
+    assert "could not be fetched" in res["message"]
+    assert res["searched"]["references"] == 0
+
+
 def test_offline_and_no_area_are_unavailable(tmp_path):
     assert PinpointEngine(tmp_path, online=False).run(
         _scene(1), [Area(0, 0, 500)])["verdict"] == "unavailable"
@@ -352,7 +367,7 @@ def _commons_answer(pages: list[dict]) -> callable:
                        "extmetadata": {"LicenseShortName": {"value": p["licence"]},
                                        "Artist": {"value": "<a>Someone</a>"}}}]}
         for i, p in enumerate(pages)}}}
-    return lambda url, timeout=30.0: listing if "geosearch" in url else details
+    return lambda url, timeout=30.0, data=None: listing if "geosearch" in url else details
 
 
 def test_commons_keeps_free_photographs_nearest_first(tmp_path, monkeypatch):
@@ -379,7 +394,7 @@ def test_a_name_search_keeps_relevance_order_and_the_circle(tmp_path, monkeypatc
         "4": {"title": "File:far.jpg", "index": 4,
               "coordinates": [{"lat": 13.1, "lon": 77.58}]}}}}
     monkeypatch.setattr(sources, "_get_json",
-                        lambda url, timeout=30.0: urls.append(url) or answer)
+                        lambda url, timeout=30.0, data=None: urls.append(url) or answer)
     refs = sources.commons_search_near('Tour "Eiffel"', 12.97, 77.58, 1000, tmp_path)
     assert [r.title for r in refs] == ["first.jpg", "second.jpg"]
     assert "nearcoord%3A1000m%2C12.97000%2C77.58000" in urls[0]
@@ -392,18 +407,45 @@ def test_details_are_asked_for_once_and_unfree_files_dropped(tmp_path, monkeypat
     answer = _commons_answer([
         {"title": "File:a.jpg", "lat": 1, "lon": 1, "licence": "CC BY 4.0"},
         {"title": "File:b.jpg", "lat": 1, "lon": 1, "licence": "All rights reserved"}])
+    sent = []
     monkeypatch.setattr(sources, "_get_json",
-                        lambda url, timeout=30.0: calls.append(url) or answer(url))
+                        lambda url, timeout=30.0, data=None:
+                        calls.append(url) or sent.append(data) or answer(url))
     first = sources.commons_details([_bare("a", 1, 1), _bare("b", 1, 1)], tmp_path)
     again = sources.commons_details([_bare("a", 1, 1), _bare("b", 1, 1)], tmp_path)
     assert [r.title for r in first] == [r.title for r in again] == ["a.jpg"]
     assert first[0].licence == "CC BY 4.0" and first[0].thumb_url
     assert len(calls) == 1                                   # the second came from disk
+    # Titles go in a POST body: fifty Cyrillic ones overflow a URL.
+    assert "File:a.jpg" in sent[0]["titles"] and "titles" not in calls[0]
+
+
+def test_a_dropped_connection_is_tried_again(monkeypatch):
+    import urllib.error
+    tries = []
+
+    class Answer:
+        def __enter__(self):
+            return io.BytesIO(b'{"ok": 1}')
+
+        def __exit__(self, *a):
+            return False
+
+    def flaky(req, timeout=30.0):
+        tries.append(req)
+        if len(tries) == 1:
+            raise urllib.error.URLError("connection reset")
+        return Answer()
+
+    monkeypatch.setattr(sources.urllib.request, "urlopen", flaky)
+    monkeypatch.setattr(sources.time, "sleep", lambda s: None)
+    assert sources._get_json("https://example.org/api") == {"ok": 1}
+    assert len(tries) == 2
 
 
 def test_mapillary_needs_the_users_token_and_never_stores_it(tmp_path, monkeypatch):
     assert sources.mapillary_near(1, 1, 500, "", tmp_path) == []
-    monkeypatch.setattr(sources, "_get_json", lambda url, timeout=30.0: {"data": [
+    monkeypatch.setattr(sources, "_get_json", lambda url, timeout=30.0, data=None: {"data": [
         {"id": 42, "thumb_1024_url": "https://m/42.jpg",
          "computed_geometry": {"coordinates": [1.0001, 1.0001]},
          "compass_angle": 90, "creator": {"username": "walker"}}]})

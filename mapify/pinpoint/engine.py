@@ -524,6 +524,7 @@ class PinpointEngine:
                     refined[r.key] = m2 if m2 is not None and m2.inliers > m.inliers else m
 
         pos = 0
+        failed = False                          # a search error stopped the comparison
         while pos < len(order) and compared < budget:
             raw = order[pos:pos + min(BATCH, budget - compared)]
             pos += len(raw)
@@ -532,6 +533,7 @@ class PinpointEngine:
             except Exception as exc:
                 notes.append(f"Photograph details could not be fetched "
                              f"({type(exc).__name__}); the search stopped there.")
+                failed = True
                 break
             batch_scored = []
             with ThreadPoolExecutor(max_workers=self.workers) as pool:
@@ -565,9 +567,13 @@ class PinpointEngine:
                for m, r in scored[:6]]
         base["matches"] = top
         if not scored:
-            return {**base, "verdict": "none",
-                    "message": "The reference photographs could not be downloaded. "
-                               "The estimate stands."}
+            # Nothing was compared: that is a failure to search, never a
+            # finding that nothing here shows the scene.
+            why = ("; ".join(notes) if failed and notes
+                   else "the reference photographs could not be downloaded")
+            return {**base, "verdict": "unavailable",
+                    "message": f"Nothing could be compared ({why}). Try again later; "
+                               f"the estimate stands."}
 
         best_m, best_r = scored[0]
         base["best"] = top[0]
