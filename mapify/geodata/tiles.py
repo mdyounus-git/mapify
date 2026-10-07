@@ -32,6 +32,11 @@ And one that is not imagery: the ground's height.
 
 A tile the source does not have is remembered as missing, so a view
 over the Bay of Bengal does not ask the USGS for Chennai on every frame.
+
+Imagery can be asked for up to OVERZOOM levels past its deepest zoom: the
+deepest real tile is cut and enlarged. That adds no detail -- 30 m Landsat
+stays 30 m -- but it lets the terrain be drawn in small tiles everywhere,
+which keeps the streets and parks laid over it sharp.
 """
 
 from __future__ import annotations
@@ -53,6 +58,7 @@ __all__ = ["TileSource", "SOURCES", "TileCache", "sources_for"]
 _UA = ("Mapify/0.1 (open-source image geolocation; "
        "https://github.com/mdyounus-git/mapify)")
 _GIBS = "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best"
+OVERZOOM = 4
 TERRAIN_ATTRIBUTION = (
     "Terrain: Terrain Tiles on AWS (Mapzen/Tilezen) -- SRTM, USGS 3DEP, "
     "GMTED2010, ETOPO1 (public domain); EU-DEM (Copernicus); Geoscience "
@@ -76,6 +82,7 @@ class TileSource:
     overlay: bool = False
     dated: bool = False
     note: str = ""
+    overzoom: bool = True        # imagery: may be cut and enlarged past max_zoom
 
 
 SOURCES: dict[str, TileSource] = {s.key: s for s in (
@@ -128,7 +135,7 @@ SOURCES: dict[str, TileSource] = {s.key: s for s in (
         max_zoom=15, ext="png", metres_per_pixel_equator=4.8,
         attribution=TERRAIN_ATTRIBUTION,
         licence="Public domain and open licences per source (see ATTRIBUTION.md)",
-        shows_buildings=False,
+        shows_buildings=False, overzoom=False,
         note="Ground height, not imagery."),
 )}
 
@@ -181,6 +188,9 @@ class TileCache:
         source = SOURCES.get(key)
         if source is None:
             return None, "unknown source"
+        if source.overzoom and source.max_zoom < z <= source.max_zoom + OVERZOOM \
+                and 0 <= x < 2 ** z and 0 <= y < 2 ** z:
+            return self._overzoomed(source, z, x, y, date)
         if not (0 <= z <= source.max_zoom) or not (0 <= x < 2 ** z) \
                 or not (0 <= y < 2 ** z):
             return None, "outside the source's range"
@@ -215,6 +225,39 @@ class TileCache:
                 return None, f"upstream HTTP {exc.code}"
             except (urllib.error.URLError, TimeoutError, OSError) as exc:
                 return None, f"unreachable: {exc}"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        tmp = path.with_suffix(".part")
+        tmp.write_bytes(data)
+        tmp.replace(path)
+        return data, media
+
+    def _overzoomed(self, source: TileSource, z: int, x: int, y: int,
+                    date: str | None) -> tuple[bytes | None, str]:
+        """A tile past the source's deepest zoom: its quarter (or smaller
+        part) of the deepest real tile, enlarged to 256 px and kept."""
+        path = self._path(source, z, x, y, date)
+        media = "image/png" if source.ext == "png" else "image/jpeg"
+        if path.is_file():
+            return path.read_bytes(), media
+        dz = z - source.max_zoom
+        px, py = x >> dz, y >> dz
+        parent, why = self.get(source.key, source.max_zoom, px, py, date)
+        if parent is None:
+            return None, why
+        from io import BytesIO
+
+        from PIL import Image
+        part = 256 >> dz
+        ox, oy = (x - (px << dz)) * part, (y - (py << dz)) * part
+        with Image.open(BytesIO(parent)) as im:
+            im = im.convert("RGBA" if source.ext == "png" else "RGB")
+            cut = im.crop((ox, oy, ox + part, oy + part)).resize((256, 256), Image.BILINEAR)
+            buf = BytesIO()
+            if source.ext == "png":
+                cut.save(buf, "PNG")
+            else:
+                cut.save(buf, "JPEG", quality=90)
+        data = buf.getvalue()
         path.parent.mkdir(parents=True, exist_ok=True)
         tmp = path.with_suffix(".part")
         tmp.write_bytes(data)

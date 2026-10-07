@@ -412,7 +412,8 @@ class TestTiles:
         from mapify.geodata.tiles import TileCache
         cache = TileCache(root=tmp_path, offline=False)
         assert cache.get("nope", 1, 0, 0)[1] == "unknown source"
-        assert cache.get("usgs", 17, 0, 0)[1] == "outside the source's range"
+        # Past the deepest zoom by more than OVERZOOM levels (16 + 4).
+        assert cache.get("usgs", 21, 0, 0)[1] == "outside the source's range"
         assert cache.get("hls", 3, 0, 0, "../../etc")[1] == "bad date"
 
 
@@ -596,3 +597,29 @@ def test_terrain_is_served_but_never_offered_as_imagery(tmp_path):
     cache = TileCache(tmp_path, offline=True)
     assert cache.get("terrain", 16, 0, 0) == (None, "outside the source's range")
     assert cache.get("terrain", 14, 2620, 6334) == (None, "offline, and not cached")
+
+
+def test_imagery_past_its_deepest_zoom_is_cut_from_the_deepest_tile(tmp_path):
+    """Landsat stops at zoom 12; zoom 13 is a quarter of a zoom-12 tile,
+    enlarged -- no new detail, but small terrain tiles everywhere."""
+    import io
+
+    from PIL import Image
+
+    from mapify.geodata.tiles import SOURCES, TileCache
+    weld = SOURCES["weld"]
+    cache = TileCache(tmp_path, offline=True)
+    im = Image.new("RGB", (256, 256), (0, 0, 255))
+    im.paste((255, 0, 0), (128, 0, 256, 128))            # north-east quarter red
+    parent = cache._path(weld, 12, 100, 200, None)
+    parent.parent.mkdir(parents=True, exist_ok=True)
+    im.save(parent, "JPEG", quality=95)
+    data, media = cache.get("weld", 13, 201, 400)          # the north-east child
+    assert media == "image/jpeg"
+    child = Image.open(io.BytesIO(data)).convert("RGB")
+    assert child.size == (256, 256)
+    r, g, b = child.getpixel((128, 128))
+    assert r > 200 and b < 60, "the red quarter, enlarged"
+    assert cache.get("weld", 17, 0, 0)[0] is None, "no more than four levels past"
+    assert cache.get("terrain", 16, 0, 0) == (None, "outside the source's range")
+
