@@ -211,15 +211,28 @@ def test_a_crowded_spot_inside_the_area_gets_a_ring_of_its_own(tmp_path, monkeyp
 
 def test_repeat_shots_from_one_spot_are_pushed_back(tmp_path, monkeypatch):
     # Five shots from one spot 100 m away: after the first, each is pushed
-    # back 120 / sqrt(5) = 54 m, so a lone photograph at 130 m comes second.
+    # back 120 / 5 = 24 m, so a lone photograph at 115 m comes second.
     spot = [_bare(f"spot-{i}", 12.97 + 100 / 111320.0, 77.58) for i in range(5)]
-    lone = _bare("lone", 12.97 - 130 / 111320.0, 77.58)
+    lone = _bare("lone", 12.97 - 115 / 111320.0, 77.58)
     monkeypatch.setattr(engine_mod, "commons_listing",
                         lambda lat, lon, radius, cache: spot + [lone])
     order, _, _ = PinpointEngine(tmp_path)._plan(
         [Area(12.97, 77.58, 1000)], lambda k, m: None, set())
     assert order[0].id.startswith("File:spot-")
     assert order[1].id == "File:lone.jpg"                    # before the 2nd shot
+
+
+def test_within_a_spot_the_nearest_photograph_comes_first(tmp_path, monkeypatch):
+    # With the centre right, the photograph taken nearest it is the likeliest
+    # match, crowded spot or not.
+    crowd = [_bare(f"crowd-{i}", 12.97 + (20 + i % 30) / 111320.0, 77.58)
+             for i in range(300)]
+    exact = _bare("exact", 12.97 + 2 / 111320.0, 77.58)
+    monkeypatch.setattr(engine_mod, "commons_listing",
+                        lambda lat, lon, radius, cache: crowd + [exact])
+    order, _, _ = PinpointEngine(tmp_path)._plan(
+        [Area(12.97, 77.58, 800)], lambda k, m: None, set())
+    assert order[0].id == "File:exact.jpg"
 
 
 def test_a_popular_viewpoint_gets_more_comparisons_than_a_quiet_one(tmp_path, monkeypatch):
@@ -229,8 +242,11 @@ def test_a_popular_viewpoint_gets_more_comparisons_than_a_quiet_one(tmp_path, mo
                         lambda lat, lon, radius, cache: busy + quiet)
     order, _, _ = PinpointEngine(tmp_path)._plan(
         [Area(12.97, 77.58, 1000)], lambda k, m: None, set())
+    # Equally far: the spot a hundred people chose takes most of the early
+    # comparisons (its 100 spread over 120 m of priority), and the quiet
+    # spot still gets its first photograph in.
     first = [r.id for r in order[:12]]
-    assert sum("busy" in i for i in first) > sum("quiet" in i for i in first) >= 2
+    assert sum("busy" in i for i in first) >= 10 and sum("quiet" in i for i in first) >= 1
 
 
 def test_the_search_stops_once_a_match_confirms(tmp_path, fake_commons, monkeypatch):

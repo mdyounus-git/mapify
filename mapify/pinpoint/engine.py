@@ -21,13 +21,15 @@ returns the nearest 500 files, which in a city centre reach a few hundred
 metres; when it is cut short, more searches are placed on a hexagonal grid
 whose spacing that reach sets, until the area is listed or the probe
 allowance is spent. Photographs are then compared in order of promise --
-nearest the area's centre first, with the second, third... photograph
-from one spot pushed back, since the eighteenth shot from one viewpoint
-adds little the first did not. The push shrinks with the square root of
-how many photographs that spot has: a viewpoint hundreds of people chose
-is where the query was likely taken too, so it gets more comparisons, not
-fewer -- about the square root of its count. Comparison runs in batches
-and stops once one confirms.
+nearest the area's centre first, with repeat shots from one spot pushed
+back a little, so that eighteen frames from one tripod do not all go
+before the next spot. A little: a whole spot spreads over at most
+REPEAT_PENALTY_M of priority, however many photographs it holds, because a
+viewpoint hundreds of people chose is where the query was likely taken
+too -- and when the centre is right, the nearest photographs are the ones
+that match (the Eiffel photograph's match was taken 7 m from it; spreading
+the 760 at the tower's foot over kilometres lost it). Comparison runs in
+batches and stops once one confirms.
 """
 
 from __future__ import annotations
@@ -76,10 +78,10 @@ MAX_PROBES = 26
 BUDGET = 400
 MAX_BUDGET = 3000
 BATCH = 100
-# The priority order: distance from the area's centre, plus this much per
-# earlier photograph taken from the same spot (cells of SPOT_M), divided by
-# the square root of the spot's count, plus this much per area down the
-# list (the analysis's best guess comes first).
+# The priority order: distance from the area's centre, plus this much in
+# all spread over the photographs of one spot (cells of SPOT_M), nearest
+# first, plus this much per area down the list (the analysis's best guess
+# comes first).
 SPOT_M = 60.0
 REPEAT_PENALTY_M = 120.0
 AREA_PENALTY_M = 100.0
@@ -259,11 +261,8 @@ class PinpointEngine:
                     notes.append(f"Mapillary could not be searched near {a.label} "
                                  f"({type(exc).__name__})")
 
-        # Priority: distance, pushed back per earlier photograph from the
-        # same spot (less at popular spots) and per area down the list.
-        # Within a spot the order is by key, a hash: distance means nothing
-        # at that scale, and a hash keeps one photographer's run of shots
-        # (titles "(1)", "(2)"...) from going first together.
+        # Priority: distance, a small push per earlier photograph from the
+        # same spot, and a push per area down the list.
         def cell(r: Reference) -> tuple[int, int]:
             return (int(math.floor(r.lat * 111320.0 / SPOT_M)),
                     int(math.floor(r.lon * 111320.0
@@ -284,11 +283,10 @@ class PinpointEngine:
             spots.setdefault(cell(r), []).append((d, idx, r))
         ranked = []
         for members in spots.values():
-            members.sort(key=lambda t: (-lifts.get(t[2].key, 0.0), t[2].key))
-            d0 = min(t[0] for t in members)
-            step_m = REPEAT_PENALTY_M / math.sqrt(len(members))
+            members.sort(key=lambda t: (-lifts.get(t[2].key, 0.0), t[0], t[2].key))
+            step_m = REPEAT_PENALTY_M / len(members)
             for k, (d, idx, r) in enumerate(members):
-                ranked.append((d0 + k * step_m + idx * AREA_PENALTY_M
+                ranked.append((d + k * step_m + idx * AREA_PENALTY_M
                                - lifts.get(r.key, 0.0), r))
         ranked.sort(key=lambda t: (t[0], t[1].key))
         return [r for _, r in ranked], notes, coverage
