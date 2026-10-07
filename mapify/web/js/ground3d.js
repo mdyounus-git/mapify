@@ -663,7 +663,9 @@ export class Ground3D {
       const ringKm = t.precisionKm ?? (t.uncertaintyKm && t.uncertaintyKm < 3
         ? t.uncertaintyKm : null);
       layers.push(new deck.ScatterplotLayer({
-        id: "target", data: [t], getPosition: (p) => [p.lon, p.lat, 0.5],
+        // A few metres up: lifted onto the terrain, a ring at its surface
+        // would sink into the coarser mesh between its vertices.
+        id: "target", data: [t], getPosition: (p) => [p.lon, p.lat, 3],
         getRadius: ringKm ? Math.max(12, ringKm * 1000) : 14,
         radiusUnits: "meters", stroked: true, filled: true,
         getFillColor: [90, 184, 240, ringKm ? 28 : 90],
@@ -1128,7 +1130,9 @@ export class Ground3D {
     const date = usable && src.dated ? `?date=${encodeURIComponent(this.hlsDate)}` : "";
     return new deck.TerrainLayer({
       id: `terrain-${usable ? src.key : "plain"}-${usable && src.dated ? this.hlsDate : "x"}`,
-      minZoom: 0, maxZoom: usable ? Math.min(14, src.max_zoom) : 14,
+      // Small tiles everywhere: the server enlarges imagery past its deepest
+      // zoom, and the streets and parks laid over the terrain stay sharp.
+      minZoom: 0, maxZoom: 14,
       elevationDecoder: TERRARIUM, elevationData: TERRAIN_URL,
       texture: usable ? `/api/tiles/${src.key}/{z}/{x}/{y}${date}` : null,
       color: [158, 156, 146], meshMaxError: 4, operation: "terrain+draw",
@@ -1375,7 +1379,7 @@ export class Ground3D {
       const k = Math.min(1, (now - t0) / 950);
       const e = 1 - Math.pow(1 - k, 3);
       const ring = new deck.ScatterplotLayer({
-        id: "zoom-pulse", data: [position], getPosition: (p) => p,
+        id: "zoom-pulse", data: [position], getPosition: (p) => [p[0], p[1], 3],
         radiusUnits: "pixels", getRadius: 8 + 120 * e, stroked: true, filled: false,
         getLineColor: [120, 200, 250, Math.round(230 * (1 - k))], lineWidthMinPixels: 2,
         updateTriggers: { getRadius: k, getLineColor: k },
