@@ -151,18 +151,24 @@ or vehicles.
 
 ## Where to pick up, in order
 
-1. **The package and the installed app.** A rebuild with terrain was
-   running at the pause (`bench/build-portable3.log`, then
-   `bench/portable3.log`, which must end "VERIFIED: self-contained"). Then
-   `installer\install.ps1 -Force` (into `E:\mapify\app`) and
-   `E:\mapify\app\Mapify.exe --selftest`. The ZIP is
-   `dist\Mapify-0.1.0-portable.zip`.
-2. **Look at the rest of the flow by eye** with the headless harness:
-   dev server, `mapify/web/vendor/_dev/g3d.html` + `g3d.js` (git-ignored;
-   the page's policy refuses inline scripts and `<base>`), then
-   `python bench/cdp_shot.py "<url>" <png> --wait 20 [--eval js]`. Not yet
-   seen: the zoom pulse, the photo overlay over terrain, Pinpoint's
-   panel and markers in the full app page.
+1. **Rebuild once more, then reinstall.** The ZIP made at the pause
+   (`dist\Mapify-0.1.0-portable.zip`, 3.5 GB, `bench/portable3.log` ends
+   "VERIFIED: self-contained") has terrain, the multi-part map fix,
+   weather and ambience, but not the last two commits (`ed0df2fb` imagery
+   over-zoom for sharp terrain close up, `353963dc` lifted rings). So: `python
+   build_exe.py --clean` then `python scripts/make_portable.py --verify`
+   (one WMI chain, ~45 min; do not edit the source until the build log says
+   "COLLECT-00.toc completed"), then `installer\install.ps1 -Force` (into
+   `E:\mapify\app`) and `E:\mapify\app\Mapify.exe --selftest`. The
+   installed app is still the build from `f79574fc` (before all of this).
+2. **Seen by eye now** (headless Edge, `bench/cdp_shot.py` for the 3D
+   harness and `bench/cdp_flow.py` for the whole app page): the full app
+   flow -- analyse the Eiffel photograph, Pinpoint ("Pinpointed", 59
+   points, the Commons photo with its credit, "also searched for ... Eiffel
+   Tower"), Walk here at the pinpointed spot in the current rain; terrain
+   at Twin Peaks, Russian Hill (walk) and Corcovado; the zoom pulse (layer
+   checked mid-animation). Not yet: the photo overlay over terrain, the
+   matched-photo markers seen in a frame.
 3. Ideas not started: trees in mapped parks and woods (positions would be
    illustrative, so they belong with ambience); English names for Moscow,
    Giza and Rio still choose wrong.
