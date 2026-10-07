@@ -529,6 +529,8 @@ def _selftest() -> int:
                 WEB_DIR / "index.html",
                 WEB_DIR / "styles.css",
                 WEB_DIR / "js" / "app.js",
+                WEB_DIR / "js" / "ground3d.js",
+                WEB_DIR / "js" / "walk.js",
                 WEB_DIR / "vendor" / "three.module.js",
             ) if not p.exists()
         ]
@@ -547,6 +549,23 @@ def _selftest() -> int:
     def _countries() -> str:
         from .data.countries import get_table
         return f"{len(get_table())} countries"
+
+    def _pinpoint() -> str:
+        """Pinpoint is imported lazily by the server, and its matcher needs
+        OpenCV's SIFT: prove both are in the bundle by matching a synthetic
+        scene against itself, offline."""
+        import numpy as np
+        from PIL import Image
+
+        from .pinpoint.engine import PinpointEngine  # noqa: F401
+        from .pinpoint.features import extract, match
+        rng = np.random.default_rng(0)
+        img = Image.fromarray(rng.integers(0, 255, (480, 640, 3), dtype=np.uint8))
+        f = extract(img, 640)
+        m = match(f, f)
+        if len(f.points) < 40 or m.inliers < 40:
+            raise RuntimeError(f"SIFT found {len(f.points)} points, {m.inliers} inliers")
+        return f"SIFT {len(f.points)} points, self-match {m.inliers} inliers"
 
     def _pipeline() -> str:
         from .pipeline import AnalysisEngine
@@ -607,6 +626,7 @@ def _selftest() -> int:
     check("interface assets", _assets)
     check("natural earth", _geodata)
     check("country table", _countries)
+    check("pinpoint", _pinpoint)
     check("pipeline", _pipeline)
     check("headless startup", _headless_startup)
     check("writable state", _state_is_writable)
