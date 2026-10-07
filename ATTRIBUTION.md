@@ -90,6 +90,29 @@ A GeoPackage or kepler.gl file exported from it carries the same obligations,
 and carries a `notice` naming every source and licence so they travel with
 it.
 
+**The ground's height** comes from **Terrain Tiles** on the Registry of Open
+Data on AWS (Mapzen / Tilezen "terrarium" tiles), fetched through
+Mapify's own tile cache and kept on disk. Free to use with attribution to
+each source merged into them: SRTM, USGS 3DEP (formerly NED), GMTED2010 and
+ETOPO1 (public domain); EU-DEM (Copernicus, CC BY); Geoscience Australia
+(CC BY 4.0); LINZ, New Zealand (CC BY 3.0); Kartverket, Norway (CC BY 4.0);
+Austria DGM (CC BY 3.0); Canada CDEM (Open Government Licence – Canada); UK
+Environment Agency LIDAR (Open Government Licence v3); INEGI, Mexico; and
+ArcticDEM ("DEM(s) were created from DigitalGlobe, Inc., imagery and funded
+under National Science Foundation awards 1043681, 1559691, and 1542736").
+The 3D view credits them on screen; "Terrain" switches the ground's height
+off.
+
+**The walk's weather** — sky, light, rain, snow, fog and haze — is
+Open-Meteo's reading for the place (see *Weather, air and terrain records*
+below): ERA5 at the photograph's hour when that is known, otherwise
+Open-Meteo's current conditions and CAMS air quality. Only a coordinate and
+a time go out.
+
+**"Ambience" is not data.** Switched on, it adds people, vehicles and birds
+moving along the mapped streets. No source says who or what is there; they
+are drawn by Mapify and the walk says so while they are shown.
+
 ### Exports for QGIS and kepler.gl
 
 Mapify writes files these tools open; it bundles neither. **QGIS** (GPL) is
