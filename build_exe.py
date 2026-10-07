@@ -178,6 +178,13 @@ def main() -> int:
     if not exe.exists():
         print("  build reported success but Mapify.exe is not there.")
         return 1
+    # --add-data copies mapify/web whole, including any test copies a
+    # developer left in web/vendor/_dev (git-ignored). They are not ours to
+    # ship.
+    for stray in out.rglob("_dev"):
+        if stray.is_dir():
+            print(f"  removing test copies: {stray.relative_to(out)}")
+            shutil.rmtree(stray, ignore_errors=True)
 
     size = sum(p.stat().st_size for p in out.rglob("*") if p.is_file())
     print(f"\n  {exe}")

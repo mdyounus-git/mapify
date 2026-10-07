@@ -92,6 +92,8 @@ def entries(models: Path, gallery: list[Path]) -> list[tuple[Path, str]]:
             rel = p.relative_to(DIST)
             if rel.parts[0] in ("data", "models") or p.name == "config.toml":
                 continue                       # never a previous run's state
+            if "_dev" in rel.parts:
+                continue                       # test copies (web/vendor/_dev)
             out.append((p, f"Mapify/{rel.as_posix()}"))
     for sub in ("hub", "easyocr"):
         for p in sorted((models / sub).rglob("*")):
