@@ -37,6 +37,7 @@ _LANDMARK_WORDS = (
     "college", "hospital", "townhall", "fuel", "tower", "lighthouse",
     "water_tower", "windmill", "obelisk", "peak", "volcano", "waterfall",
     "aerodrome", "station", "halt", "stadium", "temple", "church", "mosque",
+    "theatre", "arts_centre",          # an opera house is tagged as one of these
 )
 
 

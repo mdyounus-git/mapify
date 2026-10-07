@@ -30,6 +30,14 @@ too -- and when the centre is right, the nearest photographs are the ones
 that match (the Eiffel photograph's match was taken 7 m from it; spreading
 the 760 at the tower's foot over kilometres lost it). Comparison runs in
 batches and stops once one confirms.
+
+Distance cannot find the right viewpoint among thousands when the estimate
+is a few hundred metres out. So, given a ``namer`` (the analysis's CLIP,
+scoring "a photo of <name>" against the photograph), the named landmarks
+in each area are ranked against the photograph, and Commons is searched by
+the name of the one or two that clearly fit best, within the area. Their
+most relevant photographs move to the front. With no clear fit nothing is
+searched by name: a guessed name would spend the budget on the wrong thing.
 """
 
 from __future__ import annotations
@@ -45,8 +53,8 @@ from PIL import Image
 
 from .features import (QUERY_PIXELS, QUERY_SIDE, REFERENCE_SIDE, REFINE_SIDE, extract,
                        load, match, save, windows)
-from .sources import (LISTING_CAP, Reference, commons_details, commons_listing, fetch_thumb,
-                      mapillary_near, touch)
+from .sources import (LISTING_CAP, Reference, commons_details, commons_listing,
+                      commons_search_near, fetch_thumb, mapillary_near, touch)
 
 log = logging.getLogger("mapify.pinpoint")
 
@@ -85,10 +93,28 @@ BATCH = 100
 SPOT_M = 60.0
 REPEAT_PENALTY_M = 120.0
 AREA_PENALTY_M = 100.0
+# Searching by name: the landmarks considered per area, how many names are
+# searched, how clearly a name must stand out from the others (standard
+# deviations above their mean AND a margin in CLIP score, since in a flat
+# field a 0.01 lead is noise however many deviations it is; an absolute
+# score when there are too few names to compare), and how far forward the
+# most relevant results move. Starting values, to be checked against the
+# landmark evaluation (scripts/eval_pinpoint.py --names).
+NAMED_LANDMARKS = 250        # the famous one is often 70th by distance
+NAMED_PER_AREA = 2
+NAMED_MIN_Z = 1.0
+NAMED_MIN_MARGIN = 0.03
+NAMED_MIN_SCORE = 0.22
+NAMED_TOP = 150
+NAMED_LIFT_M = 800.0
 
 ProgressFn = Callable[[str, str], None]
 # Metres to move each listed photograph forward in the comparison order.
 LiftFn = Callable[[list[Reference]], list[float]]
+# How well each name describes the photograph (higher is better).
+NamerFn = Callable[[list[str]], list[float]]
+# Named landmarks within a radius of a point: (name, lat, lon).
+LandmarksFn = Callable[[float, float, float], list[tuple[str, float, float]]]
 
 
 @dataclass
@@ -103,14 +129,93 @@ def _fmt_m(m: float) -> str:
     return f"{m / 1000:.1f} km" if m >= 1000 else f"{m:.0f} m"
 
 
+def local_landmarks(online: bool = True) -> LandmarksFn:
+    """Named landmarks from the map data the 3D view uses (an imported
+    OpenStreetMap region, or OpenFreeMap tiles fetched once and kept)."""
+    def find(lat: float, lon: float, radius_m: float) -> list[tuple[str, float, float]]:
+        from ..geodata.nearby import nearby
+        from ..geodata.service import get_service
+        s = nearby(get_service(online), lat, lon, radius_m, fetch=online,
+                   limit=NAMED_LANDMARKS)
+        return [(f.name, f.latitude, f.longitude) for f in s.features if f.name]
+    return find
+
+
+def clip_namer(clip: Any, image: Image.Image) -> NamerFn:
+    """Score names by how well "a photo of <name>" describes ``image``,
+    with the analysis's CLIP (``mapify.models.clip_backend.ClipBackend``).
+    The image is encoded once, on first use."""
+    cache: dict[str, Any] = {}
+
+    def score(names: list[str]) -> list[float]:
+        if "q" not in cache:
+            cache["q"] = clip.encode_image(image)
+        texts = clip.encode_texts([f"a photo of {n}" for n in names])
+        return [float(v) for v in texts @ cache["q"]]
+    return score
+
+
+def choose_names(names: list[str], scores: list[float]) -> list[str]:
+    """The names that clearly fit the photograph best, at most NAMED_PER_AREA.
+
+    Clearly: NAMED_MIN_Z standard deviations and NAMED_MIN_MARGIN above the
+    others' mean when there are enough names to compare, else an absolute
+    NAMED_MIN_SCORE.
+    """
+    if not names:
+        return []
+    pairs = sorted(zip(scores, names), reverse=True)
+    if len(names) >= 4:
+        mean = sum(scores) / len(scores)
+        sd = (sum((x - mean) ** 2 for x in scores) / len(scores)) ** 0.5 or 1e-9
+        keep = [n for sc, n in pairs
+                if (sc - mean) / sd >= NAMED_MIN_Z and sc - mean >= NAMED_MIN_MARGIN]
+    else:
+        keep = [n for sc, n in pairs if sc >= NAMED_MIN_SCORE]
+    return keep[:NAMED_PER_AREA]
+
+
 class PinpointEngine:
     def __init__(self, cache_dir: Path, online: bool = True, mapillary_token: str = "",
-                 workers: int = 6, cache_mb: int = 2048):
+                 workers: int = 6, cache_mb: int = 2048,
+                 landmarks: LandmarksFn | None = None):
         self.cache = Path(cache_dir)
         self.online = online
         self.token = mapillary_token or ""
         self.workers = workers
         self.cache_mb = cache_mb
+        self.landmarks = landmarks or local_landmarks(online)
+
+    def _named(self, a: Area, namer: NamerFn, step: ProgressFn,
+               notes: list[str]) -> list[tuple[str, list[Reference]]]:
+        """Commons photographs of the landmarks in ``a`` that fit best."""
+        try:
+            marks = self.landmarks(a.lat, a.lon, a.radius_m)
+        except Exception as exc:
+            notes.append(f"The landmarks near {a.label} could not be read "
+                         f"({type(exc).__name__}); nothing was searched by name.")
+            return []
+        names = list(dict.fromkeys(m[0] for m in marks if m and m[0]))[:NAMED_LANDMARKS]
+        if not names:
+            return []
+        step("names", f"Weighing {len(names)} landmark names near {a.label} "
+                      f"against the photograph")
+        try:
+            scores = [float(x) for x in namer(names)]
+        except Exception as exc:
+            notes.append(f"The landmark names could not be weighed ({type(exc).__name__}); "
+                         f"nothing was searched by name.")
+            return []
+        out = []
+        for name in choose_names(names, scores):
+            step("search", f"Looking for photographs of {name}")
+            try:
+                out.append((name, commons_search_near(name, a.lat, a.lon,
+                                                      int(a.radius_m), self.cache)))
+            except Exception as exc:
+                notes.append(f"Commons could not be searched for {name} "
+                             f"({type(exc).__name__})")
+        return out
 
     def prune(self) -> int:
         """Keep thumbnails and features under ``cache_mb``: past it, the
@@ -165,13 +270,15 @@ class PinpointEngine:
         return [(a.lat + y / 111320.0, a.lon + x / (111320.0 * coslat)) for _, y, x in pts]
 
     def _plan(self, areas: list[Area], step: ProgressFn, exclude: set[str],
-              lift: LiftFn | None = None) -> tuple[list[Reference], list[str], list[dict]]:
+              lift: LiftFn | None = None, namer: NamerFn | None = None
+              ) -> tuple[list[Reference], list[str], list[dict]]:
         """Every photograph listed in the areas, in the order to compare them."""
         from ..geo.geodesy import haversine_km
         notes: list[str] = []
         coverage: list[dict] = []
         found: dict[str, tuple[float, int, Reference]] = {}     # key -> (dist, area, ref)
         probes_left = MAX_PROBES
+        named_keys: set[str] = set()
 
         def take(refs: list[Reference], idx: int, a: Area) -> None:
             for r in refs:
@@ -260,6 +367,19 @@ class PinpointEngine:
                 except Exception as exc:
                     notes.append(f"Mapillary could not be searched near {a.label} "
                                  f"({type(exc).__name__})")
+            if namer is not None:
+                named = self._named(a, namer, step, notes)
+                info["named"] = []
+                for name, refs in named:
+                    before = set(found)
+                    take(refs, idx, a)
+                    named_keys.update(r.key for r in refs[:NAMED_TOP] if r.key in found)
+                    info["named"].append({"name": name, "found": len(refs),
+                                          "not_listed_otherwise": len(set(found) - before)})
+                if named:
+                    notes.append(f"Also searched near {a.label} for photographs of "
+                                 + " and ".join(n for n, _ in named)
+                                 + ", the landmarks there that best fit the photograph.")
 
         # Priority: distance, a small push per earlier photograph from the
         # same spot, and a push per area down the list.
@@ -278,6 +398,8 @@ class PinpointEngine:
             except Exception as exc:
                 notes.append(f"The titles could not be weighed ({type(exc).__name__}); "
                              f"distance alone orders the search.")
+        for key in named_keys:
+            lifts[key] = lifts.get(key, 0.0) + NAMED_LIFT_M
         spots: dict[tuple[int, int], list] = {}
         for d, idx, r in found.values():
             spots.setdefault(cell(r), []).append((d, idx, r))
@@ -313,13 +435,16 @@ class PinpointEngine:
 
     def run(self, image: Image.Image, areas: list[Area],
             progress: ProgressFn | None = None,
-            exclude: set[str] | None = None, budget: int = BUDGET) -> dict[str, Any]:
+            exclude: set[str] | None = None, budget: int = BUDGET,
+            namer: NamerFn | None = None) -> dict[str, Any]:
         """``budget``: photographs to compare at most, in order of promise.
+        ``namer``: scores landmark names against this photograph; with it,
+        Commons is also searched by the name of the landmark that fits.
         ``exclude``: reference ids never to match -- for evaluation, where a
         benchmark photograph must not be found as its own Commons copy."""
         try:
             return self._run(image, areas, progress, exclude,
-                             max(1, min(MAX_BUDGET, int(budget))))
+                             max(1, min(MAX_BUDGET, int(budget))), namer)
         finally:
             try:
                 self.prune()
@@ -327,7 +452,8 @@ class PinpointEngine:
                 log.warning("the Pinpoint cache could not be pruned")
 
     def _run(self, image: Image.Image, areas: list[Area], progress: ProgressFn | None,
-             exclude: set[str] | None, budget: int) -> dict[str, Any]:
+             exclude: set[str] | None, budget: int,
+             namer: NamerFn | None = None) -> dict[str, Any]:
         step = progress or (lambda k, m: None)
         searched = {"areas": [{"lat": a.lat, "lon": a.lon, "radius_m": a.radius_m,
                                "label": a.label} for a in areas[:MAX_AREAS]],
@@ -358,7 +484,7 @@ class PinpointEngine:
         def best_match(feats):
             return max((match(v, feats) for v in views), key=lambda m: m.inliers)
 
-        order, notes, coverage = self._plan(areas, step, set(exclude or ()))
+        order, notes, coverage = self._plan(areas, step, set(exclude or ()), namer=namer)
         searched["areas"] = [{**sa, **cv} for sa, cv in zip(searched["areas"], coverage)]
         searched["listed"] = len(order)
         base["notes"] = notes

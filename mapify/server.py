@@ -581,9 +581,16 @@ def create_app(cfg: Config | None = None, token: str | None = None,
         def work() -> dict:
             from io import BytesIO
             from PIL import Image
+            from .pinpoint.engine import clip_namer
             with Image.open(BytesIO(data)) as img:
                 img.load()
-                return _pinpoint_engine().run(img, areas, progress, budget=budget)
+                # The analysis's CLIP, already loaded, weighs the landmark
+                # names near each area against the photograph; never loaded
+                # just for this.
+                clip = getattr(engine, "clip", None)
+                namer = clip_namer(clip, img) if clip is not None and clip.loaded else None
+                return _pinpoint_engine().run(img, areas, progress, budget=budget,
+                                              namer=namer)
 
         async def run() -> None:
             try:

@@ -209,6 +209,52 @@ def test_a_crowded_spot_inside_the_area_gets_a_ring_of_its_own(tmp_path, monkeyp
     assert all(r < 100 for _, _, r in calls[engine_mod.PROBES_PER_AREA:])
 
 
+def test_only_a_name_that_clearly_fits_is_chosen():
+    from mapify.pinpoint.engine import choose_names
+    names = ["Tour Eiffel", "Cafe Kleber", "Pharmacie", "Musee du Quai Branly", "Hotel"]
+    assert choose_names(names, [0.31, 0.18, 0.17, 0.20, 0.18]) == ["Tour Eiffel"]
+    assert choose_names(names, [0.19, 0.18, 0.18, 0.19, 0.18]) == []   # nothing stands out
+    assert choose_names(["Tower"], [0.25]) == ["Tower"]                # too few: absolute
+    assert choose_names(["Kiosk"], [0.15]) == []
+
+
+def _named_engine(tmp_path, monkeypatch, scores):
+    crowd = [_bare(f"c-{i}", 12.97 + (i % 20) * 2e-5, 77.58 + (i // 20) * 2e-5)
+             for i in range(200)]
+    tower = [_bare(f"tower-{i}", 12.97 + 600 / 111320.0, 77.58) for i in range(3)]
+    searched = []
+    monkeypatch.setattr(engine_mod, "commons_listing",
+                        lambda lat, lon, radius, cache: list(crowd))
+
+    def search(text, lat, lon, radius, cache):
+        searched.append(text)
+        return list(tower)
+
+    monkeypatch.setattr(engine_mod, "commons_search_near", search)
+    marks = [("Tower", 12.975, 77.58), ("Kiosk", 12.97, 77.58), ("Bakery", 12.97, 77.581),
+             ("Shop", 12.971, 77.58), ("Bank", 12.97, 77.579)]
+    eng = PinpointEngine(tmp_path, landmarks=lambda lat, lon, r: marks)
+    order, notes, cover = eng._plan([Area(12.97, 77.58, 1000)], lambda k, m: None, set(),
+                                    namer=lambda names: [scores.get(n, 0.18) for n in names])
+    return order, notes, cover, searched
+
+
+def test_photographs_of_the_landmark_that_fits_go_first(tmp_path, monkeypatch):
+    # Listed by distance, the tower's photographs (600 m out) would come
+    # after the 200 nearer ones; found by its name, they lead.
+    order, notes, cover, searched = _named_engine(tmp_path, monkeypatch, {"Tower": 0.31})
+    assert searched == ["Tower"]
+    assert all(r.id.startswith("File:tower-") for r in order[:3])
+    assert cover[0]["named"][0] == {"name": "Tower", "found": 3, "not_listed_otherwise": 3}
+    assert any("photographs of Tower" in n for n in notes)
+
+
+def test_no_clear_fit_searches_no_name(tmp_path, monkeypatch):
+    order, notes, cover, searched = _named_engine(tmp_path, monkeypatch, {})
+    assert searched == [] and cover[0]["named"] == []
+    assert not any(r.id.startswith("File:tower-") for r in order)
+
+
 def test_repeat_shots_from_one_spot_are_pushed_back(tmp_path, monkeypatch):
     # Five shots from one spot 100 m away: after the first, each is pushed
     # back 120 / 5 = 24 m, so a lone photograph at 115 m comes second.
@@ -320,6 +366,25 @@ def test_commons_keeps_free_photographs_nearest_first(tmp_path, monkeypatch):
     refs = sources.commons_near(12.97, 77.58, 3000, tmp_path)
     assert [r.title for r in refs] == ["near.jpg", "far.jpg"]
     assert refs[0].author == "Someone" and refs[0].distance_m < 50
+
+
+def test_a_name_search_keeps_relevance_order_and_the_circle(tmp_path, monkeypatch):
+    urls = []
+    answer = {"query": {"pages": {
+        "1": {"title": "File:second.jpg", "index": 2,
+              "coordinates": [{"lat": 12.9701, "lon": 77.5801}]},
+        "2": {"title": "File:first.jpg", "index": 1,
+              "coordinates": [{"lat": 12.9702, "lon": 77.5802}]},
+        "3": {"title": "File:no-camera.jpg", "index": 3},
+        "4": {"title": "File:far.jpg", "index": 4,
+              "coordinates": [{"lat": 13.1, "lon": 77.58}]}}}}
+    monkeypatch.setattr(sources, "_get_json",
+                        lambda url, timeout=30.0: urls.append(url) or answer)
+    refs = sources.commons_search_near('Tour "Eiffel"', 12.97, 77.58, 1000, tmp_path)
+    assert [r.title for r in refs] == ["first.jpg", "second.jpg"]
+    assert "nearcoord%3A1000m%2C12.97000%2C77.58000" in urls[0]
+    assert "%22" not in urls[0]                         # quotes stripped
+    assert sources.commons_search_near("   ", 1, 1, 500, tmp_path) == []
 
 
 def test_details_are_asked_for_once_and_unfree_files_dropped(tmp_path, monkeypatch):

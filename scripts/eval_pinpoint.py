@@ -11,6 +11,8 @@ By default this measures the matching, not the search: in use, Pinpoint
 searches around the analysis's estimate, which is sometimes far from the
 truth. ``--offset`` moves the search centre that far from the truth (a
 different bearing per photograph) to measure the search as well.
+``--names`` also searches Commons by the names of the landmarks the
+photograph fits, weighed with CLIP as the application does.
 
     python scripts/eval_pinpoint.py [--scene landmark] [--radius 800] [--offset 0]
 """
@@ -20,6 +22,7 @@ from __future__ import annotations
 import argparse
 import json
 import math
+import os
 import sys
 import time
 from pathlib import Path
@@ -49,6 +52,9 @@ def main() -> int:
                     help="metres between the search centre and the truth")
     ap.add_argument("--budget", type=int, default=0,
                     help="photographs to compare at most (default: the engine's)")
+    ap.add_argument("--names", action="store_true",
+                    help="also search by the names of landmarks the photograph fits "
+                         "(loads CLIP from the local model cache)")
     ap.add_argument("--sites", default="",
                     help="comma-separated sample sites to run (default: all of the scene)")
     args = ap.parse_args()
@@ -64,6 +70,17 @@ def main() -> int:
     if args.limit:
         items = items[:args.limit]
     engine = PinpointEngine(state_dir() / "pinpoint")
+    clip = None
+    if args.names:
+        os.environ.setdefault("HF_HUB_OFFLINE", "1")      # the weights already here
+        from mapify.paths import apply_model_cache_env
+        apply_model_cache_env()
+        from mapify.models.clip_backend import ClipBackend
+        from mapify.pinpoint.engine import clip_namer
+        clip = ClipBackend()
+        if not clip.load():
+            print("CLIP could not be loaded:", clip.load_error)
+            return 1
     rows = []
     for it in items:
         t0 = time.time()
@@ -75,6 +92,7 @@ def main() -> int:
             img.load()
             res = engine.run(img, [Area(lat, lon, args.radius, it["site"])],
                              exclude={it.get("commons_title", "")},
+                             namer=clip_namer(clip, img) if clip is not None else None,
                              **({"budget": args.budget} if args.budget else {}))
         best = res.get("best") or {}
         err = None
@@ -91,6 +109,10 @@ def main() -> int:
               f"{best.get('title', '')[:50]}", flush=True)
         for note in res.get("notes") or []:
             print(f"{'':<16} note: {note}", flush=True)
+        for area in res["searched"].get("areas") or []:
+            for named in area.get("named") or []:
+                print(f"{'':<16} named: {named['name']} -- {named['found']} found, "
+                      f"{named['not_listed_otherwise']} not listed by distance", flush=True)
     hits = [r for r in rows if r[1] == "pinpointed"]
     print(f"\n{len(hits)} of {len(rows)} pinpointed"
           + (f"; median error {sorted(r[3] for r in hits)[len(hits) // 2]:.0f} m"

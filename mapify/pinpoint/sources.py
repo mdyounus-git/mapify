@@ -29,8 +29,9 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-__all__ = ["Reference", "commons_listing", "commons_details", "commons_near", "touch",
-           "mapillary_near", "fetch_thumb", "UA", "LISTING_CAP"]
+__all__ = ["Reference", "commons_listing", "commons_search_near", "commons_details",
+           "commons_near", "touch", "mapillary_near", "fetch_thumb", "UA",
+           "LISTING_CAP"]
 
 UA = ("Mapify/0.1 (open-source image geolocation; "
       "https://github.com/mdyounus-git/mapify)")
@@ -164,6 +165,48 @@ def commons_listing(lat: float, lon: float, radius_m: int, cache: Path) -> list[
         r.distance_m = _metres(lat, lon, r.lat, r.lon)
         out.append(r)
     out.sort(key=lambda r: r.distance_m)
+    return out
+
+
+def commons_search_near(text: str, lat: float, lon: float, radius_m: int,
+                        cache: Path) -> list[Reference]:
+    """Commons files that mention ``text`` and were taken within the radius.
+
+    A full-text search (CirrusSearch) narrowed by ``nearcoord:`` to the
+    circle, at most LISTING_CAP files, most relevant first, with each
+    file's camera position. Where a geo search drowns in a crowded spot
+    -- 760 photographs at the foot of one tower -- this finds the ones of
+    the named thing, wherever in the circle they were taken. Unresolved,
+    like ``commons_listing``; files with no camera position are dropped.
+    """
+    radius_m = int(max(10, min(10000, radius_m)))
+    words = " ".join(w for w in (text or "").replace('"', " ").split() if w)[:120]
+    if not words:
+        return []
+
+    def fetch() -> list[dict]:
+        data = _get_json(_COMMONS + "?" + urllib.parse.urlencode({
+            "action": "query", "format": "json", "generator": "search",
+            "gsrsearch": f"{words} nearcoord:{radius_m}m,{lat:.5f},{lon:.5f}",
+            "gsrnamespace": "6", "gsrlimit": str(LISTING_CAP),
+            "prop": "coordinates", "colimit": "max", "coprimary": "primary"}))
+        out = []
+        for page in ((data.get("query") or {}).get("pages") or {}).values():
+            co = (page.get("coordinates") or [None])[0]
+            if co:
+                out.append({"title": page["title"], "lat": co["lat"], "lon": co["lon"],
+                            "rank": page.get("index", 0)})
+        return sorted(out, key=lambda h: h["rank"])
+
+    raw = _cached(cache, f"commons-search:{words}:{lat:.5f}:{lon:.5f}:{radius_m}", fetch)
+    out = []
+    for h in raw:
+        r = Reference(source="commons", id=h["title"], lat=float(h["lat"]),
+                      lon=float(h["lon"]), thumb_url="", page_url="", licence="",
+                      author="", title=h["title"].removeprefix("File:"))
+        r.distance_m = _metres(lat, lon, r.lat, r.lon)
+        if r.distance_m <= radius_m:
+            out.append(r)
     return out
 
 
