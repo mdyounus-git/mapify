@@ -29,6 +29,8 @@
 
 import { BuildingIndex, EYE_HEIGHT_M, Walker, floorLines, groundLayers,
          nearestRoadPoint, streetLabels } from "./walk.js";
+import { AMBIENCE_NOTE, Ambience, SceneFx, describeWeather, lightFor, readWeather,
+         skyFor } from "./scene.js";
 
 const DECK_SRC = "vendor/deck/dist.min.js";
 let deckLoading = null;
@@ -169,6 +171,11 @@ export class Ground3D {
     this.photoOn = false;
     this.photoOpacity = 0.5;
     this.fovy = WALK_FOVY;
+    this.weather = null;          // Open-Meteo's reading for the walk, as served
+    this._reading = null;         // ...and what it means for the drawing
+    this.ambience = new Ambience();
+    this.ambienceOn = false;
+    this._walkLayers = [];
     this.walker = new Walker({
       getState: () => this.viewState,
       setState: (v) => { this.viewState = v; this.deck?.setProps({ viewState: v }); },
@@ -193,6 +200,7 @@ export class Ground3D {
   _build() {
     this.host.innerHTML = `
       <div class="g3d-canvas"></div>
+      <canvas class="g3d-fx" aria-hidden="true"></canvas>
       <div class="g3d-photo" hidden aria-hidden="true"><img alt=""></div>
       <div class="g3d-top">
         <div class="g3d-title">
@@ -210,6 +218,9 @@ export class Ground3D {
                   title="Walk around at eye level (F)">Walk</button>
           <button type="button" data-act="photo" class="g3d-photo-btn" hidden
                   title="Lay your photograph over the view (P)">Photo</button>
+          <button type="button" data-act="ambience" class="g3d-amb-btn" hidden
+                  title="Illustrative people, vehicles and birds -- not observed at this place"
+                  >Ambience</button>
           <label class="g3d-imagery-label">Ground
             <select class="g3d-imagery" aria-label="Ground imagery"></select>
           </label>
@@ -238,6 +249,8 @@ export class Ground3D {
           <kbd>[</kbd><kbd>]</kbd> fade &middot; <kbd>-</kbd><kbd>=</kbd> lens
         </div>
         <div class="g3d-walk-lens"></div>
+        <div class="g3d-walk-weather"></div>
+        <div class="g3d-walk-amb" hidden></div>
         <div class="g3d-walk-light"></div>
       </div>
       <div class="g3d-attrib"></div>`;
@@ -263,7 +276,12 @@ export class Ground3D {
       photoImg: this.host.querySelector(".g3d-photo img"),
       photoBtn: this.host.querySelector(".g3d-photo-btn"),
       photoKeys: this.host.querySelector(".g3d-walk-photokeys"),
+      fx: this.host.querySelector(".g3d-fx"),
+      ambBtn: this.host.querySelector(".g3d-amb-btn"),
+      walkWeather: this.host.querySelector(".g3d-walk-weather"),
+      walkAmb: this.host.querySelector(".g3d-walk-amb"),
     };
+    this.fx = new SceneFx(this.el.fx);
     this.host.querySelector(".g3d-tools").addEventListener("click", (e) => {
       const act = e.target.closest("button")?.dataset.act;
       if (act) this._act(act);
@@ -690,6 +708,7 @@ export class Ground3D {
     const photo = Boolean(this.target?.photoUrl);
     this.el.photoBtn.hidden = !photo;
     this.el.photoKeys.hidden = !photo;
+    this.el.ambBtn.hidden = false;
     this.fovy = WALK_FOVY;
     this.viewState = { longitude: lon, latitude: lat, position: [0, 0, EYE_HEIGHT_M],
                        bearing, pitch: 0, minPitch: -80, maxPitch: 80 };
@@ -706,6 +725,7 @@ export class Ground3D {
     this._walkMoved(lon, lat, true);
     this.walker.start();
     this._status("");
+    this._loadWeather(lon, lat);
   }
 
   exitWalk(render = true) {
@@ -713,6 +733,11 @@ export class Ground3D {
     this._setPhoto(false);
     this.el.photoBtn.hidden = true;
     this.el.photoKeys.hidden = true;
+    this._setAmbience(false);
+    this.el.ambBtn.hidden = true;
+    this.fx.stop();
+    this.host.style.background = "";
+    this.el.walkWeather.textContent = "";
     this.walker.stop();
     this.walking = false;
     this.host.classList.remove("walking");
@@ -832,10 +857,84 @@ export class Ground3D {
     // No cast shadows: deck.gl's shadow maps are experimental, and over a
     // few kilometres of city they darkened every wall rather than casting.
     // The sun's direction still lights each face by the hour.
+    const k = lightFor(this._reading);       // cloud dims the sun, lifts the diffuse
     return new LightingEffect({
-      ambient: new AmbientLight({ color: [255, 255, 255], intensity: 1.55 }),
-      sun: new SunLight({ timestamp: ts, color: [255, 246, 230], intensity: 1.6 }),
+      ambient: new AmbientLight({ color: [255, 255, 255], intensity: 1.55 * k.ambient }),
+      sun: new SunLight({ timestamp: ts, color: [255, 246, 230], intensity: 1.6 * k.sun }),
     });
+  }
+
+  /**
+   * The weather the walk is drawn in, from Open-Meteo: at the hour the
+   * photograph was taken when that is known, otherwise now. The sky, the
+   * light, rain, snow, fog and haze follow the reading; nothing is drawn
+   * that it does not say. With no reading the walk stays as it was.
+   */
+  async _loadWeather(lon, lat) {
+    const at = this.target?.capturedAt;
+    const key = `${lat.toFixed(2)},${lon.toFixed(2)},${at || "now"}`;
+    if (this._weatherKey !== key) {
+      this._weatherKey = key;
+      this.weather = null;
+      try {
+        const q = `lat=${lat.toFixed(5)}&lon=${lon.toFixed(5)}`
+          + (at ? `&at=${encodeURIComponent(at)}` : "");
+        const resp = await fetch(`/api/weather/scene?${q}`);
+        this.weather = resp.ok ? await resp.json() : null;
+      } catch (_) {
+        this.weather = null;
+      }
+    }
+    if (!this.walking) return;
+    this._reading = readWeather(this.weather);
+    this.host.style.background = this._reading ? skyFor(this._reading) : "";
+    this.el.walkWeather.textContent = describeWeather(this.weather);
+    this.fx.set(this._reading);
+    this.fx.bearing = this.viewState?.bearing || 0;
+    if (this.fx.active) this.fx.start(); else this.fx.stop();
+    const deck = window.deck;
+    if (deck && this.deck) {
+      const v = this.viewState;
+      this.deck.setProps({ effects: [this._walkLighting(deck, v.longitude, v.latitude)] });
+    }
+    this._attrib();
+  }
+
+  /**
+   * Illustrative people, vehicles and birds (scene.js). Off by default;
+   * while on, the walk says they are illustrative.
+   */
+  _setAmbience(on) {
+    this.ambienceOn = Boolean(on && this.walking);
+    this.el.ambBtn.classList.toggle("on", this.ambienceOn);
+    this.el.walkAmb.hidden = !this.ambienceOn;
+    this.el.walkAmb.textContent = this.ambienceOn ? AMBIENCE_NOTE : "";
+    this.fx.setBirds(this.ambienceOn);
+    if (this.ambienceOn) {
+      const v = this.viewState;
+      this.ambience.build(this.data.roads.values(), v.longitude, v.latitude);
+      this._ambienceAt = [v.longitude, v.latitude];
+      this.fx.start();
+      if (!this._ambRaf) {
+        let last = performance.now(), drawn = 0;
+        const tick = (now) => {
+          this._ambRaf = requestAnimationFrame(tick);
+          this.ambience.step(Math.min(0.1, (now - last) / 1000));
+          last = now;
+          if (now - drawn > 50 && this.deck && window.deck) {   // ~20 frames a second
+            drawn = now;
+            this.deck.setProps({ layers: [...this._walkLayers,
+                                          ...this.ambience.layers(window.deck)] });
+          }
+        };
+        this._ambRaf = requestAnimationFrame(tick);
+      }
+    } else {
+      if (this._ambRaf) cancelAnimationFrame(this._ambRaf);
+      this._ambRaf = null;
+      if (!this.fx.active) this.fx.stop();
+      if (this.walking && this.deck) this.deck.setProps({ layers: this._walkLayers });
+    }
   }
 
   _overviewLighting(deck) {
@@ -854,6 +953,12 @@ export class Ground3D {
     const now = performance.now();
     if (!force && now - (this._hudAt || 0) < 180) return;
     this._hudAt = now;
+    this.fx.bearing = this.viewState?.bearing || 0;
+    if (this.ambienceOn && this._ambienceAt
+        && metresBetween(this._ambienceAt, [lon, lat]) > 300) {
+      this.ambience.build(this.data.roads.values(), lon, lat);
+      this._ambienceAt = [lon, lat];
+    }
     const road = nearestRoadPoint(this.data.roads.values(), lon, lat, 40);
     const v = this.viewState;
     const dirs = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"];
@@ -935,7 +1040,9 @@ export class Ground3D {
       }));
     }
     layers.push(...this._matchLayers(deck, true));
-    this.deck.setProps({ layers });
+    this._walkLayers = layers;
+    this.deck.setProps({ layers: this.ambienceOn
+      ? [...layers, ...this.ambience.layers(deck)] : layers });
     this._attrib();
   }
 
@@ -1022,6 +1129,7 @@ export class Ground3D {
       const ov = this.imagery.find((i) => i.overlay);
       if (ov) parts.push(esc(ov.attribution));
     }
+    if (this.walking && this.weather?.available) parts.push(esc(this.weather.attribution));
     parts.push("Rendered with deck.gl (MIT)");
     this.el.attrib.innerHTML = parts.join(" &middot; ");
   }
@@ -1074,6 +1182,10 @@ export class Ground3D {
     }
     if (act === "photo") {
       this._setPhoto(!this.photoOn);
+      return;
+    }
+    if (act === "ambience") {
+      this._setAmbience(!this.ambienceOn);
       return;
     }
     const v = { ...this.viewState };
