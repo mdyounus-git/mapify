@@ -184,9 +184,10 @@ def _geom(rings: list[list[tuple[int, int]]], close: bool) -> list[int]:
     return out
 
 
-def _tile(english: str | None = None) -> bytes:
+def _tile(english: str | None = None, second_part: bool = False) -> bytes:
     """A vector tile with a clipped building, a hole, a road and a label
-    (with an English name too, when ``english`` is given)."""
+    (with an English name too, when ``english`` is given, and the building
+    feature holding a second, separate footprint when ``second_part``)."""
     def packed(vals):
         return b"".join(_varint(v) for v in vals)
 
@@ -204,8 +205,11 @@ def _tile(english: str | None = None) -> bytes:
     # hole wound the other way.
     outer = [(3900, 100), (4300, 100), (4300, 500), (3900, 500)]
     hole = [(3950, 150), (3950, 250), (4050, 250), (4050, 150)]
+    rings = [outer, hole]
+    if second_part:                      # wound like ``outer``: another exterior
+        rings.append([(1000, 1000), (1400, 1000), (1400, 1400), (1000, 1400)])
     building = (_field(1, 2, b"building")
-                + _field(2, 2, feature(3, [0, 0], _geom([outer, hole], True)))
+                + _field(2, 2, feature(3, [0, 0], _geom(rings, True)))
                 + _field(3, 2, b"render_height") + _field(4, 2, value_int(24))
                 + _field(5, 0, 4096) + _field(15, 0, 2))
     road = (_field(1, 2, b"transportation")
@@ -276,6 +280,38 @@ class TestVectorTiles:
         assert self._filed_poi(tmp_path / "a", "Market Hall")[5] == "Market Hall"
         assert len(self._filed_poi(tmp_path / "b", None)) == 5
         assert len(self._filed_poi(tmp_path / "c", "Test Market")) == 5   # same: not kept
+
+    def test_every_part_of_a_multi_part_building_is_kept(self, tmp_path):
+        """Merged buildings come as one feature of many polygons; they all
+        stay (they shared one id, and all but the first were dropped)."""
+        from mapify.geodata.store import GeoStore, _tile_bounds
+        from mapify.geodata.vector_tiles import OpenFreeMap
+        st = GeoStore(tmp_path / "s.sqlite")
+        st.begin_stage()
+        OpenFreeMap(st, tmp_path)._file(_tile(second_part=True), self.X, self.Y)
+        st.finish_stage()
+        got = st.query(_tile_bounds(self.Z, self.X, self.Y), ("building",))["building"]
+        assert len(got) == 2
+        assert len({f[0] for _, f in got}) == 2
+
+    def test_an_older_filing_is_discarded_once(self, tmp_path):
+        from mapify.geodata.store import GeoStore
+        from mapify.geodata.vector_tiles import FILING_VERSION, OpenFreeMap
+        st = GeoStore(tmp_path / "s.sqlite")
+        st.begin_stage()
+        st.stage("poi", "ofm", (1, 1, 1, 1), [1, "shop=shop", "Old", 1000000, 1000000])
+        st.stage("poi", "osm", (1, 1, 1, 1), [2, "shop=shop", "Imported", 1000000, 1000000])
+        st.finish_stage()
+        st.mark_fetched("ofm", 14, 1, 1)
+        ofm = OpenFreeMap(st, tmp_path)
+        ofm._check_filing_version()
+        got = st.query((0.9, 0.9, 1.1, 1.1), ("poi",))["poi"]
+        assert [s for s, _ in got] == ["osm"], "an imported region is never discarded"
+        assert not st.was_fetched("ofm", 14, 1, 1)
+        assert st.meta_get("ofm_filing_version") == str(FILING_VERSION)
+        st.mark_fetched("ofm", 14, 1, 1)
+        OpenFreeMap(st, tmp_path)._check_filing_version()   # current: nothing happens
+        assert st.was_fetched("ofm", 14, 1, 1)
 
     def test_tiles_fetched_before_a_change_are_fetched_again(self, tmp_path):
         from mapify.geodata.store import GeoStore

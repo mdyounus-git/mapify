@@ -257,6 +257,22 @@ class GeoStore:
              checksum, json.dumps(counts)))
         self.db.commit()
 
+    def meta_get(self, key: str) -> str | None:
+        row = self.db.execute("SELECT value FROM meta WHERE key=?", (key,)).fetchone()
+        return row[0] if row else None
+
+    def meta_set(self, key: str, value: str) -> None:
+        self.db.execute("INSERT OR REPLACE INTO meta VALUES (?,?)", (key, value))
+        self.db.commit()
+
+    def clear_source(self, source: str) -> None:
+        """Forget everything one remote source filed, and that it was
+        fetched, so it is fetched and filed afresh as places are viewed."""
+        self.db.execute("DELETE FROM tiles WHERE source=?", (source,))
+        self.db.execute("DELETE FROM fetched WHERE source=?", (source,))
+        self.db.commit()
+        self._cache.clear()
+
     def mark_fetched(self, source: str, z: int, x: int, y: int) -> None:
         self.db.execute("INSERT OR REPLACE INTO fetched VALUES (?,?,?,?,?)",
                         (source, z, x, y,

@@ -45,9 +45,13 @@ log = logging.getLogger("mapify.geodata")
 __all__ = ["OpenFreeMap", "OFM_ATTRIBUTION", "OFM_LICENCE", "SOURCE"]
 
 SOURCE = "ofm"
-# Tiles fetched before this were filed without the English names of points
-# of interest; they are fetched once more the next time they are needed.
-REFETCH_BEFORE = "2026-10-07T11:00:00Z"   # must be in the past when shipped
+# How tiles are filed. When it changes, what an older version filed is
+# discarded once and tiles are fetched afresh as places are viewed:
+#   2  every part of a multi-part feature kept (one id per part -- before,
+#      the parts shared one id and all but the first were dropped, which
+#      in central Paris lost most buildings); English names of points of
+#      interest kept.
+FILING_VERSION = 2
 # OpenFreeMap rebuilds its planet from OpenStreetMap every week. A tile kept
 # longer than this is fetched again the next time it is needed, so a place
 # shows what was mapped lately rather than what was mapped when it was
@@ -57,9 +61,8 @@ REFRESH_AFTER_DAYS = 30
 
 def _fresh_since() -> str:
     """The oldest fetch time still counted as current."""
-    cutoff = time.strftime("%Y-%m-%dT%H:%M:%SZ",
-                           time.gmtime(time.time() - REFRESH_AFTER_DAYS * 86400))
-    return max(cutoff, REFETCH_BEFORE)
+    return time.strftime("%Y-%m-%dT%H:%M:%SZ",
+                         time.gmtime(time.time() - REFRESH_AFTER_DAYS * 86400))
 OFM_ATTRIBUTION = "OpenFreeMap © OpenMapTiles Data from OpenStreetMap"
 OFM_LICENCE = "ODbL 1.0 (OpenStreetMap data); OpenMapTiles schema"
 OFM_LINK = "https://openfreemap.org"
@@ -88,6 +91,19 @@ class OpenFreeMap:
         self._tilejson: dict[str, Any] | None = None
         self._tj_at = 0.0
         self._lock = threading.Lock()
+        self._version_checked = False
+
+    def _check_filing_version(self) -> None:
+        """Discard what an older filing version stored (see FILING_VERSION)."""
+        if self._version_checked:
+            return
+        key = f"{SOURCE}_filing_version"
+        if self.store.meta_get(key) != str(FILING_VERSION):
+            log.info("OpenFreeMap features were filed by an older version; "
+                     "they will be fetched afresh as places are viewed")
+            self.store.clear_source(SOURCE)
+            self.store.meta_set(key, str(FILING_VERSION))
+        self._version_checked = True
 
     def _template(self) -> str:
         """The current tile URL; the planet build it names changes weekly."""
@@ -125,6 +141,7 @@ class OpenFreeMap:
     def ensure(self, bbox: tuple[float, float, float, float]) -> dict[str, int]:
         """Fetch and file every z14 tile touching ``bbox`` not already held."""
         with self._lock:
+            self._check_filing_version()
             tiles = tiles_for_bbox(bbox, 14)
             missing = [t for t in tiles
                        if not self.store.was_fetched(SOURCE, 14, *t,
@@ -159,6 +176,15 @@ class OpenFreeMap:
         layers = decode_tile(raw, 14, x, y, _LAYERS)
         base_id = (x << 34) | (y << 20)
         n = 0
+        # One id per staged part, within each layer's own range of the low
+        # 20 bits: a feature can be a multi-polygon of dozens of buildings
+        # (or a multi-line street), and the store keeps one feature per id.
+        parts: dict[int, int] = {}
+
+        def uid(start: int, span: int) -> int:
+            k = parts.get(start, 0)
+            parts[start] = k + 1
+            return base_id | (start + k % span)
 
         def stage(layer, geometry_rings, feature):
             nonlocal n
@@ -186,7 +212,7 @@ class OpenFreeMap:
             hsrc = 0 if (h is None or h == DEFAULT_HEIGHT) else 3
             for poly in f["geometry"]:
                 stage("building", poly, [
-                    base_id | (i & 0xFFFFF), None, "building",
+                    uid(0x00000, 0x40000), None, "building",
                     int(round(max(height, base + 0.5) * 10)),
                     int(round(float(base) * 10)), hsrc, None, 0,
                     [encode_ring(r) for r in poly]])
@@ -205,7 +231,7 @@ class OpenFreeMap:
                 continue                 # rail, ferry, transit: not streets
             for line in f["geometry"]:
                 if len(line) >= 2:
-                    stage("road", [line], [base_id | (0x40000 + i), road,
+                    stage("road", [line], [uid(0x40000, 0x40000), road,
                                            p.get("name"), None,
                                            encode_ring(line)])
 
@@ -213,7 +239,7 @@ class OpenFreeMap:
             if f["type"] != "polygon":
                 continue
             for poly in f["geometry"]:
-                stage("water", poly, [base_id | (0x80000 + i), None,
+                stage("water", poly, [uid(0x80000, 0x20000), None,
                                       [encode_ring(r) for r in poly]])
 
         for i, f in enumerate(layers.get("waterway", [])):
@@ -222,7 +248,7 @@ class OpenFreeMap:
             p = f["props"]
             for line in f["geometry"]:
                 if len(line) >= 2:
-                    stage("waterway", [line], [base_id | (0xA0000 + i),
+                    stage("waterway", [line], [uid(0xA0000, 0x20000),
                                                p.get("class") or "stream",
                                                p.get("name"),
                                                encode_ring(line)])
@@ -235,7 +261,7 @@ class OpenFreeMap:
                    if f["type"] == "polygon"]
         for i, (f, kind) in enumerate(greens):
             for poly in f["geometry"]:
-                stage("green", poly, [base_id | (0xC0000 + i), kind, None,
+                stage("green", poly, [uid(0xC0000, 0x20000), kind, None,
                                       [encode_ring(r) for r in poly]])
 
         for i, f in enumerate(layers.get("poi", [])):
