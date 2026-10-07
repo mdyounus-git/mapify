@@ -47,7 +47,19 @@ __all__ = ["OpenFreeMap", "OFM_ATTRIBUTION", "OFM_LICENCE", "SOURCE"]
 SOURCE = "ofm"
 # Tiles fetched before this were filed without the English names of points
 # of interest; they are fetched once more the next time they are needed.
-REFETCH_BEFORE = "2026-10-07T12:00:00Z"
+REFETCH_BEFORE = "2026-10-07T11:00:00Z"   # must be in the past when shipped
+# OpenFreeMap rebuilds its planet from OpenStreetMap every week. A tile kept
+# longer than this is fetched again the next time it is needed, so a place
+# shows what was mapped lately rather than what was mapped when it was
+# first seen.
+REFRESH_AFTER_DAYS = 30
+
+
+def _fresh_since() -> str:
+    """The oldest fetch time still counted as current."""
+    cutoff = time.strftime("%Y-%m-%dT%H:%M:%SZ",
+                           time.gmtime(time.time() - REFRESH_AFTER_DAYS * 86400))
+    return max(cutoff, REFETCH_BEFORE)
 OFM_ATTRIBUTION = "OpenFreeMap © OpenMapTiles Data from OpenStreetMap"
 OFM_LICENCE = "ODbL 1.0 (OpenStreetMap data); OpenMapTiles schema"
 OFM_LINK = "https://openfreemap.org"
@@ -116,7 +128,7 @@ class OpenFreeMap:
             tiles = tiles_for_bbox(bbox, 14)
             missing = [t for t in tiles
                        if not self.store.was_fetched(SOURCE, 14, *t,
-                                                     since=REFETCH_BEFORE)]
+                                                     since=_fresh_since())]
             if not missing:
                 return {"tiles": 0, "cached": len(tiles), "features": 0}
             template = self._template()

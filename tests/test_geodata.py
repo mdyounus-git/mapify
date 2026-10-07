@@ -286,6 +286,20 @@ class TestVectorTiles:
         assert not st.was_fetched("ofm", 14, 1, 2, since="2999-01-01T00:00:00Z")
         assert not st.was_fetched("ofm", 14, 9, 9)
 
+    def test_a_tile_kept_past_a_month_is_fetched_again(self, tmp_path):
+        import time as _time
+
+        from mapify.geodata.store import GeoStore
+        from mapify.geodata.vector_tiles import _fresh_since
+        st = GeoStore(tmp_path / "s.sqlite")
+        st.mark_fetched("ofm", 14, 1, 1)                       # today
+        st.mark_fetched("ofm", 14, 2, 2)
+        old = _time.strftime("%Y-%m-%dT%H:%M:%SZ", _time.gmtime(_time.time() - 40 * 86400))
+        st.db.execute("UPDATE fetched SET at=? WHERE x=2", (old,))
+        st.db.commit()
+        assert st.was_fetched("ofm", 14, 1, 1, since=_fresh_since())
+        assert not st.was_fetched("ofm", 14, 2, 2, since=_fresh_since())
+
     def test_nearby_landmarks_carry_their_english_name(self, tmp_path):
         from types import SimpleNamespace
 
