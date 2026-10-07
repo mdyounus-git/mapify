@@ -1033,8 +1033,11 @@ export class Ground3D {
     const named = [...d.pois.values()].filter((p) => p.name)
       .map((p) => ({ p, dist: metresBetween(here, p.position) }))
       .filter((n) => n.dist < 350).sort((a, b) => a.dist - b.dist).slice(0, 30);
+    // Its own id: the overview's "pois" carries collision props this one
+    // does not, and deck.gl reusing one layer's state for the other failed
+    // ("getCollisionPriority is not a function").
     layers.push(new deck.TextLayer({
-      id: "pois", data: named, characterSet: "auto",
+      id: "walk-pois", data: named, characterSet: "auto",
       getPosition: (n) => [n.p.position[0], n.p.position[1], 4.5],
       getText: (n) => n.p.name, getSize: 12, sizeUnits: "pixels",
       getColor: [236, 242, 250, 235], background: true,
@@ -1175,7 +1178,7 @@ export class Ground3D {
     if (layer?.id === "roads") {
       return { text: `${object.name || "Unnamed street"}\n${object.class}` };
     }
-    if (layer?.id === "pois") {
+    if (layer?.id === "pois" || layer?.id === "walk-pois") {
       const poi = object.p || object;          // labels carry {p, dist}
       return { text: `${poi.name}\n${poi.kind}` };
     }
