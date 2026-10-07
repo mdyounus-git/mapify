@@ -4,7 +4,7 @@ The user asked for two things: a place you can **walk around in**, and a
 **dedicated engine that maps the exact location** a photograph was taken.
 Both exist, work, and are in the installed application. This records how
 far each got, what was measured, and exactly where to pick up. Updated
-2026-10-07 after the third session.
+2026-10-07 after the fourth session.
 
 ---
 
@@ -122,28 +122,50 @@ only.
 
 ---
 
+## The fourth session (2026-10-07, evening): a shareable package and a real place
+
+The user asked for one package that works wherever it is shared, whether
+Mapify runs fully offline (answered: **no** -- analysis yes; Pinpoint,
+3D for places not seen before, and weather need the internet), and for the
+3D view and walk to look like the real place. They chose **one portable
+ZIP** and an **optional, labelled ambience**. What was built:
+
+| Commit | What |
+|---|---|
+| `4515c4bd` | English names (`name:en`) of landmarks kept; named search weighs them and searches both names -- centre 600 m off, named search now confirms Eiffel, Tower Bridge, Sydney **and Athens** (4 of the 6 that pinpoint at the true spot) |
+| `f8f863f2` | `scripts/make_portable.py --verify`: one ZIP (program + CLIP + 12 OCR models + GPS gallery, nothing personal); the packaged self-test reports the weights |
+| `4f33343c` | The walk's real weather (Open-Meteo: sky, light, rain, snow, fog, haze, wind) and optional **Ambience** (people, vehicles, birds; labelled illustrative) |
+| `0bee2721` | Map tiles older than 30 days are fetched again |
+| `1608cf4d` | Smooth zoom in the 3D view and a settle-in animation with a pulse on zooming in (the globe untouched) |
+| `0a9b3e40` | **Every part of a multi-part map feature kept**: central Paris showed 54 buildings around a street, now 2,219 -- an old bug that hid most buildings in dense cities everywhere |
+| `40fd2935`, `d46829b3` | Walk label layer fix; ambience drives the street network |
+| `233681a4`, `2fd5fb0e`, `5b91dd55` | **Real terrain**: Terrain Tiles on AWS through the tile cache; the overview's ground is the terrain under the imagery, the walk's eye stays 1.7 m above the real ground; own main-thread mesh loader (deck.gl's needs a CDN worker the page refuses) |
+
+Seen in headless screenshots (`bench/cdp_shot.py`, Edge InPrivate with sync
+off -- a fresh profile otherwise signs in and syncs the user's data): a
+Paris street in the current rain with buildings on both sides, people and
+vehicles on the street; Twin Peaks as a hill under the USGS photograph;
+a walk on Russian Hill 78 m up. Not possible free: photographic facades
+everywhere (Google's photorealistic tiles are a paid API) and real people
+or vehicles.
+
 ## Where to pick up, in order
 
-1. **English landmark names** for the places named search gets wrong. Keep
-   OSM `name:en` beside `name` in the local store (the OpenFreeMap POI
-   layer has it; the local OSM import has `name:en` tags), weigh
-   "a photo of <English name>" with CLIP, and search Commons by both names.
-   Already-fetched tiles lack it: re-fetch POIs lazily (a store version
-   bump that clears the OpenFreeMap fetched-marks). Measure with
-   `bench/names_probe.py` (no Commons calls) and then
-   `scripts/eval_pinpoint.py --names --offset 600 --sites moscow,tokyo-asakusa,beijing`
-   — but only Tokyo pinpoints at the true spot, so judge by name choice
-   first.
-2. **See the flow by eye** once the in-app browser tools work: dev server
-   (`MAPIFY_CASE_DIR=E:/mapify/bench/cases-dev python -m mapify.server`,
-   port 8771; copy a sample into `mapify/web/vendor/_dev/`, dispatch it to
-   `#file-input` from JavaScript on `document.body`, delete the copy
-   afterwards): Pinpoint → pinpointed panel → Walk here → P overlay →
-   markers; and "Search further" on a photograph that is not found.
-   Never while an evaluation is searching Commons.
-3. **Rebuild and reinstall** after any engine change: `python build_exe.py
-   --clean` (~22 min), then `installer\install.ps1 -Force` (installs into
-   `E:\mapify\app`, despite its help text); `Mapify.exe --selftest`.
+1. **The package and the installed app.** A rebuild with terrain was
+   running at the pause (`bench/build-portable3.log`, then
+   `bench/portable3.log`, which must end "VERIFIED: self-contained"). Then
+   `installer\install.ps1 -Force` (into `E:\mapify\app`) and
+   `E:\mapify\app\Mapify.exe --selftest`. The ZIP is
+   `dist\Mapify-0.1.0-portable.zip`.
+2. **Look at the rest of the flow by eye** with the headless harness:
+   dev server, `mapify/web/vendor/_dev/g3d.html` + `g3d.js` (git-ignored;
+   the page's policy refuses inline scripts and `<base>`), then
+   `python bench/cdp_shot.py "<url>" <png> --wait 20 [--eval js]`. Not yet
+   seen: the zoom pulse, the photo overlay over terrain, Pinpoint's
+   panel and markers in the full app page.
+3. Ideas not started: trees in mapped parks and woods (positions would be
+   illustrative, so they belong with ambience); English names for Moscow,
+   Giza and Rio still choose wrong.
 4. Still pending from before: the text-bearing benchmark
    (`scripts/fetch_text_samples.py --target 70`, approved by the user) and
    `measure_text_clues.py --set text`.
