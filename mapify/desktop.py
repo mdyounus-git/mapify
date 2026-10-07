@@ -620,6 +620,25 @@ def _selftest() -> int:
         probe.unlink(missing_ok=True)
         return str(state_dir())
 
+    def _weights() -> str:
+        """Where the model weights are, and whether they came with this copy.
+
+        Not a failure when absent -- the plain folder build downloads them on
+        first run -- but a portable package must say "present", or it will
+        not work offline on the computer it is shared to.
+        """
+        from .paths import models_dir, ocr_model_dir
+        root = models_dir()
+        clip = any((root / "hub").glob("models--openai--clip-vit-large-patch14/snapshots/*"))
+        ocr_dir = ocr_model_dir()
+        ocr = sorted(p.stem for p in (ocr_dir / "model").glob("*.pth")) if ocr_dir else []
+        if clip and ocr:
+            return (f"present in {root} (CLIP; OCR: {len(ocr)} models) -- "
+                    f"analysis works offline")
+        missing = [n for n, ok in (("CLIP", clip), ("OCR", bool(ocr))) if not ok]
+        return (f"{' and '.join(missing)} not here yet ({root}): downloaded on "
+                f"first run, which needs the internet")
+
     check("torch", _torch)
     check("model stack", _models)
     check("pywebview", _webview)
@@ -630,6 +649,7 @@ def _selftest() -> int:
     check("pipeline", _pipeline)
     check("headless startup", _headless_startup)
     check("writable state", _state_is_writable)
+    check("model weights", _weights)
 
     width = max(len(label) for label, _ in checks)
     for label, result in checks:
