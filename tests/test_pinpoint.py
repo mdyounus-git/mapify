@@ -580,3 +580,74 @@ def test_the_engine_asks_panoramax_only_when_switched_on(tmp_path, monkeypatch):
         [Area(48.8584, 2.2945, 800)], lambda k, m: None, set())
     assert asked == [engine_mod.PANORAMAX_PER_AREA]
     assert [r.id for r in order] == ["pic-1"]
+
+
+def test_wikidata_landmarks_carry_their_commons_category(tmp_path, monkeypatch):
+    asked = []
+
+    def fake_get_json(url, timeout=30.0, data=None):
+        asked.append(url)
+        row = lambda q, label, en, cat, lon, lat, links: {     # noqa: E731
+            "item": {"value": f"http://www.wikidata.org/entity/{q}"},
+            "itemLabel": {"value": label}, "cat": {"value": cat},
+            "coord": {"value": f"Point({lon} {lat})"}, "links": {"value": str(links)},
+            **({"en": {"value": en}} if en else {})}
+        return {"results": {"bindings": [
+            row("Q1", "Храм Василия Блаженного", "Saint Basil's Cathedral",
+                "Saint Basil's Cathedral", 37.6231, 55.7525, 120),
+            row("Q2", "Q2", None, "Something", 37.62, 55.75, 3),          # no label
+            {"itemLabel": {"value": "No coordinate"}, "cat": {"value": "X"}},
+        ]}}
+
+    monkeypatch.setattr(sources, "_get_json", fake_get_json)
+    marks = sources.wikidata_landmarks(55.7539, 37.6208, 800, tmp_path)
+    assert marks == [("Храм Василия Блаженного", 55.7525, 37.6231,
+                      "Saint Basil's Cathedral", "Saint Basil's Cathedral")]
+    assert "query.wikidata.org" in asked[0] and "P373" in asked[0]
+    sources.wikidata_landmarks(55.7539, 37.6208, 800, tmp_path)
+    assert len(asked) == 1                      # cached
+
+
+def test_a_commons_category_is_searched_as_a_category(tmp_path, monkeypatch):
+    asked = []
+
+    def fake_get_json(url, timeout=30.0, data=None):
+        asked.append(url)
+        return {"query": {"pages": {"1": {"title": "File:Basil.jpg", "index": 1,
+                                          "coordinates": [{"lat": 55.7526, "lon": 37.6230}]}}}}
+
+    monkeypatch.setattr(sources, "_get_json", fake_get_json)
+    refs = sources.commons_category_near('Saint "Basil\'s" Cathedral', 55.7539, 37.6208,
+                                         800, tmp_path)
+    assert [r.id for r in refs] == ["File:Basil.jpg"]
+    import urllib.parse
+    query = urllib.parse.parse_qs(urllib.parse.urlparse(asked[0]).query)["gsrsearch"][0]
+    assert query.startswith('incategory:"Saint  Basil\'s  Cathedral"'.replace("  ", " "))
+    assert "nearcoord:800m," in query
+
+
+def test_named_search_looks_in_the_landmarks_category_first(tmp_path, monkeypatch):
+    marks = [("Храм Василия Блаженного", 55.7525, 37.6231, "Saint Basil's Cathedral",
+              "Saint Basil's Cathedral"),
+             ("ГУМ", 55.7547, 37.6215, "GUM")]
+    searched = []
+
+    def by_text(term, lat, lon, radius, cache):
+        searched.append(("text", term))
+        return [_bare(f"text-{term}", lat, lon)]
+
+    def by_category(cat, lat, lon, radius, cache):
+        searched.append(("category", cat))
+        return [_bare(f"cat-{cat}", lat, lon)]
+
+    monkeypatch.setattr(engine_mod, "commons_search_near", by_text)
+    monkeypatch.setattr(engine_mod, "commons_category_near", by_category)
+    eng = PinpointEngine(tmp_path, landmarks=lambda lat, lon, r: marks)
+    named = eng._named(Area(55.7539, 37.6208, 800),
+                       lambda names: [5.0 if "Basil" in n else 0.0 for n in names],
+                       lambda k, m: None, [])
+    assert ("category", "Saint Basil's Cathedral") in searched
+    assert not any(kind == "category" and "GUM" in what for kind, what in searched)
+    name, refs = named[0]
+    assert name == "Saint Basil's Cathedral"
+    assert refs[0].id == "File:cat-Saint Basil's Cathedral.jpg"     # the category leads

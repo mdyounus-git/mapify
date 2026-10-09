@@ -53,9 +53,10 @@ from PIL import Image
 
 from .features import (QUERY_PIXELS, QUERY_SIDE, REFERENCE_SIDE, REFINE_SIDE, extract,
                        load, match, save, windows)
-from .sources import (LISTING_CAP, Reference, commons_details, commons_listing,
-                      commons_search_near, fetch_thumb, mapillary_near,
-                      panoramax_near, touch)
+from .sources import (LISTING_CAP, Reference, commons_category_near,
+                      commons_details, commons_listing, commons_search_near,
+                      fetch_thumb, mapillary_near, panoramax_near, touch,
+                      wikidata_landmarks)
 
 log = logging.getLogger("mapify.pinpoint")
 
@@ -149,6 +150,34 @@ def local_landmarks(online: bool = True) -> LandmarksFn:
     return find
 
 
+def merged_landmarks(online: bool, cache: Path) -> LandmarksFn:
+    """Wikidata's notable landmarks first (each with its Commons category),
+    then the named features of the map data."""
+    from_map = local_landmarks(online)
+
+    def find(lat: float, lon: float, radius_m: float) -> list[tuple]:
+        marks: list[tuple] = []
+        if online:
+            try:
+                marks.extend(wikidata_landmarks(lat, lon, radius_m, cache))
+            except Exception as exc:              # network, quota, format
+                log.info("Wikidata landmarks unavailable: %s", exc)
+        return marks + list(from_map(lat, lon, radius_m))
+    return find
+
+
+def landmark_categories(marks: list[tuple]) -> dict[str, str]:
+    """The Commons category of each landmark that has one, keyed by the
+    label landmark_labels weighs it by."""
+    out: dict[str, str] = {}
+    for m in marks:
+        if not m or not m[0] or len(m) < 5 or not m[4]:
+            continue
+        label = (m[3] if m[3] else None) or m[0]
+        out.setdefault(label, m[4])
+    return out
+
+
 def landmark_labels(marks: list[tuple]) -> dict[str, list[str]]:
     """What to weigh each landmark by, and what to search Commons for.
 
@@ -229,7 +258,7 @@ class PinpointEngine:
         self.panoramax = panoramax
         self.workers = workers
         self.cache_mb = cache_mb
-        self.landmarks = landmarks or local_landmarks(online)
+        self.landmarks = landmarks or merged_landmarks(online, self.cache)
 
     def _named(self, a: Area, namer: NamerFn, step: ProgressFn,
                notes: list[str]) -> list[tuple[str, list[Reference]]]:
@@ -241,6 +270,7 @@ class PinpointEngine:
                          f"({type(exc).__name__}); nothing was searched by name.")
             return []
         terms = landmark_labels(marks)
+        categories = landmark_categories(marks)
         names = list(terms)
         if not names:
             return []
@@ -263,6 +293,13 @@ class PinpointEngine:
                 except Exception as exc:
                     notes.append(f"Commons could not be searched for {term} "
                                  f"({type(exc).__name__})")
+            if name in categories:
+                try:
+                    found.insert(0, commons_category_near(
+                        categories[name], a.lat, a.lon, int(a.radius_m), self.cache))
+                except Exception as exc:
+                    notes.append(f"Commons could not be searched for the category "
+                                 f"{categories[name]} ({type(exc).__name__})")
             if found:
                 out.append((name, _interleave(found)))
         return out

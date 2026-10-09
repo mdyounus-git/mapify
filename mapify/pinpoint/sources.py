@@ -32,8 +32,9 @@ from pathlib import Path
 from typing import Any
 
 __all__ = ["Reference", "commons_listing", "commons_search_near", "commons_details",
-           "commons_near", "touch", "mapillary_near", "panoramax_near",
-           "fetch_thumb", "UA", "LISTING_CAP"]
+           "commons_category_near", "commons_near", "touch", "mapillary_near",
+           "panoramax_near", "wikidata_landmarks", "fetch_thumb", "UA",
+           "LISTING_CAP"]
 
 UA = ("Mapify/0.1 (open-source image geolocation; "
       "https://github.com/mdyounus-git/mapify)")
@@ -194,15 +195,34 @@ def commons_search_near(text: str, lat: float, lon: float, radius_m: int,
     the named thing, wherever in the circle they were taken. Unresolved,
     like ``commons_listing``; files with no camera position are dropped.
     """
-    radius_m = int(max(10, min(10000, radius_m)))
     words = " ".join(w for w in (text or "").replace('"', " ").split() if w)[:120]
     if not words:
         return []
+    return _commons_geo_search(words, f"commons-search:{words}", lat, lon,
+                               radius_m, cache)
+
+
+def commons_category_near(category: str, lat: float, lon: float, radius_m: int,
+                          cache: Path) -> list[Reference]:
+    """Commons files in a category -- the photographs *of* a landmark,
+    however they are captioned -- taken within the radius. The category
+    comes from Wikidata (P373); its direct members only."""
+    name = " ".join((category or "").replace('"', " ").split())[:200]
+    if not name:
+        return []
+    return _commons_geo_search(f'incategory:"{name}"', f"commons-category:{name}",
+                               lat, lon, radius_m, cache)
+
+
+def _commons_geo_search(search: str, key: str, lat: float, lon: float,
+                        radius_m: int, cache: Path) -> list[Reference]:
+    """A CirrusSearch query narrowed by ``nearcoord:`` to the circle."""
+    radius_m = int(max(10, min(10000, radius_m)))
 
     def fetch() -> list[dict]:
         data = _get_json(_COMMONS + "?" + urllib.parse.urlencode({
             "action": "query", "format": "json", "generator": "search",
-            "gsrsearch": f"{words} nearcoord:{radius_m}m,{lat:.5f},{lon:.5f}",
+            "gsrsearch": f"{search} nearcoord:{radius_m}m,{lat:.5f},{lon:.5f}",
             "gsrnamespace": "6", "gsrlimit": str(LISTING_CAP),
             "prop": "coordinates", "colimit": "max", "coprimary": "primary"}))
         out = []
@@ -213,7 +233,7 @@ def commons_search_near(text: str, lat: float, lon: float, radius_m: int,
                             "rank": page.get("index", 0)})
         return sorted(out, key=lambda h: h["rank"])
 
-    raw = _cached(cache, f"commons-search:{words}:{lat:.5f}:{lon:.5f}:{radius_m}", fetch)
+    raw = _cached(cache, f"{key}:{lat:.5f}:{lon:.5f}:{radius_m}", fetch)
     out = []
     for h in raw:
         r = Reference(source="commons", id=h["title"], lat=float(h["lat"]),
@@ -223,6 +243,65 @@ def commons_search_near(text: str, lat: float, lon: float, radius_m: int,
         if r.distance_m <= radius_m:
             out.append(r)
     return out
+
+
+_WDQS = "https://query.wikidata.org/sparql"
+WIKIDATA_LANDMARKS = 25
+
+
+def wikidata_landmarks(lat: float, lon: float, radius_m: float, cache: Path,
+                       limit: int = WIKIDATA_LANDMARKS) -> list[tuple]:
+    """Notable things near a point that have a Commons category, most notable
+    first, as (label, lat, lon, English label, Commons category).
+
+    Wikidata (CC0) knows a landmark's coordinate, its labels in every
+    language and its Commons category (P373). The category is the point: it
+    holds the photographs of the thing whatever their captions say, which is
+    where a search by a name read off the map -- in Cyrillic, Arabic or
+    Portuguese, weighed by an English-reading CLIP -- goes wrong. Notability
+    is the number of Wikipedia articles (sitelinks). Things that are not a
+    place to photograph are left out by what Wikidata says of them: a
+    population (a city: "Moscow" has a coordinate in Red Square's circle), a
+    dissolved, abolished or demolished date (a dynasty, a building gone),
+    being a rapid-transit network. One query per area through the Wikidata
+    Query Service, with the project's User-Agent and the same one-at-a-time
+    pace as the Commons calls, cached for 30 days.
+    """
+    import re
+
+    km = max(0.05, min(10.0, radius_m / 1000.0))
+    query = (
+        "SELECT ?item ?itemLabel ?en ?cat ?coord ?links WHERE {\n"
+        "  SERVICE wikibase:around { ?item wdt:P625 ?coord .\n"
+        f'    bd:serviceParam wikibase:center "Point({lon:.6f} {lat:.6f})"^^geo:wktLiteral ;\n'
+        f'                    wikibase:radius "{km:.3f}" . }}\n'
+        "  ?item wdt:P373 ?cat ; wikibase:sitelinks ?links .\n"
+        "  FILTER NOT EXISTS { ?item wdt:P1082 [] }\n"
+        "  FILTER NOT EXISTS { ?item wdt:P576 [] }\n"
+        "  FILTER NOT EXISTS { ?item wdt:P31/wdt:P279* wd:Q5503 }\n"
+        '  OPTIONAL { ?item rdfs:label ?en . FILTER(LANG(?en) = "en") }\n'
+        '  SERVICE wikibase:label { bd:serviceParam wikibase:language "mul,en". }\n'
+        f"}} ORDER BY DESC(?links) LIMIT {int(limit)}")
+
+    def fetch() -> list[dict]:
+        data = _get_json(_WDQS + "?" + urllib.parse.urlencode(
+            {"query": query, "format": "json"}))
+        out = []
+        for b in ((data or {}).get("results") or {}).get("bindings") or []:
+            point = re.match(r"Point\(([-0-9.eE]+) ([-0-9.eE]+)\)",
+                             (b.get("coord") or {}).get("value", ""))
+            cat = (b.get("cat") or {}).get("value")
+            label = (b.get("itemLabel") or {}).get("value") or ""
+            if not point or not cat or not label or re.fullmatch(r"Q\d+", label):
+                continue
+            out.append({"label": label, "en": (b.get("en") or {}).get("value"),
+                        "cat": cat, "lon": float(point.group(1)),
+                        "lat": float(point.group(2)),
+                        "links": int((b.get("links") or {}).get("value") or 0)})
+        return out
+
+    rows = _cached(cache, f"wikidata:{lat:.4f}:{lon:.4f}:{km:.3f}:{limit}", fetch)
+    return [(r["label"], r["lat"], r["lon"], r["en"], r["cat"]) for r in rows]
 
 
 def _details_db(cache: Path) -> sqlite3.Connection:
