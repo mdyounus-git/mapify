@@ -293,7 +293,13 @@ class TileCache:
             if data is not None:
                 return data, "image/png"
             if z > source.max_zoom:
-                return None, "outside the source's range"
+                # Past the AWS tiles' deepest zoom: their deepest tile, cut
+                # and enlarged as heights, so the ground never just vanishes.
+                dz = z - source.max_zoom
+                parent, why = self.get("terrain", source.max_zoom, x >> dz, y >> dz)
+                if parent is None:
+                    return None, why
+                return _cut_heights(parent, dz, x, y), "image/png"
         if source.overzoom and source.max_zoom < z <= source.max_zoom + OVERZOOM \
                 and 0 <= x < 2 ** z and 0 <= y < 2 ** z:
             return self._overzoomed(source, z, x, y, date)
@@ -373,24 +379,7 @@ class TileCache:
             # Offline, a coarser tile kept from an earlier visit still serves.
         else:
             return None, "no Mapterhorn tile here"
-        from io import BytesIO
-
-        import numpy as np
-        from PIL import Image
-        with Image.open(BytesIO(parent)) as im:
-            rgb = np.asarray(im.convert("RGB"), dtype=np.float64)
-        heights = rgb[..., 0] * 256 + rgb[..., 1] + rgb[..., 2] / 256 - 32768
-        part = heights.shape[0] >> dz            # this tile's share: 256 px one level up
-        ox, oy = (x - ((x >> dz) << dz)) * part, (y - ((y >> dz) << dz)) * part
-        cut = heights[oy:oy + part, ox:ox + part].astype(np.float32)
-        if part != 256:
-            cut = np.asarray(Image.fromarray(cut).resize((256, 256), Image.BILINEAR))
-        v = np.clip(cut.astype(np.float64) + 32768, 0, 65535.996)
-        whole = np.floor(v)
-        out = np.stack([whole // 256, whole % 256, np.floor((v - whole) * 256)], axis=-1)
-        buf = BytesIO()
-        Image.fromarray(out.astype(np.uint8), "RGB").save(buf, "PNG")
-        data = buf.getvalue()
+        data = _cut_heights(parent, dz, x, y)
         path.parent.mkdir(parents=True, exist_ok=True)
         tmp = path.with_suffix(".part")
         tmp.write_bytes(data)
@@ -450,3 +439,28 @@ def _is_fill(data: bytes) -> bool:
     except Exception:
         return False
     return max(spread) < 6.0
+
+
+def _cut_heights(parent: bytes, dz: int, x: int, y: int) -> bytes:
+    """Tile (z, x, y) as a 256 px Terrarium PNG, cut from its ancestor
+    ``dz`` levels up (any square size) and resampled as heights: decoded
+    first, so interpolation never mixes one metre's high byte with
+    another's low one."""
+    from io import BytesIO
+
+    import numpy as np
+    from PIL import Image
+    with Image.open(BytesIO(parent)) as im:
+        rgb = np.asarray(im.convert("RGB"), dtype=np.float64)
+    heights = rgb[..., 0] * 256 + rgb[..., 1] + rgb[..., 2] / 256 - 32768
+    part = max(1, heights.shape[0] >> dz)
+    ox, oy = (x - ((x >> dz) << dz)) * part, (y - ((y >> dz) << dz)) * part
+    cut = heights[oy:oy + part, ox:ox + part].astype(np.float32)
+    if part != 256:
+        cut = np.asarray(Image.fromarray(cut).resize((256, 256), Image.BILINEAR))
+    v = np.clip(cut.astype(np.float64) + 32768, 0, 65535.996)
+    whole = np.floor(v)
+    out = np.stack([whole // 256, whole % 256, np.floor((v - whole) * 256)], axis=-1)
+    buf = BytesIO()
+    Image.fromarray(out.astype(np.uint8), "RGB").save(buf, "PNG")
+    return buf.getvalue()

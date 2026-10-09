@@ -662,7 +662,7 @@ def test_terrain_is_served_but_never_offered_as_imagery(tmp_path):
     assert "terrain" in SOURCES and "SRTM" in SOURCES["terrain"].attribution
     assert "terrain" not in [s["key"] for s in sources_for(37.75, -122.45)]
     cache = TileCache(tmp_path, offline=True)
-    assert cache.get("terrain", 16, 0, 0) == (None, "outside the source's range")
+    assert cache.get("terrain", 19, 0, 0) == (None, "outside the source's range")
     assert cache.get("terrain", 14, 2620, 6334) == (None, "offline, and not cached")
 
 
@@ -688,7 +688,7 @@ def test_imagery_past_its_deepest_zoom_is_cut_from_the_deepest_tile(tmp_path):
     r, g, b = child.getpixel((128, 128))
     assert r > 200 and b < 60, "the red quarter, enlarged"
     assert cache.get("weld", 17, 0, 0)[0] is None, "no more than four levels past"
-    assert cache.get("terrain", 16, 0, 0) == (None, "outside the source's range")
+    assert cache.get("terrain", 19, 0, 0) == (None, "outside the source's range")
 
 
 
@@ -802,3 +802,25 @@ def test_where_mapterhorn_has_nothing_the_aws_terrain_answers(tmp_path):
     aws.write_bytes(buf.getvalue())
     data, media = TileCache(root=tmp_path, offline=True).get("terrain", z, x, y)
     assert media == "image/png" and _height_at(data, 5, 5) == -4500.0
+
+
+def test_past_the_aws_tiles_deepest_zoom_the_ground_does_not_vanish(tmp_path):
+    """Walking needs zoom 16; offline, with no Mapterhorn kept, the AWS
+    z15 tile is cut and enlarged, as heights."""
+    import io
+
+    import numpy as np
+    from PIL import Image
+
+    from mapify.geodata.tiles import TileCache
+    h = np.zeros((256, 256))
+    h[:128, 128:] = 41.5                                    # the NE quarter
+    aws = tmp_path / "terrain" / "15" / "100" / "200.png"
+    aws.parent.mkdir(parents=True)
+    buf = io.BytesIO()
+    Image.fromarray(_terrarium(h), "RGB").save(buf, "PNG")
+    aws.write_bytes(buf.getvalue())
+    cache = TileCache(root=tmp_path, offline=True)
+    data, media = cache.get("terrain", 16, 201, 400)         # NE child of (100, 200)
+    assert media == "image/png" and _height_at(data, 128, 128) == 41.5
+    assert cache.get("terrain", 19, 0, 0)[1] == "outside the source's range"
