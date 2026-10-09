@@ -21,7 +21,11 @@ timezonefinder>=6.5         # MIT code; ODbL boundary data, attributed in-app
 
 # --- models --------------------------------------------------------------
 transformers>=4.40          # Apache-2.0
-geoclip>=1.2                # MIT; GeoCLIP weights are MIT
+geoclip==1.2.1              # MIT; GeoCLIP weights are MIT
+# Pinned: 1.2.2 (2026-10-06) loads its weights from the Hugging Face Hub and
+# 1.2.3 changes how CLIP is initialised. Every benchmark figure in the README
+# was measured on 1.2.1; move the pin only after scripts/evaluate.py and the
+# offline first-run check pass on the new version.
 # torch, torchvision        # BSD-3-Clause -- installed from the CPU index
 
 # --- network enrichment (optional at runtime, can be switched off) --------
