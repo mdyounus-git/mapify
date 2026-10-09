@@ -299,6 +299,25 @@ def _go_offline_if_complete(hub: Path) -> None:
         os.environ.setdefault("TRANSFORMERS_OFFLINE", "1")
 
 
+def _point_torch_hub_at_models() -> None:
+    """Keep torch.hub's cache beside the other weights, off the system drive.
+
+    Anything loaded through torch.hub -- weights and the code it fetches
+    with them -- goes to ``~/.cache/torch`` unless ``TORCH_HOME`` says
+    otherwise. Unlike Hugging Face there is no existing copy to preserve, so
+    this applies to a checkout as well as a frozen build. torch reads the
+    variable each time it resolves the directory; an explicit one wins.
+    """
+    if os.environ.get("TORCH_HOME"):
+        return
+    try:
+        target = models_dir()
+    except OSError:
+        return
+    if _writable(target):
+        os.environ["TORCH_HOME"] = str(target / "torch")
+
+
 def apply_model_cache_env() -> Path | None:
     """Point Hugging Face at our models directory, for a frozen build.
 
@@ -317,6 +336,7 @@ def apply_model_cache_env() -> Path | None:
     wins -- that is someone stating where their cache lives, and it is not
     ours to override.
     """
+    _point_torch_hub_at_models()
     if os.environ.get("HF_HOME") or os.environ.get("HF_HUB_CACHE"):
         return None
     if not is_frozen() and _default_hf_cache_has_weights():

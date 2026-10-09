@@ -117,6 +117,21 @@ class TestWritablePaths:
         monkeypatch.setenv("HF_HOME", r"D:\somewhere\else")
         assert paths.apply_model_cache_env() is None
 
+    def test_torch_hub_downloads_go_beside_the_models(self, monkeypatch,
+                                                     tmp_path):
+        """Otherwise they land in ~/.cache/torch, on the system drive."""
+        monkeypatch.setenv("TORCH_HOME", "unset-below")
+        monkeypatch.delenv("TORCH_HOME")
+        monkeypatch.setenv("HF_HOME", str(tmp_path / "hf"))
+        monkeypatch.setattr(paths, "models_dir", lambda: tmp_path)
+        paths.apply_model_cache_env()
+        assert os.environ["TORCH_HOME"] == str(tmp_path / "torch")
+
+    def test_an_explicit_torch_home_is_never_overridden(self, monkeypatch):
+        monkeypatch.setenv("TORCH_HOME", r"D:\somewhere\else")
+        paths.apply_model_cache_env()
+        assert os.environ["TORCH_HOME"] == r"D:\somewhere\else"
+
     def test_easyocr_is_pointed_at_the_directory_holding_the_weights(self):
         """One level out is a silent 565 MB re-download, not an error.
 
