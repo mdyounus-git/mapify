@@ -15,6 +15,7 @@ different bearing per photograph) to measure the search as well.
 photograph fits, weighed with CLIP as the application does.
 
     python scripts/eval_pinpoint.py [--scene landmark] [--radius 800] [--offset 0]
+                                    [--names] [--panoramax]
 """
 
 from __future__ import annotations
@@ -55,6 +56,8 @@ def main() -> int:
     ap.add_argument("--names", action="store_true",
                     help="also search by the names of landmarks the photograph fits "
                          "(loads CLIP from the local model cache)")
+    ap.add_argument("--panoramax", action="store_true",
+                    help="also ask Panoramax for street pictures, as the app does")
     ap.add_argument("--sites", default="",
                     help="comma-separated sample sites to run (default: all of the scene)")
     args = ap.parse_args()
@@ -69,7 +72,7 @@ def main() -> int:
         items = [i for i in items if i["site"] in keep]
     if args.limit:
         items = items[:args.limit]
-    engine = PinpointEngine(state_dir() / "pinpoint")
+    engine = PinpointEngine(state_dir() / "pinpoint", panoramax=args.panoramax)
     clip = None
     if args.names:
         os.environ.setdefault("HF_HUB_OFFLINE", "1")      # the weights already here

@@ -67,6 +67,12 @@ class NetworkConfig:
     # second search nearby costs nothing; past this size the ones used
     # longest ago are deleted.
     pinpoint_cache_mb: int = 2048
+    # Pinpoint also asks Panoramax (api.panoramax.xyz), the open commons of
+    # street-level imagery, for pictures near each candidate: no account,
+    # Etalab 2.0 or CC BY-SA 4.0, most with the camera's heading. Dense in
+    # France and Germany, sparse or absent elsewhere. Only a coordinate box
+    # is sent.
+    pinpoint_panoramax: bool = True
     # A Mapillary access token, from your own free Mapillary account, adds
     # its street-level imagery (CC BY-SA 4.0) to Pinpoint. Empty: Commons
     # only. Kept in your config file; never written anywhere else.

@@ -519,3 +519,64 @@ def test_the_server_validates_areas_and_thumbnail_keys(monkeypatch, tmp_path):
     assert result["verdict"] == "unavailable"          # offline: no search, said so
     assert client.get("/api/pinpoint/thumb/../../secret").status_code == 404
     assert client.get("/api/pinpoint/thumb/" + "0" * 20).status_code == 404
+
+
+def _pic(pid, lat, lon, seq="s1", licence="CC-BY-SA-4.0", azimuth=90):
+    return {"id": pid, "collection": seq,
+            "geometry": {"type": "Point", "coordinates": [lon, lat]},
+            "properties": {"license": licence, "view:azimuth": azimuth,
+                           "datetime": "2026-05-01T10:00:00Z"},
+            "providers": [{"name": "someone", "roles": ["producer"]}],
+            "assets": {"sd": {"href": f"https://example.org/{pid}/sd.jpg"}},
+            "links": [{"rel": "self", "href": f"https://api.example/{pid}"}]}
+
+
+def test_panoramax_keeps_open_licences_and_one_picture_per_patch(tmp_path, monkeypatch):
+    """A sequence a few metres apart must not fill the comparison budget."""
+    asked = []
+    pics = [_pic(f"walk-{i}", 48.8584 + i * 1e-5, 2.2945) for i in range(20)]  # ~1 m apart
+    pics += [_pic("other-seq", 48.8590, 2.2950, seq="s2"),
+             _pic("closed", 48.8585, 2.2946, seq="s3", licence="proprietary"),
+             _pic("far", 48.8700, 2.2945, seq="s4")]
+
+    def fake_get_json(url, timeout=30.0, data=None):
+        asked.append(url)
+        return {"features": pics}
+
+    monkeypatch.setattr(sources, "_get_json", fake_get_json)
+    refs = sources.panoramax_near(48.8584, 2.2945, 800, tmp_path)
+    ids = [r.id for r in refs]
+    assert "closed" not in ids                     # not an open licence
+    assert "far" not in ids                        # outside the radius
+    assert "other-seq" in ids
+    # 20 pictures over 22 m of street: one per 15 m cell, so at most three.
+    assert 1 <= sum(i.startswith("walk-") for i in ids) <= 3
+    assert refs == sorted(refs, key=lambda r: r.distance_m)
+    first = refs[0]
+    assert first.source == "panoramax" and first.licence == "CC BY-SA 4.0"
+    assert first.heading == 90 and first.author == "someone"
+    assert first.page_url.startswith("https://api.example/")
+    assert all("sortby=-datetime" in u for u in asked)
+    assert len(asked) == len(sources._PANORAMAX_SHELLS)
+    sources.panoramax_near(48.8584, 2.2945, 800, tmp_path)
+    assert len(asked) == len(sources._PANORAMAX_SHELLS)   # second time: the cache
+
+
+def test_the_engine_asks_panoramax_only_when_switched_on(tmp_path, monkeypatch):
+    monkeypatch.setattr(engine_mod, "commons_listing", lambda lat, lon, radius, cache: [])
+    asked = []
+
+    def near(lat, lon, radius, cache, limit=150):
+        asked.append(limit)
+        r = Reference(source="panoramax", id="pic-1", lat=lat, lon=lon,
+                      thumb_url="", page_url="", licence="CC BY-SA 4.0", author="a")
+        return [r]
+
+    monkeypatch.setattr(engine_mod, "panoramax_near", near)
+    order, _, _ = PinpointEngine(tmp_path)._plan(
+        [Area(48.8584, 2.2945, 800)], lambda k, m: None, set())
+    assert asked == [] and not order
+    order, _, _ = PinpointEngine(tmp_path, panoramax=True)._plan(
+        [Area(48.8584, 2.2945, 800)], lambda k, m: None, set())
+    assert asked == [engine_mod.PANORAMAX_PER_AREA]
+    assert [r.id for r in order] == ["pic-1"]

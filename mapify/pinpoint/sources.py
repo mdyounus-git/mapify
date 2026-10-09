@@ -2,9 +2,11 @@
 
 Wikimedia Commons, always: photographs freely licensed by their authors,
 with the camera position the photographer recorded ({{Location}}), found
-with the GeoData search. Mapillary, only when the user has configured
-their own free access token: street-level sequences under CC BY-SA 4.0,
-denser than Commons on ordinary streets.
+with the GeoData search. Panoramax, unless switched off: the open commons
+of street-level imagery, no account needed, most pictures with the camera's
+heading. Mapillary, only when the user has configured their own free access
+token: street-level sequences under CC BY-SA 4.0, denser than Commons on
+ordinary streets.
 
 Only a coordinate and a radius are sent; answers and thumbnails are
 cached under the data folder, so asking again costs nothing. Requests
@@ -30,8 +32,8 @@ from pathlib import Path
 from typing import Any
 
 __all__ = ["Reference", "commons_listing", "commons_search_near", "commons_details",
-           "commons_near", "touch", "mapillary_near", "fetch_thumb", "UA",
-           "LISTING_CAP"]
+           "commons_near", "touch", "mapillary_near", "panoramax_near",
+           "fetch_thumb", "UA", "LISTING_CAP"]
 
 UA = ("Mapify/0.1 (open-source image geolocation; "
       "https://github.com/mdyounus-git/mapify)")
@@ -335,6 +337,91 @@ def mapillary_near(lat: float, lon: float, radius_m: int, token: str, cache: Pat
         if r.distance_m <= radius_m:
             out.append(r)
     out.sort(key=lambda r: r.distance_m)
+    return out[:limit]
+
+
+_PANORAMAX = "https://api.panoramax.xyz/api/search"
+_PANORAMAX_LICENCES = {"etalab-2.0": "Etalab Open Licence 2.0",
+                       "cc-by-sa-4.0": "CC BY-SA 4.0", "cc-by-4.0": "CC BY 4.0",
+                       "cc0-1.0": "CC0 1.0", "cc0": "CC0"}
+_PANORAMAX_SHELLS = (0.25, 0.5, 1.0)   # searched out to these parts of the radius
+_PANORAMAX_PER_SEARCH = 500
+_SEQUENCE_CELL_M = 15.0                 # one picture per sequence per patch
+
+
+def _bbox(lat: float, lon: float, radius_m: float) -> str:
+    from math import cos, radians
+    dlat = radius_m / 111320.0
+    dlon = radius_m / (111320.0 * max(0.2, cos(radians(lat))))
+    return f"{lon - dlon:.6f},{lat - dlat:.6f},{lon + dlon:.6f},{lat + dlat:.6f}"
+
+
+def _panoramax_search(bbox: str) -> list[dict]:
+    """One search, reduced to what a reference needs (and only open licences)."""
+    # Newest first: unsorted, a search fills up with the first few dense
+    # sequences it holds (500 pictures from 5 sequences, all within 54 m of
+    # the Eiffel Tower in an 800 m box); by date it spreads over 31.
+    url = _PANORAMAX + "?" + urllib.parse.urlencode(
+        {"bbox": bbox, "limit": str(_PANORAMAX_PER_SEARCH), "sortby": "-datetime"})
+    out = []
+    for f in (_get_json(url) or {}).get("features") or []:
+        props = f.get("properties") or {}
+        licence = _PANORAMAX_LICENCES.get(str(props.get("license") or "").lower())
+        coords = (f.get("geometry") or {}).get("coordinates")
+        href = ((f.get("assets") or {}).get("sd") or {}).get("href")
+        if not licence or not coords or not href or not f.get("id"):
+            continue
+        producers = [p.get("name") for p in f.get("providers") or []
+                     if "producer" in (p.get("roles") or []) and p.get("name")]
+        self_link = next((l.get("href") for l in f.get("links") or []
+                          if l.get("rel") == "self"), "")
+        out.append({"id": f["id"], "lon": coords[0], "lat": coords[1],
+                    "href": href, "licence": licence, "page": self_link,
+                    "author": producers[0] if producers
+                    else props.get("geovisio:producer") or "Panoramax contributor",
+                    "heading": props.get("view:azimuth"),
+                    "sequence": f.get("collection") or "",
+                    "taken": props.get("datetime") or ""})
+    return out
+
+
+def panoramax_near(lat: float, lon: float, radius_m: int, cache: Path,
+                   limit: int = 150) -> list[Reference]:
+    """Panoramax street-level photographs near a point -- no account needed.
+
+    Panoramax (panoramax.fr) is the open, federated commons of street-level
+    imagery: IGN and OpenStreetMap France are among its instances, each
+    picture is under Etalab 2.0 or CC BY-SA 4.0, and most carry the camera's
+    heading. Dense in France and Germany, a few sequences in many cities
+    elsewhere, none in many others -- so it is asked every time and never
+    assumed. A search is not nearest-first, so each area is searched out to
+    a quarter, a half and all of the radius, newest pictures first. Pictures come in sequences a few
+    metres apart; each sequence keeps the nearest picture per 15 m patch, or
+    one street would spend the whole comparison budget.
+    """
+    from math import cos, radians
+    seen: dict[str, dict] = {}
+    for part in _PANORAMAX_SHELLS:
+        bbox = _bbox(lat, lon, radius_m * part)
+        for pic in _cached(cache, f"panoramax:newest:{bbox}",
+                           lambda b=bbox: _panoramax_search(b)):
+            seen.setdefault(pic["id"], pic)
+    cell_lat = _SEQUENCE_CELL_M / 111320.0
+    cell_lon = cell_lat / max(0.2, cos(radians(lat)))
+    kept: dict[tuple, Reference] = {}
+    for pic in seen.values():
+        r = Reference(source="panoramax", id=str(pic["id"]), lat=float(pic["lat"]),
+                      lon=float(pic["lon"]), thumb_url=pic["href"],
+                      page_url=pic["page"], licence=pic["licence"],
+                      author=pic["author"], heading=pic.get("heading"),
+                      extra={"sequence": pic["sequence"], "taken": pic["taken"]})
+        r.distance_m = _metres(lat, lon, r.lat, r.lon)
+        if r.distance_m > radius_m:
+            continue
+        cell = (pic["sequence"], round(r.lat / cell_lat), round(r.lon / cell_lon))
+        if cell not in kept or r.distance_m < kept[cell].distance_m:
+            kept[cell] = r
+    out = sorted(kept.values(), key=lambda r: r.distance_m)
     return out[:limit]
 
 

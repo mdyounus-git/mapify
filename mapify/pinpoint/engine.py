@@ -54,7 +54,8 @@ from PIL import Image
 from .features import (QUERY_PIXELS, QUERY_SIDE, REFERENCE_SIDE, REFINE_SIDE, extract,
                        load, match, save, windows)
 from .sources import (LISTING_CAP, Reference, commons_details, commons_listing,
-                      commons_search_near, fetch_thumb, mapillary_near, touch)
+                      commons_search_near, fetch_thumb, mapillary_near,
+                      panoramax_near, touch)
 
 log = logging.getLogger("mapify.pinpoint")
 
@@ -82,6 +83,7 @@ REFINE_TOP = 15
 # compared then come from the cache in a fraction of a second each.
 PROBES_PER_AREA = 13          # the centre and two hexagonal rings
 DENSE_PROBES = 6              # then a small ring round the nearest crowded spot
+PANORAMAX_PER_AREA = 60       # street pictures (2048 px, ~0.45 MB each) per area
 MAX_PROBES = 26
 BUDGET = 400
 MAX_BUDGET = 3000
@@ -220,10 +222,11 @@ def choose_names(names: list[str], scores: list[float]) -> list[str]:
 class PinpointEngine:
     def __init__(self, cache_dir: Path, online: bool = True, mapillary_token: str = "",
                  workers: int = 6, cache_mb: int = 2048,
-                 landmarks: LandmarksFn | None = None):
+                 landmarks: LandmarksFn | None = None, panoramax: bool = False):
         self.cache = Path(cache_dir)
         self.online = online
         self.token = mapillary_token or ""
+        self.panoramax = panoramax
         self.workers = workers
         self.cache_mb = cache_mb
         self.landmarks = landmarks or local_landmarks(online)
@@ -407,6 +410,14 @@ class PinpointEngine:
                                  f"{_fmt_m(a.radius_m)} asked for.")
             else:
                 info["listed_within_m"] = round(a.radius_m)
+            if self.panoramax:
+                step("search", f"Asking Panoramax for street photographs near {a.label}")
+                try:
+                    take(panoramax_near(a.lat, a.lon, int(a.radius_m), self.cache,
+                                        limit=PANORAMAX_PER_AREA), idx, a)
+                except Exception as exc:
+                    notes.append(f"Panoramax could not be searched near {a.label} "
+                                 f"({type(exc).__name__})")
             if self.token:
                 try:
                     take(mapillary_near(a.lat, a.lon, int(a.radius_m), self.token,
@@ -505,6 +516,7 @@ class PinpointEngine:
         searched = {"areas": [{"lat": a.lat, "lon": a.lon, "radius_m": a.radius_m,
                                "label": a.label} for a in areas[:MAX_AREAS]],
                     "references": 0, "budget": budget, "sources": ["Wikimedia Commons"]
+                    + (["Panoramax"] if self.panoramax else [])
                     + (["Mapillary"] if self.token else [])}
         threshold = {"strong": STRONG_INLIERS, "weak": WEAK_INLIERS,
                      "unrelated_photographs_reach": NEGATIVE_MAX}

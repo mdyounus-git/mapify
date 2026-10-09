@@ -545,7 +545,8 @@ def create_app(cfg: Config | None = None, token: str | None = None,
         return PinpointEngine(state_dir() / "pinpoint",
                               online=not net.offline_only and net.pinpoint_enabled,
                               mapillary_token=net.mapillary_token,
-                              cache_mb=net.pinpoint_cache_mb)
+                              cache_mb=net.pinpoint_cache_mb,
+                              panoramax=net.pinpoint_panoramax)
 
     def _areas(items: Any) -> list:
         from .pinpoint.engine import Area
