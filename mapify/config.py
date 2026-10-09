@@ -19,9 +19,11 @@ ROOT = read_root()
 
 # The image formats Mapify will process. Declared here rather than in the
 # pipeline so the desktop shell can filter its file dialog without importing
-# the model stack -- the window should open before PyTorch does.
-ACCEPTED_FORMATS = frozenset({"JPEG", "PNG", "WEBP", "MPO"})
-ACCEPTED_EXTENSIONS = frozenset({".jpg", ".jpeg", ".png", ".webp"})
+# the model stack -- the window should open before PyTorch does. HEIC/HEIF
+# decodes only with the optional decoder (see heif.py); it is listed either
+# way so a HEIC file reaches the analysis and is told how to add it.
+ACCEPTED_FORMATS = frozenset({"JPEG", "PNG", "WEBP", "MPO", "HEIF"})
+ACCEPTED_EXTENSIONS = frozenset({".jpg", ".jpeg", ".png", ".webp", ".heic", ".heif"})
 DATA_DIR = ROOT / "data"
 PKG_DATA_DIR = Path(__file__).resolve().parent / "data"
 

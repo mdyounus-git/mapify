@@ -36,7 +36,7 @@ log = logging.getLogger("mapify.desktop")
 ROOT = read_root()
 WEB_DIR = Path(__file__).resolve().parent / "web"
 
-IMAGE_TYPES = ("Images (*.jpg;*.jpeg;*.png;*.webp)", "All files (*.*)")
+IMAGE_TYPES = ("Images (*.jpg;*.jpeg;*.png;*.webp;*.heic;*.heif)", "All files (*.*)")
 
 # A ceiling on one batch. At roughly three seconds an image this is already
 # half an hour of work, and an unbounded folder walk is a foot-gun.
@@ -174,7 +174,7 @@ class NativeBridge:
             files.append({"path": resolved, "name": path.name, "bytes": size})
 
         if not files:
-            return {"error": f"No JPG, PNG or WEBP images in {root.name}."}
+            return {"error": f"No JPG, PNG, WEBP or HEIC images in {root.name}."}
         return {
             "folder": str(root),
             "files": files,

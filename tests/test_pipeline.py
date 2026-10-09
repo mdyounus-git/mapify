@@ -9,13 +9,19 @@ milliseconds and asserted exactly.
 from __future__ import annotations
 
 import io
+from pathlib import Path
 
 import pytest
 
 from conftest import gps_exif, make_jpeg, requires_geodata
+from mapify import heif
 from mapify.config import load_config
 from mapify.models.base import GroupReading, RawCandidate, VisualEvidence
 from mapify.pipeline import AnalysisEngine, ImageRejected
+
+# A 128 x 128 HEIF from pillow_heif's test images (BSD-3-Clause; see the
+# README beside it).
+HEIF_SAMPLE = Path(__file__).parent / "data" / "heif" / "RGB_8__128x128.heif"
 
 
 class StubLocator:
@@ -128,6 +134,26 @@ class TestDecode:
         small = engine._prepare(big, 1600)
         assert max(small.size) == 1600
         assert small.mode == "RGB"
+
+    def test_heic_decodes_when_the_decoder_is_installed(self, engine):
+        """The iPhone's default format, rejected outright until now."""
+        pytest.importorskip("pi_heif")
+        img, meta = engine.decode(HEIF_SAMPLE.read_bytes(), "photo.heic")
+        assert meta["format"] == "HEIF"
+        assert img.size == (128, 128)
+        assert engine._prepare(img, 1600).mode == "RGB"
+
+    def test_heic_without_the_decoder_says_how_to_add_it(self, engine,
+                                                         monkeypatch):
+        """Not "could not decode": the file is fine, a decoder is missing."""
+        monkeypatch.setattr(heif, "enable", lambda: False)
+        with pytest.raises(ImageRejected, match="pip install pi-heif"):
+            engine.decode(HEIF_SAMPLE.read_bytes(), "photo.heic")
+
+    def test_a_heif_header_is_recognised_whatever_the_file_is_called(self):
+        assert heif.looks_like_heif(HEIF_SAMPLE.read_bytes())
+        assert not heif.looks_like_heif(make_jpeg())
+        assert not heif.looks_like_heif(b"")
 
 
 @requires_geodata

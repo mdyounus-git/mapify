@@ -35,7 +35,7 @@ from fastapi.responses import (
 )
 from fastapi.staticfiles import StaticFiles
 
-from . import __version__, firstrun
+from . import __version__, firstrun, heif
 from .config import Config, load_config
 from .paths import apply_model_cache_env, cache_dir, read_root, state_dir
 from .pipeline import AnalysisEngine, ImageRejected
@@ -124,6 +124,9 @@ def create_app(cfg: Config | None = None, token: str | None = None,
     """
     cfg = cfg or load_config()
     engine = AnalysisEngine(cfg)
+    # Previews, Pinpoint and exports open the photograph too, not only the
+    # analysis; with the optional decoder installed they all read HEIC.
+    heif.enable()
 
     app = FastAPI(
         title="Mapify",
@@ -445,19 +448,23 @@ def create_app(cfg: Config | None = None, token: str | None = None,
         handed out, and the copy is made in memory and never stored.
         """
         data, _name = _read_approved(path)
+        return await _preview_response(data)
 
-        def shrink() -> bytes:
-            from io import BytesIO
-            from PIL import Image, ImageOps
-            img = Image.open(BytesIO(data))
-            img = ImageOps.exif_transpose(img) or img
-            img.thumbnail((1600, 1600))
-            out = BytesIO()
-            img.convert("RGB").save(out, "JPEG", quality=88)
-            return out.getvalue()
+    @app.post("/api/preview/upload")
+    async def preview_upload(image: UploadFile = File(...)) -> Response:
+        """The same copy for a file dropped on the window.
 
+        The page shows such a file straight from the browser, which cannot
+        draw HEIC; it asks for this instead, so the thumbnail, the evidence
+        map and the walk overlay have something to show.
+        """
+        data = await image.read()
+        _check_size(cfg, len(data))
+        return await _preview_response(data)
+
+    async def _preview_response(data: bytes) -> Response:
         try:
-            body = await asyncio.to_thread(shrink)
+            body = await asyncio.to_thread(_preview_jpeg, data)
         except Exception as exc:
             raise HTTPException(status_code=415, detail=f"Cannot preview: {exc}") from exc
         return Response(body, media_type="image/jpeg",
@@ -846,7 +853,10 @@ def create_app(cfg: Config | None = None, token: str | None = None,
                         mime = {
                             ".png": "image/png", ".webp": "image/webp",
                         }.get(suffix, "image/jpeg")
-                    except OSError:
+                        if heif.looks_like_heif(image_bytes):
+                            # A browser opening the report cannot draw HEIC.
+                            image_bytes = _preview_jpeg(image_bytes)
+                    except Exception:
                         image_bytes = None
             html = build_single(report, image_bytes, mime)
 
@@ -1033,6 +1043,19 @@ def _check_size(cfg: Config, size: int) -> None:
                 f"{cfg.server.max_upload_bytes / 1e6:.0f} MB."
             ),
         )
+
+
+def _preview_jpeg(data: bytes) -> bytes:
+    """An upright JPEG copy, at most 1600 px, made in memory and not stored."""
+    from io import BytesIO
+
+    from PIL import Image, ImageOps
+    img = Image.open(BytesIO(data))
+    img = ImageOps.exif_transpose(img) or img
+    img.thumbnail((1600, 1600))
+    out = BytesIO()
+    img.convert("RGB").save(out, "JPEG", quality=88)
+    return out.getvalue()
 
 
 def main(argv: list[str] | None = None) -> int:

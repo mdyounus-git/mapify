@@ -972,7 +972,7 @@ function pickFile() {
   return new Promise((resolve) => {
     const input = document.createElement("input");
     input.type = "file";
-    input.accept = ".jpg,.jpeg,.png,.webp,image/*";
+    input.accept = ".jpg,.jpeg,.png,.webp,.heic,.heif,image/*";
     input.addEventListener("change", () => resolve(input.files?.[0] || null),
                            { once: true });
     input.click();
@@ -1625,10 +1625,10 @@ async function analyse(source) {
   if (setupBlocks()) return;
   const name = source.name || source.file?.name || "image";
   const typeOk =
-    /\.(jpe?g|png|webp)$/i.test(name) ||
-    /^image\/(jpeg|png|webp)$/.test(source.file?.type || "");
+    /\.(jpe?g|png|webp|heic|heif)$/i.test(name) ||
+    /^image\/(jpeg|png|webp|heic|heif)$/.test(source.file?.type || "");
   if (!typeOk) {
-    fail("Unsupported file", `${name} is not a JPG, PNG or WEBP image.`);
+    fail("Unsupported file", `${name} is not a JPG, PNG, WEBP or HEIC image.`);
     return;
   }
 
@@ -1746,6 +1746,7 @@ async function readStream(resp) {
 }
 
 function showSource(source) {
+  const ticket = ++heifPreviewTicket;   // a newer image cancels a pending copy
   if (state.previewUrl) {
     URL.revokeObjectURL(state.previewUrl);
     state.previewUrl = null;
@@ -1753,7 +1754,13 @@ function showSource(source) {
   el.sourceFoot.hidden = false;
   el.sourceDims.textContent = source.bytes
     ? `${(source.bytes / 1024).toFixed(0)} KB` : "";
-  if (source.file) {
+  if (source.file && isHeif(source.file)) {
+    // The window cannot draw HEIC; the server sends a JPEG copy instead.
+    el.sourceThumb.removeAttribute("src");
+    el.sourceName.textContent = source.file.name;
+    el.sourceDims.textContent = `${(source.file.size / 1024).toFixed(0)} KB`;
+    heifPreview(source.file, ticket);
+  } else if (source.file) {
     state.previewUrl = URL.createObjectURL(source.file);
     el.sourceThumb.src = state.previewUrl;
     el.sourceName.textContent = source.file.name;
@@ -1767,6 +1774,29 @@ function showSource(source) {
     el.sourceThumb.removeAttribute("src");
     el.sourceName.textContent = source.name || "";
   }
+}
+
+function isHeif(file) {
+  return /\.(heic|heif)$/i.test(file.name || "") ||
+    /^image\/(heic|heif)$/.test(file.type || "");
+}
+
+let heifPreviewTicket = 0;
+
+/** Ask the server for a JPEG copy of a dropped HEIC file to show. */
+async function heifPreview(file, ticket) {
+  const form = new FormData();
+  form.append("image", file, file.name || "image.heic");
+  try {
+    const res = await fetch("/api/preview/upload", { method: "POST", body: form });
+    // Without the optional decoder this fails; the analysis says why.
+    if (!res.ok || ticket !== heifPreviewTicket) return;
+    const url = URL.createObjectURL(await res.blob());
+    if (ticket !== heifPreviewTicket) { URL.revokeObjectURL(url); return; }
+    if (state.previewUrl) URL.revokeObjectURL(state.previewUrl);
+    state.previewUrl = url;
+    el.sourceThumb.src = url;
+  } catch { /* no preview; the analysis still runs */ }
 }
 
 function showProgress(on) {

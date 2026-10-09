@@ -32,6 +32,7 @@ components below, which keep their own terms.
 | **PyTorch** | BSD-3-Clause | Keep the notice | Installed as a dependency, notice ships in the wheel |
 | **Hugging Face Transformers** | Apache-2.0 | Keep the notice and NOTICE file | Installed as a dependency |
 | **EasyOCR** (optional) | Apache-2.0 | Keep the notice | Optional; only loaded if the user installs it |
+| **pi-heif** (optional) — reads HEIC/HEIF photographs | Code BSD-3-Clause; its wheels bundle libheif and libde265, both LGPL-3.0, and no encoder | Keep the notices; libheif and libde265 stay separate, replaceable DLLs (LGPL) | Optional; only loaded if the user installs it. HEVC, the codec inside HEIC, is covered by patents in some countries, which is why it is not installed by default. Not `pillow-heif`: its wheels carry the GPL-2.0 x265 encoder |
 
 GeoCLIP citation:
 

@@ -8,6 +8,8 @@ native dialog.
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 from fastapi.testclient import TestClient
 
@@ -118,6 +120,23 @@ class TestLocalPathReads:
         from io import BytesIO
         from PIL import Image
         assert max(Image.open(BytesIO(r.content)).size) == 1600     # downscaled copy
+
+    def test_a_dropped_heic_gets_a_jpeg_preview(self, open_client):
+        """The window cannot draw HEIC, so the page asks for this copy."""
+        pytest.importorskip("pi_heif")
+        sample = Path(__file__).parent / "data" / "heif" / "RGB_8__128x128.heif"
+        r = open_client.post(
+            "/api/preview/upload",
+            files={"image": ("photo.heic", sample.read_bytes(), "image/heic")})
+        assert r.status_code == 200 and r.headers["content-type"] == "image/jpeg"
+        assert r.content[:3] == b"\xff\xd8\xff"
+        assert "no-store" in r.headers["cache-control"]
+
+    def test_an_upload_that_is_not_an_image_gets_no_preview(self, open_client):
+        r = open_client.post(
+            "/api/preview/upload",
+            files={"image": ("x.heic", b"not an image at all", "image/heic")})
+        assert r.status_code == 415
 
     def test_no_preview_without_a_desktop_bridge(self, open_client):
         r = open_client.get("/api/preview", params={"path": "C:/Windows/win.ini"})

@@ -28,6 +28,7 @@ from typing import Any, Callable
 
 from PIL import Image, ImageOps
 
+from . import heif
 from .config import ACCEPTED_EXTENSIONS, ACCEPTED_FORMATS, Config
 from .data.countries import get_table
 from .evidence import script_detect
@@ -251,6 +252,8 @@ class AnalysisEngine:
                 f"Image is {len(data) / 1e6:.1f} MB; the limit is "
                 f"{self.cfg.server.max_upload_bytes / 1e6:.0f} MB."
             )
+        if heif.looks_like_heif(data) and not heif.enable():
+            raise ImageRejected(heif.MISSING)
         try:
             probe = Image.open(io.BytesIO(data))
             probe.verify()          # structural check; consumes the file object
@@ -264,7 +267,7 @@ class AnalysisEngine:
         if fmt not in ACCEPTED_FORMATS:
             raise ImageRejected(
                 f"Format {fmt or 'unknown'} is not supported. "
-                "Use JPG, PNG or WEBP."
+                "Use JPG, PNG, WEBP or HEIC."
             )
 
         meta = {

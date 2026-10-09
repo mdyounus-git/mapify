@@ -36,6 +36,12 @@ httpx>=0.27                 # BSD-3-Clause
 # want signage text read:  pip install easyocr
 # easyocr>=1.7
 
+# --- optional HEIC/HEIF (the iPhone default) ----------------------------
+# pi-heif: code BSD-3-Clause, wheels LGPL-3.0 (libheif, libde265; no encoder).
+# Optional because HEVC is patent-encumbered in some countries. Without it a
+# HEIC photo is refused with these instructions:  pip install pi-heif
+# pi-heif==1.4.0
+
 # --- development ---------------------------------------------------------
 pytest>=8                   # MIT
 
