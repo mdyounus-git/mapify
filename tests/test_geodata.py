@@ -416,6 +416,73 @@ class TestTiles:
         assert cache.get("usgs", 21, 0, 0)[1] == "outside the source's range"
         assert cache.get("hls", 3, 0, 0, "../../etc")[1] == "bad date"
 
+    def test_national_aerial_photographs_are_offered_only_at_home(self):
+        from mapify.geo.offline import get_geocoder
+        from mapify.geodata.tiles import sources_for
+        if not get_geocoder().available():
+            pytest.skip("Natural Earth not installed")
+        first = lambda lat, lon: sources_for(lat, lon)[0]["key"]   # noqa: E731
+        assert first(48.8584, 2.2945) == "fr"           # Paris
+        assert first(52.3731, 4.8926) == "nl"           # Amsterdam
+        assert first(46.9480, 7.4474) == "ch"           # Bern
+        assert first(40.4168, -3.7038) == "es"          # Madrid
+        assert first(35.6586, 139.7454) == "jp"         # Tokyo
+        assert first(-21.1151, 55.5364) == "fr"         # Reunion, overseas France
+        lisbon = [s["key"] for s in sources_for(38.7223, -9.1393)]
+        assert not {"fr", "nl", "ch", "es", "jp"} & set(lisbon)
+        assert first(39.74, -104.99) == "usgs"
+
+    def test_a_flat_fill_is_not_a_photograph(self):
+        """What IGN Espana sends over Portugal, PDOK over Belgium."""
+        import io
+
+        import numpy as np
+        from PIL import Image
+
+        from mapify.geodata.tiles import _is_fill
+
+        def jpeg(im):
+            buf = io.BytesIO()
+            im.save(buf, "JPEG", quality=75)
+            return buf.getvalue()
+
+        assert _is_fill(jpeg(Image.new("RGB", (256, 256), (162, 134, 105))))
+        assert _is_fill(jpeg(Image.new("RGB", (256, 256), (255, 255, 255))))
+        rng = np.random.default_rng(0)
+        streets = Image.fromarray(rng.integers(0, 255, (256, 256, 3), dtype=np.uint8))
+        assert not _is_fill(jpeg(streets))
+        assert not _is_fill(b"not an image")
+
+    def test_a_fill_is_remembered_as_missing(self, tmp_path, monkeypatch):
+        import io
+        import urllib.request
+
+        from PIL import Image
+
+        from mapify.geodata.tiles import TileCache
+
+        buf = io.BytesIO()
+        Image.new("RGB", (256, 256), (32, 26, 38)).save(buf, "JPEG")
+
+        class Reply(io.BytesIO):
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *exc):
+                return False
+
+        calls = []
+
+        def urlopen(req, timeout=30):
+            calls.append(req.full_url)
+            return Reply(buf.getvalue())
+
+        monkeypatch.setattr(urllib.request, "urlopen", urlopen)
+        cache = TileCache(root=tmp_path, offline=False)
+        assert cache.get("es", 15, 15000, 12000) == (None, "the source has no tile here")
+        assert cache.get("es", 15, 15000, 12000)[0] is None
+        assert len(calls) == 1, "remembered, not asked for again"
+
 
 # ------------------------------------------------------------- service
 
@@ -623,3 +690,50 @@ def test_imagery_past_its_deepest_zoom_is_cut_from_the_deepest_tile(tmp_path):
     assert cache.get("weld", 17, 0, 0)[0] is None, "no more than four levels past"
     assert cache.get("terrain", 16, 0, 0) == (None, "outside the source's range")
 
+
+
+def test_a_dropped_connection_is_tried_again(tmp_path, monkeypatch):
+    """IGN Espana drops about one request in three; each succeeds when asked again."""
+    import http.client
+    import io
+    import urllib.request
+
+    from mapify.geodata import tiles
+    from mapify.geodata.tiles import TileCache
+
+    class Reply(io.BytesIO):
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *exc):
+            return False
+
+    calls = []
+
+    def urlopen(req, timeout=30):
+        calls.append(1)
+        if len(calls) == 1:
+            raise http.client.RemoteDisconnected("Remote end closed connection")
+        return Reply(b"\xff\xd8 a real tile, " + b"x" * 4000)
+
+    monkeypatch.setattr(urllib.request, "urlopen", urlopen)
+    monkeypatch.setattr(tiles.time, "sleep", lambda s: None)
+    data, media = TileCache(root=tmp_path, offline=False).get("weld", 5, 22, 14)
+    assert data and media == "image/jpeg" and len(calls) == 2
+
+
+def test_a_timeout_is_not_waited_on_twice(tmp_path, monkeypatch):
+    import urllib.request
+
+    from mapify.geodata import tiles
+    from mapify.geodata.tiles import TileCache
+    calls = []
+
+    def urlopen(req, timeout=30):
+        calls.append(1)
+        raise TimeoutError("timed out")
+
+    monkeypatch.setattr(urllib.request, "urlopen", urlopen)
+    monkeypatch.setattr(tiles.time, "sleep", lambda s: None)
+    data, why = TileCache(root=tmp_path, offline=False).get("weld", 5, 22, 14)
+    assert data is None and why.startswith("unreachable") and len(calls) == 1
