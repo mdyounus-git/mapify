@@ -36,14 +36,23 @@ Outside its coverage a national service may answer with a flat fill
 rather than an error (white over Belgium, beige over Portugal); such a
 tile is recognised and remembered as missing like a 404.
 
-And one that is not imagery: the ground's height.
+And one that is not imagery: the ground's height ("terrain"), as 256 px
+Terrarium PNGs (height = R*256 + G + B/256 - 32768 m), from two sources:
 
-  terrain  Terrain Tiles on the Registry of Open Data on AWS (Mapzen /
-           Tilezen "terrarium" PNGs: height = R*256 + G + B/256 - 32768 m),
-           merged from SRTM, 3DEP, GMTED2010, ETOPO1 and national models.
-           Free to use with attribution (see ATTRIBUTION.md); the 3D view
-           lifts the ground, buildings and streets onto it. Never offered
-           as imagery.
+  mapterhorn  Mapterhorn (mapterhorn.com): Copernicus GLO-30 everywhere and
+           bare-earth national models at 0.25-2 m in about 30 countries,
+           as 512 px lossless WebP. Bare earth matters in a city: at Dam
+           Square, Amsterdam, it reads 1.8 m where the AWS tiles read 13.8 m
+           -- roofs, not ground -- and Bern's old town 540 m against 550.
+           Each terrain tile is cut from the deepest Mapterhorn tile above
+           it (at most four levels up), resampled as heights, not colours.
+  terrain  Terrain Tiles on AWS (Mapzen / Tilezen), merged from SRTM, 3DEP,
+           GMTED2010, ETOPO1 and national models: used where Mapterhorn has
+           no tile (the open ocean, where it carries the sea floor), when it
+           cannot be reached, and offline from what was kept before.
+
+Both are free to use with attribution (see ATTRIBUTION.md); the 3D view
+lifts the ground, buildings and streets onto them. Never offered as imagery.
 
 A tile the source does not have is remembered as missing, so a view
 over the Bay of Bengal does not ask the USGS for Chennai on every frame.
@@ -74,6 +83,12 @@ _UA = ("Mapify/0.1 (open-source image geolocation; "
        "https://github.com/mdyounus-git/mapify)")
 _GIBS = "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best"
 OVERZOOM = 4
+MAPTERHORN_ATTRIBUTION = (
+    "Terrain: Mapterhorn (mapterhorn.com), from open elevation data listed at "
+    "mapterhorn.com/attribution -- national terrain models and Copernicus "
+    "WorldDEM-30 (c) DLR e.V. 2010-2014 and (c) Airbus Defence and Space GmbH "
+    "2014-2018, provided under COPERNICUS by the European Union and ESA")
+MAPTERHORN_LEVELS_UP = 4        # how far up to look for a Mapterhorn tile
 TERRAIN_ATTRIBUTION = (
     "Terrain: Terrain Tiles on AWS (Mapzen/Tilezen) -- SRTM, USGS 3DEP, "
     "GMTED2010, ETOPO1 (public domain); EU-DEM (Copernicus); Geoscience "
@@ -193,6 +208,15 @@ SOURCES: dict[str, TileSource] = {s.key: s for s in (
         shows_buildings=True, countries=("JP",),
         note="Aerial photographs of Japan."),
     TileSource(
+        key="mapterhorn", name="Mapterhorn (elevation)",
+        url="https://tiles.mapterhorn.com/{z}/{x}/{y}.webp",
+        max_zoom=17, ext="webp", metres_per_pixel_equator=2.4,
+        attribution=MAPTERHORN_ATTRIBUTION,
+        licence="Open licences per source: CC BY 4.0, public domain, Etalab 2.0, "
+                "DL-DE BY 2.0, GSI terms (mapterhorn.com/attribution)",
+        shows_buildings=False, overzoom=False,
+        note="Ground height (512 px tiles), not imagery."),
+    TileSource(
         key="terrain", name="Terrain Tiles (elevation)",
         url="https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png",
         max_zoom=15, ext="png", metres_per_pixel_equator=4.8,
@@ -263,6 +287,13 @@ class TileCache:
         source = SOURCES.get(key)
         if source is None:
             return None, "unknown source"
+        if key == "terrain" and 0 <= z <= source.max_zoom + 3 \
+                and 0 <= x < 2 ** z and 0 <= y < 2 ** z:
+            data, _why = self._from_mapterhorn(z, x, y)
+            if data is not None:
+                return data, "image/png"
+            if z > source.max_zoom:
+                return None, "outside the source's range"
         if source.overzoom and source.max_zoom < z <= source.max_zoom + OVERZOOM \
                 and 0 <= x < 2 ** z and 0 <= y < 2 ** z:
             return self._overzoomed(source, z, x, y, date)
@@ -276,7 +307,7 @@ class TileCache:
                 return None, "bad date"
         path = self._path(source, z, x, y, date)
         missing = path.with_suffix(".missing")
-        media = "image/png" if source.ext == "png" else "image/jpeg"
+        media = {"png": "image/png", "webp": "image/webp"}.get(source.ext, "image/jpeg")
         if path.is_file():
             return path.read_bytes(), media
         if missing.is_file():
@@ -318,6 +349,53 @@ class TileCache:
         tmp.write_bytes(data)
         tmp.replace(path)
         return data, media
+
+    def _from_mapterhorn(self, z: int, x: int, y: int) -> tuple[bytes | None, str]:
+        """A 256 px Terrarium tile cut from the deepest Mapterhorn tile above it.
+
+        Mapterhorn's tiles are 512 px, so its tile at z-1 holds this one
+        exactly; where its finest data stops, a tile further up is cut and
+        enlarged. The heights are decoded first and resampled as numbers --
+        interpolating Terrarium's packed colours would mix a metre's high
+        byte with another's low one.
+        """
+        path = self.root / "terrain-mapterhorn" / str(z) / str(x) / f"{y}.png"
+        if path.is_file():
+            return path.read_bytes(), "image/png"
+        top = SOURCES["mapterhorn"].max_zoom
+        for pz in range(min(z - 1, top), max(-1, z - 1 - MAPTERHORN_LEVELS_UP), -1):
+            dz = z - pz
+            parent, why = self.get("mapterhorn", pz, x >> dz, y >> dz)
+            if parent is not None:
+                break
+            if why not in ("the source has no tile here", "offline, and not cached"):
+                return None, why            # unreachable: let the AWS tiles try
+            # Offline, a coarser tile kept from an earlier visit still serves.
+        else:
+            return None, "no Mapterhorn tile here"
+        from io import BytesIO
+
+        import numpy as np
+        from PIL import Image
+        with Image.open(BytesIO(parent)) as im:
+            rgb = np.asarray(im.convert("RGB"), dtype=np.float64)
+        heights = rgb[..., 0] * 256 + rgb[..., 1] + rgb[..., 2] / 256 - 32768
+        part = heights.shape[0] >> dz            # this tile's share: 256 px one level up
+        ox, oy = (x - ((x >> dz) << dz)) * part, (y - ((y >> dz) << dz)) * part
+        cut = heights[oy:oy + part, ox:ox + part].astype(np.float32)
+        if part != 256:
+            cut = np.asarray(Image.fromarray(cut).resize((256, 256), Image.BILINEAR))
+        v = np.clip(cut.astype(np.float64) + 32768, 0, 65535.996)
+        whole = np.floor(v)
+        out = np.stack([whole // 256, whole % 256, np.floor((v - whole) * 256)], axis=-1)
+        buf = BytesIO()
+        Image.fromarray(out.astype(np.uint8), "RGB").save(buf, "PNG")
+        data = buf.getvalue()
+        path.parent.mkdir(parents=True, exist_ok=True)
+        tmp = path.with_suffix(".part")
+        tmp.write_bytes(data)
+        tmp.replace(path)
+        return data, "image/png"
 
     def _overzoomed(self, source: TileSource, z: int, x: int, y: int,
                     date: str | None) -> tuple[bytes | None, str]:

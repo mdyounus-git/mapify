@@ -91,10 +91,25 @@ A GeoPackage or kepler.gl file exported from it carries the same obligations,
 and carries a `notice` naming every source and licence so they travel with
 it.
 
-**The ground's height** comes from **Terrain Tiles** on the Registry of Open
-Data on AWS (Mapzen / Tilezen "terrarium" tiles), fetched through
-Mapify's own tile cache and kept on disk. Free to use with attribution to
-each source merged into them: SRTM, USGS 3DEP (formerly NED), GMTED2010 and
+**The ground's height** comes first from **Mapterhorn** (mapterhorn.com,
+code BSD-3-Clause), which builds terrain tiles from 151 open elevation
+sources: Copernicus WorldDEM-30 everywhere ("produced using Copernicus
+WorldDEM-30 (c) DLR e.V. 2010-2014 and (c) Airbus Defence and Space GmbH
+2014-2018 provided under COPERNICUS by the European Union and ESA; all
+rights reserved") and bare-earth national terrain models at 0.25-2 m in
+about 30 countries, under CC BY 4.0, public domain (U.S. Government work),
+Licence Ouverte 2.0, Datenlizenz Deutschland, CC0 and the GSI terms of use
+(Japan). Every source, its producer and licence are listed at
+mapterhorn.com/attribution (and in its attribution.json); the 3D view
+credits Mapterhorn and Copernicus on screen. Tiles are fetched one at a
+time through Mapify's tile cache from `tiles.mapterhorn.com` and kept, so a
+place is asked for once.
+
+Where Mapterhorn has no tile -- the open ocean -- when it cannot be
+reached, and offline from what was kept before, the height comes from
+**Terrain Tiles** on the Registry of Open Data on AWS (Mapzen / Tilezen
+"terrarium" tiles), fetched through Mapify's own tile cache and kept on
+disk. Free to use with attribution to each source merged into them: SRTM, USGS 3DEP (formerly NED), GMTED2010 and
 ETOPO1 (public domain); EU-DEM (Copernicus, CC BY); Geoscience Australia
 (CC BY 4.0); LINZ, New Zealand (CC BY 3.0); Kartverket, Norway (CC BY 4.0);
 Austria DGM (CC BY 3.0); Canada CDEM (Open Government Licence – Canada); UK

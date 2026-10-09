@@ -15,8 +15,9 @@ export const TERRAIN_URL = "/api/tiles/terrain/{z}/{x}/{y}";
 export const TERRARIUM = { rScaler: 256, gScaler: 1, bScaler: 1 / 256, offset: -32768 };
 export const SAMPLE_Z = 14;            // ~10 m a pixel at mid-latitudes
 export const TERRAIN_CREDIT =
-  "Terrain: Terrain Tiles on AWS (SRTM, USGS 3DEP, GMTED2010, ETOPO1, EU-DEM and "
-  + "national models; see ATTRIBUTION.md)";
+  "Terrain: Mapterhorn (national models; Copernicus WorldDEM-30 \u00a9 DLR e.V., "
+  + "\u00a9 Airbus DS, provided under COPERNICUS by the EU and ESA) and Terrain Tiles "
+  + "on AWS; see ATTRIBUTION.md";
 
 /** The z/x/y tile holding a point, and the point's pixel inside it. */
 export function tileOf(lon, lat, z) {

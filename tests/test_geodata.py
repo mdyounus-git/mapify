@@ -737,3 +737,68 @@ def test_a_timeout_is_not_waited_on_twice(tmp_path, monkeypatch):
     monkeypatch.setattr(tiles.time, "sleep", lambda s: None)
     data, why = TileCache(root=tmp_path, offline=False).get("weld", 5, 22, 14)
     assert data is None and why.startswith("unreachable") and len(calls) == 1
+
+
+def _terrarium(heights):
+    import numpy as np
+    v = np.asarray(heights, dtype=np.float64) + 32768
+    whole = np.floor(v)
+    return np.stack([whole // 256, whole % 256, np.floor((v - whole) * 256)],
+                    axis=-1).astype(np.uint8)
+
+
+def _height_at(png: bytes, px: int, py: int) -> float:
+    import io
+
+    from PIL import Image
+    r, g, b = Image.open(io.BytesIO(png)).convert("RGB").getpixel((px, py))
+    return r * 256 + g + b / 256 - 32768
+
+
+def test_terrain_is_cut_from_mapterhorn_with_its_heights_intact(tmp_path):
+    """One 512 px Mapterhorn tile holds four 256 px terrain tiles exactly;
+    two levels down it is enlarged as heights, never as packed colours."""
+    import numpy as np
+    from PIL import Image
+
+    from mapify.geodata.tiles import TileCache
+    h = np.zeros((512, 512))
+    h[:256, :256], h[:256, 256:] = 100.0, 200.0
+    h[256:, :256], h[256:, 256:] = -12.5, 3776.25
+    parent = tmp_path / "mapterhorn" / "11" / "1000" / "700.webp"
+    parent.parent.mkdir(parents=True)
+    Image.fromarray(_terrarium(h), "RGB").save(parent, "WEBP", lossless=True)
+    cache = TileCache(root=tmp_path, offline=True)
+
+    ne, media = cache.get("terrain", 12, 2001, 1400)          # the top-right quarter
+    assert media == "image/png"
+    assert _height_at(ne, 10, 10) == 200.0 and _height_at(ne, 250, 250) == 200.0
+    se, _ = cache.get("terrain", 12, 2001, 1401)
+    assert _height_at(se, 128, 128) == 3776.25
+    sw, _ = cache.get("terrain", 12, 2000, 1401)
+    assert _height_at(sw, 128, 128) == -12.5
+    deeper, _ = cache.get("terrain", 13, 4003, 2802)          # inside the SE quarter
+    assert abs(_height_at(deeper, 128, 128) - 3776.25) < 0.01
+    assert (tmp_path / "terrain-mapterhorn" / "12" / "2001" / "1400.png").is_file()
+
+
+def test_where_mapterhorn_has_nothing_the_aws_terrain_answers(tmp_path):
+    """The open ocean: no Mapterhorn tile at any level asked about."""
+    import io
+
+    import numpy as np
+    from PIL import Image
+
+    from mapify.geodata.tiles import MAPTERHORN_LEVELS_UP, TileCache
+    z, x, y = 12, 1979, 1473
+    for dz in range(1, MAPTERHORN_LEVELS_UP + 1):
+        m = tmp_path / "mapterhorn" / str(z - dz) / str(x >> dz) / f"{y >> dz}.missing"
+        m.parent.mkdir(parents=True, exist_ok=True)
+        m.write_text("404")
+    aws = tmp_path / "terrain" / str(z) / str(x) / f"{y}.png"
+    aws.parent.mkdir(parents=True)
+    buf = io.BytesIO()
+    Image.fromarray(_terrarium(np.full((256, 256), -4500.0)), "RGB").save(buf, "PNG")
+    aws.write_bytes(buf.getvalue())
+    data, media = TileCache(root=tmp_path, offline=True).get("terrain", z, x, y)
+    assert media == "image/png" and _height_at(data, 5, 5) == -4500.0
