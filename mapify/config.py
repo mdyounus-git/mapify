@@ -200,6 +200,10 @@ class ModelConfig:
     # technique 12, weight zero until measured; the 1.7 GB model is loaded
     # only when enough letters were read.
     language_id_enabled: bool = True
+    # A second, independent locator (PLONK, MIT; DINOv2, Apache-2.0): its
+    # places join the candidates and its spread says how placeable the
+    # photograph is. 10-20 s more an analysis on a CPU; off until measured.
+    plonk_enabled: bool = False
     max_image_side: int = 1600
 
 

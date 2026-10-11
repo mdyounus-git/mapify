@@ -19,13 +19,13 @@ never as a second vote.
 
 from __future__ import annotations
 
-import math
 import threading
 from pathlib import Path
 
 import numpy as np
 
 from .base import RawCandidate
+from .clusters import places
 
 __all__ = ["RetrievalMemory", "SOURCE", "ATTRIBUTION"]
 
@@ -38,13 +38,6 @@ _TEMPERATURE = 0.02          # similarities this far apart weigh e-fold apart
 def _default_dir() -> Path:
     from ..paths import models_dir
     return models_dir() / "osv5m" / "index"
-
-
-def _km(lat1, lon1, lat2, lon2):
-    p1, p2 = np.radians(lat1), np.radians(lat2)
-    a = (np.sin((p2 - p1) / 2) ** 2
-         + np.cos(p1) * np.cos(p2) * np.sin(np.radians(lon2 - lon1) / 2) ** 2)
-    return 2 * 6371.0088 * np.arcsin(np.sqrt(np.clip(a, 0.0, 1.0)))
 
 
 class RetrievalMemory:
@@ -104,31 +97,7 @@ class RetrievalMemory:
         nb = self.neighbours(embedding, k)
         if not nb:
             return []
-        lat = np.array([n[0] for n in nb])
-        lon = np.array([n[1] for n in nb])
         sim = np.array([n[2] for n in nb])
-        w = np.exp((sim - sim.max()) / _TEMPERATURE)
-        w = w / w.sum()
-        left = np.ones(len(nb), dtype=bool)
-        out: list[RawCandidate] = []
-        while left.any() and len(out) < top:
-            best_i, best_mask, best_mass = -1, None, 0.0
-            for i in np.flatnonzero(left):
-                mask = left & (_km(lat[i], lon[i], lat, lon) <= radius_km)
-                mass = float(w[mask].sum())
-                if mass > best_mass:
-                    best_i, best_mask, best_mass = i, mask, mass
-            if best_mask is None:
-                break
-            ww = w[best_mask]
-            # Report the place at its weighted centre, on the sphere.
-            rl, rn = np.radians(lat[best_mask]), np.radians(lon[best_mask])
-            x = float((ww * np.cos(rl) * np.cos(rn)).sum())
-            y = float((ww * np.cos(rl) * np.sin(rn)).sum())
-            z = float((ww * np.sin(rl)).sum())
-            out.append(RawCandidate(
-                latitude=math.degrees(math.atan2(z, math.hypot(x, y))),
-                longitude=math.degrees(math.atan2(y, x)),
-                score=best_mass, source=SOURCE))
-            left &= ~best_mask
-        return out
+        weight = np.exp((sim - sim.max()) / _TEMPERATURE)
+        return places([n[0] for n in nb], [n[1] for n in nb], weight, SOURCE,
+                      radius_km=radius_km, top=top)

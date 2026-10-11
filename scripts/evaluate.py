@@ -166,6 +166,8 @@ def main() -> int:
                     help="look read place names up in GeoNames too (geonames_enabled)")
     ap.add_argument("--retrieval", action="store_true",
                     help="add the street-photo memory's places (retrieval_enabled)")
+    ap.add_argument("--plonk", action="store_true",
+                    help="add the second locator, PLONK (plonk_enabled)")
     args = ap.parse_args()
     samples_dir = SAMPLES if args.set == "bench" else SAMPLES / "text"
 
@@ -189,6 +191,7 @@ def main() -> int:
     cfg.models.ocr_enabled = args.ocr
     cfg.models.geonames_enabled = args.geonames
     cfg.models.retrieval_enabled = args.retrieval
+    cfg.models.plonk_enabled = args.plonk
 
     print(f"Loading models (offline={args.offline}, ocr={args.ocr})…",
           flush=True)

@@ -180,6 +180,7 @@ class AnalysisEngine:
         self.geocoder.use_geonames = cfg.models.geonames_enabled
         self._memory = None           # the street-photo memory, loaded when first used
         self._lid = None              # the language identifier, likewise
+        self._plonk = None            # the second locator, likewise
         self.table = get_table()
         self.fusion = FusionEngine(cfg.fusion, self.geocoder, self.table)
 
@@ -423,6 +424,7 @@ class AnalysisEngine:
                 ceiling = max((c.score for c in raw), default=0.05)
                 extra_pool.extend(readplace.to_candidates(read_places, ceiling))
             extra_pool.extend(self._remembered(embedding, raw, report))
+            extra_pool.extend(self._second_opinion(image, raw, report))
 
             # ---- is this a photograph of a place? --------------------------
             #
@@ -644,6 +646,28 @@ class AnalysisEngine:
             return self._lid.identify(text)
         except Exception:                         # a damaged model file
             return None
+
+    def _second_opinion(self, image: Image.Image, raw: list[RawCandidate],
+                        report: AnalysisReport) -> list[RawCandidate]:
+        """PLONK's places, a second line independent of GeoCLIP (different
+        encoder, different training photographs), scored on the same scale
+        as GeoCLIP's own candidates. Off unless models.plonk_enabled."""
+        if not self.cfg.models.plonk_enabled:
+            return []
+        if self._plonk is None:
+            from .models.plonk_locator import PlonkLocator
+            self._plonk = PlonkLocator()
+        if not self._plonk.available():
+            return []
+        try:
+            cands, summary = self._plonk.locate(image)
+        except Exception as exc:
+            report.warnings.append(f"The second locator did not run: {exc}")
+            return []
+        report.evidence["second_locator"] = {"model": "PLONK (YFCC)", **summary}
+        ceiling = max((c.score for c in raw), default=0.05)
+        return [RawCandidate(c.latitude, c.longitude, c.score * ceiling, c.source)
+                for c in cands]
 
     def _remembered(self, embedding, raw: list[RawCandidate],
                     report: AnalysisReport) -> list[RawCandidate]:
