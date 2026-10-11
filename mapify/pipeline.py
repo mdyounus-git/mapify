@@ -59,6 +59,48 @@ class ImageRejected(ValueError):
     """The upload is not an image we will process."""
 
 
+# A mirrored photograph is told by its text: read flipped, it reads clearly
+# better. The flipped reading is only tried when the first one is poor, so a
+# photograph whose text reads well costs nothing extra. Measured with
+# scripts/measure_mirror.py, every photograph read both ways (the 163-photo
+# benchmark and the text-bearing set): no photograph the right way round was
+# flipped at any threshold tried, and with these every mirrored one whose
+# text reads well was caught. The price is a second reading for about a
+# third of ordinary photographs -- those whose text already reads poorly.
+MIRROR_TRY_BELOW = 0.6        # first reading's quality below which to try
+MIRROR_MIN_QUALITY = 0.6      # the flipped reading must be at least this good
+MIRROR_MIN_GAIN = 0.1         # ... and this much better than the first
+MIRRORED_NOTE = (
+    "The photograph appears to be mirrored (a selfie camera or a flipped "
+    "copy): its text reads properly only when flipped, so it was analysed "
+    "flipped, and is shown that way."
+)
+
+
+def reading_quality(ocr: OcrResult) -> float:
+    """Mean OCR confidence, weighted by how many letters and digits each
+    line holds, so a one-character fragment cannot outvote a sign."""
+    total = weight = 0.0
+    for line in ocr.lines:
+        n = sum(ch.isalnum() for ch in line.text)
+        if n >= 2:
+            total += line.confidence * n
+            weight += n
+    return total / weight if weight else 0.0
+
+
+@dataclass
+class _Look:
+    """What looking at the pixels produced, before any fusion."""
+    raw: list[RawCandidate]
+    embedding: Any
+    evidence: VisualEvidence
+    extra: list[RawCandidate]
+    ocr_result: OcrResult
+    script_reading: Any
+    extra_group: tuple[str, ...] | None
+
+
 @dataclass
 class AnalysisReport:
     ok: bool
@@ -326,107 +368,22 @@ class AnalysisEngine:
             image = self._prepare(source, self.cfg.models.max_image_side)
             report.image["analysed_size"] = [image.width, image.height]
 
-            # ---- locators -------------------------------------------------
-            step("locate", "Estimating coordinates")
-            raw: list[RawCandidate] = []
-            embedding = None
-            evidence = VisualEvidence()
-
-            if self.geoclip and self.geoclip.load():
-                try:
-                    # Mode search needs the locator's full distribution.
-                    # Any locator can decline to offer one -- a stand-in
-                    # in the tests, or a different model later -- and the
-                    # point-wise shortlist is the correct fallback rather
-                    # than a failure.
-                    modes = (self.cfg.models.geoclip_mode_search
-                             and hasattr(self.geoclip, "locate_modes"))
-                    if modes:
-                        raw, embedding = self.geoclip.locate_modes(
-                            image,
-                            self.cfg.models.geoclip_top_k,
-                            self.cfg.models.geoclip_mode_radius_km,
-                            focus_km=self.cfg.models.geoclip_mode_focus_km,
-                        )
-                    else:
-                        raw, embedding = self.geoclip.locate_with_embedding(
-                            image, self.cfg.models.geoclip_top_k
-                        )
-                except Exception as exc:
-                    report.warnings.append(
-                        f"GeoCLIP failed on this image: {type(exc).__name__}: {exc}"
-                    )
-            elif self.geoclip:
-                report.warnings.append(
-                    "GeoCLIP is unavailable "
-                    f"({self.geoclip.load_error}); falling back to the CLIP "
-                    "country gazetteer, which is far coarser."
-                )
-
-            # ---- zero-shot evidence --------------------------------------
-            if self.cfg.models.clip_evidence_enabled and self.clip.load():
-                step("evidence", "Reading visual clues")
-                if embedding is None:
-                    try:
-                        embedding = self.clip.encode_image(image)
-                    except Exception as exc:
-                        report.warnings.append(f"CLIP encode failed: {exc}")
-                if embedding is not None:
-                    evidence = self.evidence_extractor.score_embedding(embedding)
-                    if self.cfg.models.gazetteer_locator_enabled:
-                        try:
-                            evidence.country_prior = (
-                                self.gazetteer_locator.country_prior(embedding)
-                            )
-                        except Exception as exc:
-                            report.warnings.append(
-                                f"Country prior unavailable: {exc}"
-                            )
-
-            # Fallback locator: if nothing proposed coordinates, use the
-            # country prior's best guesses -- coarse, and labelled as such.
-            extra: list[RawCandidate] = []
-            if not raw and evidence.country_prior:
-                ranked = sorted(
-                    evidence.country_prior.items(), key=lambda kv: -kv[1]
-                )[:8]
-                for code, p in ranked:
-                    country = self.table.get(code)
-                    if country:
-                        extra.append(
-                            RawCandidate(
-                                latitude=country.label_lat,
-                                longitude=country.label_lon,
-                                score=p,
-                                source="clip-country-gazetteer",
-                            )
-                        )
-                report.warnings.append(
-                    "Coordinates come from the country-level CLIP gazetteer, "
-                    "not GeoCLIP. Expect country-scale accuracy at best."
-                )
-
-            report.evidence = evidence.as_dict()
-
-            # ---- OCR ------------------------------------------------------
-            ocr_result = OcrResult()
-            script_reading = None
-            if self.ocr:
-                step("ocr", "Reading signage text")
-                extra_group = self._choose_ocr_group(evidence)
-                try:
-                    ocr_result = self.ocr.read(image, extra_group)
-                except TypeError:
-                    ocr_result = self.ocr.read(image)
-                except Exception as exc:
-                    ocr_result = OcrResult(error=f"{type(exc).__name__}: {exc}")
-                if extra_group:
-                    report.ocr_reader_hint = "+".join(extra_group)
-                if ocr_result.text.strip():
-                    script_reading = script_detect.analyse(ocr_result.text)
-            report.ocr = ocr_result.as_dict()
-            if script_reading:
-                report.ocr["scripts"] = script_reading.as_dict()
+            warnings_before = len(report.warnings)
+            look = self._look(image, report, step)
+            mirrored = self._mirrored_reading(image, look)
+            if mirrored is not None:
+                # A selfie camera or a flipped repost reverses the whole
+                # scene: the text, the side of the road, every shape. Text
+                # that reads properly only when flipped says which way round
+                # it really is, so the analysis starts again on that copy.
+                image = ImageOps.mirror(image)
+                del report.warnings[warnings_before:]
+                look = self._look(image, report, step, ocr=mirrored)
+                report.image["mirrored"] = True
+                report.warnings.append(MIRRORED_NOTE)
+            raw, embedding, evidence = look.raw, look.embedding, look.evidence
+            extra = look.extra
+            ocr_result, script_reading = look.ocr_result, look.script_reading
 
             # ---- what the text actually says ------------------------------
             #
@@ -547,6 +504,143 @@ class AnalysisEngine:
         report.elapsed_s = time.time() - t0
         step("done", "Complete")
         return report
+
+    def _look(self, image: Image.Image, report: AnalysisReport,
+              step: Callable[[str, str], None],
+              ocr: OcrResult | None = None) -> _Look:
+        """Locate, read the visual clues and the text: everything that looks
+        at the pixels. Run again on a flipped copy when the photograph turns
+        out to be mirrored, with the text already read from that copy.
+        """
+        # ---- locators -------------------------------------------------
+        step("locate", "Estimating coordinates")
+        raw: list[RawCandidate] = []
+        embedding = None
+        evidence = VisualEvidence()
+
+        if self.geoclip and self.geoclip.load():
+            try:
+                # Mode search needs the locator's full distribution.
+                # Any locator can decline to offer one -- a stand-in
+                # in the tests, or a different model later -- and the
+                # point-wise shortlist is the correct fallback rather
+                # than a failure.
+                modes = (self.cfg.models.geoclip_mode_search
+                         and hasattr(self.geoclip, "locate_modes"))
+                if modes:
+                    raw, embedding = self.geoclip.locate_modes(
+                        image,
+                        self.cfg.models.geoclip_top_k,
+                        self.cfg.models.geoclip_mode_radius_km,
+                        focus_km=self.cfg.models.geoclip_mode_focus_km,
+                    )
+                else:
+                    raw, embedding = self.geoclip.locate_with_embedding(
+                        image, self.cfg.models.geoclip_top_k
+                    )
+            except Exception as exc:
+                report.warnings.append(
+                    f"GeoCLIP failed on this image: {type(exc).__name__}: {exc}"
+                )
+        elif self.geoclip:
+            report.warnings.append(
+                "GeoCLIP is unavailable "
+                f"({self.geoclip.load_error}); falling back to the CLIP "
+                "country gazetteer, which is far coarser."
+            )
+
+        # ---- zero-shot evidence --------------------------------------
+        if self.cfg.models.clip_evidence_enabled and self.clip.load():
+            step("evidence", "Reading visual clues")
+            if embedding is None:
+                try:
+                    embedding = self.clip.encode_image(image)
+                except Exception as exc:
+                    report.warnings.append(f"CLIP encode failed: {exc}")
+            if embedding is not None:
+                evidence = self.evidence_extractor.score_embedding(embedding)
+                if self.cfg.models.gazetteer_locator_enabled:
+                    try:
+                        evidence.country_prior = (
+                            self.gazetteer_locator.country_prior(embedding)
+                        )
+                    except Exception as exc:
+                        report.warnings.append(
+                            f"Country prior unavailable: {exc}"
+                        )
+
+        # Fallback locator: if nothing proposed coordinates, use the
+        # country prior's best guesses -- coarse, and labelled as such.
+        extra: list[RawCandidate] = []
+        if not raw and evidence.country_prior:
+            ranked = sorted(
+                evidence.country_prior.items(), key=lambda kv: -kv[1]
+            )[:8]
+            for code, p in ranked:
+                country = self.table.get(code)
+                if country:
+                    extra.append(
+                        RawCandidate(
+                            latitude=country.label_lat,
+                            longitude=country.label_lon,
+                            score=p,
+                            source="clip-country-gazetteer",
+                        )
+                    )
+            report.warnings.append(
+                "Coordinates come from the country-level CLIP gazetteer, "
+                "not GeoCLIP. Expect country-scale accuracy at best."
+            )
+
+        report.evidence = evidence.as_dict()
+
+        # ---- OCR ------------------------------------------------------
+        ocr_result = ocr if ocr is not None else OcrResult()
+        extra_group: tuple[str, ...] | None = None
+        script_reading = None
+        if self.ocr and ocr is None:
+            step("ocr", "Reading signage text")
+            extra_group = self._choose_ocr_group(evidence)
+            try:
+                ocr_result = self.ocr.read(image, extra_group)
+            except TypeError:
+                ocr_result = self.ocr.read(image)
+            except Exception as exc:
+                ocr_result = OcrResult(error=f"{type(exc).__name__}: {exc}")
+            if extra_group:
+                report.ocr_reader_hint = "+".join(extra_group)
+        if ocr_result.text.strip():
+            script_reading = script_detect.analyse(ocr_result.text)
+        report.ocr = ocr_result.as_dict()
+        if script_reading:
+            report.ocr["scripts"] = script_reading.as_dict()
+        return _Look(raw, embedding, evidence, extra, ocr_result,
+                     script_reading, extra_group)
+
+    def _mirrored_reading(self, image: Image.Image,
+                          look: _Look) -> OcrResult | None:
+        """The text read off a flipped copy, when it reads clearly better.
+
+        None when there is nothing to compare: no OCR, no text, or a first
+        reading good enough that the photograph is the right way round.
+        """
+        first = look.ocr_result
+        if not self.ocr or first.error or not first.lines:
+            return None
+        before = reading_quality(first)
+        if before >= MIRROR_TRY_BELOW:
+            return None
+        flipped = ImageOps.mirror(image)
+        try:
+            after = self.ocr.read(flipped, look.extra_group)
+        except TypeError:
+            after = self.ocr.read(flipped)
+        except Exception:
+            return None
+        quality = reading_quality(after)
+        if quality >= MIRROR_MIN_QUALITY and quality - before >= MIRROR_MIN_GAIN:
+            return after
+        return None
 
     def _assess_locatability(self, source, embedding, ocr, exif):
         """Run the gate. Never raises: a failed check lets the image through.

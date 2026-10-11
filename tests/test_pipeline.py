@@ -374,3 +374,96 @@ class TestOfflineMode:
         assert status["offline_only"] is True
         assert status["nominatim_enabled"] is False
         assert status["overpass_enabled"] is False
+
+
+def two_tone_jpeg() -> bytes:
+    """Red on the left, blue on the right: which way round is visible."""
+    from PIL import Image
+
+    im = Image.new("RGB", (256, 256), (200, 0, 0))
+    im.paste((0, 0, 200), (128, 0, 256, 256))
+    buf = io.BytesIO()
+    im.save(buf, "JPEG", quality=95)
+    return buf.getvalue()
+
+
+def blue_on_the_left(image) -> bool:
+    return image.convert("RGB").getpixel((10, 128))[2] > 100
+
+
+class MirrorOcr:
+    """A sign that reads properly only when the blue half is on the left,
+    as text on a mirrored photograph reads properly only when flipped."""
+
+    name = "mirror-fake"
+
+    def __init__(self, good=0.93, bad=0.12):
+        self.good, self.bad = good, bad
+        self.reads = 0
+
+    def read(self, image, extra_group=None):
+        from mapify.models.base import OcrLine, OcrResult
+
+        self.reads += 1
+        if blue_on_the_left(image):
+            return OcrResult(lines=[OcrLine("MOSCOW", self.good)], engine=self.name)
+        return OcrResult(lines=[OcrLine("WOCSOW", self.bad)], engine=self.name)
+
+
+class RecordingLocator(StubLocator):
+    def __init__(self, points):
+        super().__init__(points)
+        self.images = []
+
+    def locate(self, image, top_k=12):
+        self.images.append(image)
+        return super().locate(image, top_k)
+
+
+@requires_geodata
+class TestMirroredPhotograph:
+    POINTS = [(55.7558, 37.6173, 0.10), (55.7600, 37.6200, 0.08)]
+
+    def test_text_that_reads_only_flipped_means_the_photo_is_mirrored(
+            self, engine):
+        from mapify.pipeline import MIRRORED_NOTE
+
+        engine.geoclip = RecordingLocator(self.POINTS)
+        engine.ocr = MirrorOcr()
+        report = engine.analyse(two_tone_jpeg(), "selfie.jpg")
+        assert report.ok, report.error
+        assert report.image.get("mirrored") is True
+        assert MIRRORED_NOTE in report.warnings
+        assert report.ocr["text"] == "MOSCOW"
+        # The locator looked again, at the flipped copy...
+        assert [blue_on_the_left(i) for i in engine.geoclip.images] == [False, True]
+        # ...and the flipped text was read once, not again.
+        assert engine.ocr.reads == 2
+
+    def test_text_that_reads_well_costs_no_second_reading(self, engine):
+        engine.geoclip = RecordingLocator(self.POINTS)
+        engine.ocr = MirrorOcr(good=0.93, bad=0.93)
+        report = engine.analyse(two_tone_jpeg(), "street.jpg")
+        assert "mirrored" not in report.image
+        assert engine.ocr.reads == 1
+        assert len(engine.geoclip.images) == 1
+
+    def test_flipping_that_reads_no_better_changes_nothing(self, engine):
+        engine.geoclip = RecordingLocator(self.POINTS)
+        engine.ocr = MirrorOcr(good=0.2, bad=0.12)
+        report = engine.analyse(two_tone_jpeg(), "blurred.jpg")
+        assert "mirrored" not in report.image
+        assert report.ocr["text"] == "WOCSOW"
+        assert engine.ocr.reads == 2
+        assert len(engine.geoclip.images) == 1
+
+
+class TestReadingQuality:
+    def test_fragments_cannot_outvote_a_sign(self):
+        from mapify.models.base import OcrLine, OcrResult
+        from mapify.pipeline import reading_quality
+
+        ocr = OcrResult(lines=[OcrLine("a", 0.0), OcrLine("|", 0.0),
+                               OcrLine("STATION", 0.9)])
+        assert reading_quality(ocr) == pytest.approx(0.9)
+        assert reading_quality(OcrResult()) == 0.0

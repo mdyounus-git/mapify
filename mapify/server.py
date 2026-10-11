@@ -575,7 +575,8 @@ def create_app(cfg: Config | None = None, token: str | None = None,
         except (TypeError, ValueError) as exc:
             raise HTTPException(status_code=400, detail="bad budget") from exc
 
-    def _pinpoint_stream(data: bytes, areas: list, budget: int) -> StreamingResponse:
+    def _pinpoint_stream(data: bytes, areas: list, budget: int,
+                         mirrored: bool = False) -> StreamingResponse:
         queue: asyncio.Queue[str | None] = asyncio.Queue()
         loop = asyncio.get_running_loop()
         gone = threading.Event()
@@ -588,10 +589,15 @@ def create_app(cfg: Config | None = None, token: str | None = None,
 
         def work() -> dict:
             from io import BytesIO
-            from PIL import Image
+            from PIL import Image, ImageOps
             from .pinpoint.engine import clip_namer
             with Image.open(BytesIO(data)) as img:
                 img.load()
+                if mirrored:
+                    # The analysis found the photograph mirrored. Features
+                    # do not match their mirror image, so compare the scene
+                    # the right way round -- upright first, as it was read.
+                    img = ImageOps.mirror(ImageOps.exif_transpose(img) or img)
                 # The analysis's CLIP, already loaded, weighs the landmark
                 # names near each area against the photograph; never loaded
                 # just for this.
@@ -633,16 +639,19 @@ def create_app(cfg: Config | None = None, token: str | None = None,
     @app.post("/api/pinpoint/stream")
     async def pinpoint_stream(image: UploadFile = File(...),
                               areas: str = Form("[]"),
-                              budget: str = Form("")) -> StreamingResponse:
+                              budget: str = Form(""),
+                              mirrored: str = Form("")) -> StreamingResponse:
         data = await image.read()
         _check_size(cfg, len(data))
-        return _pinpoint_stream(data, _areas(areas), _budget(budget))
+        return _pinpoint_stream(data, _areas(areas), _budget(budget),
+                                mirrored=mirrored == "1")
 
     @app.post("/api/pinpoint/local/stream")
     async def pinpoint_local_stream(payload: dict[str, Any]) -> StreamingResponse:
         data, _name = _read_approved(str(payload.get("path", "")))
         return _pinpoint_stream(data, _areas(payload.get("areas", [])),
-                                _budget(payload.get("budget")))
+                                _budget(payload.get("budget")),
+                                mirrored=payload.get("mirrored") is True)
 
     @app.get("/api/pinpoint/thumb/{key}")
     async def pinpoint_thumb(key: str) -> Response:

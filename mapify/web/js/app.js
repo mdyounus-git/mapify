@@ -734,18 +734,21 @@ async function runPinpoint(budget = null) {
     The photograph itself stays on this computer.
     <div class="pinpoint-status">Starting</div>`;
   const status = panel.querySelector(".pinpoint-status");
+  // A photograph the analysis found mirrored is compared the right way round.
+  const mirrored = state.report?.image?.mirrored === true;
   try {
     let resp;
     if (state.sourcePath) {
       resp = await fetch("/api/pinpoint/local/stream", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ path: state.sourcePath, areas, budget }),
+        body: JSON.stringify({ path: state.sourcePath, areas, budget, mirrored }),
       });
     } else {
       const form = new FormData();
       form.append("image", state.sourceFile, state.sourceFile.name || "image.jpg");
       form.append("areas", JSON.stringify(areas));
       if (budget) form.append("budget", String(budget));
+      if (mirrored) form.append("mirrored", "1");
       resp = await fetch("/api/pinpoint/stream", { method: "POST", body: form });
     }
     if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
@@ -1686,6 +1689,9 @@ async function analyse(source) {
     if (!report.ok) { fail("Analysis failed", report.error || "Unknown error."); return; }
 
     state.report = report;
+    // Before render: the evidence map and the walk overlay take the
+    // preview as it is then, and it must be the way the analysis read it.
+    if (report.image?.mirrored) await showMirrored();
     render(report);
     el.saveBtn.disabled = false;
     el.exportBtn.disabled = false;
@@ -1774,6 +1780,29 @@ function showSource(source) {
     el.sourceThumb.removeAttribute("src");
     el.sourceName.textContent = source.name || "";
   }
+}
+
+/** Show the photograph flipped back, the way the analysis read it. */
+async function showMirrored() {
+  const src = state.previewUrl || el.sourceThumb.getAttribute("src");
+  if (!src) return;
+  try {
+    const img = new Image();
+    img.src = src;
+    await img.decode();
+    const canvas = document.createElement("canvas");
+    canvas.width = img.naturalWidth;
+    canvas.height = img.naturalHeight;
+    const ctx = canvas.getContext("2d");
+    ctx.translate(canvas.width, 0);
+    ctx.scale(-1, 1);
+    ctx.drawImage(img, 0, 0);
+    const blob = await new Promise((done) => canvas.toBlob(done, "image/jpeg", 0.92));
+    if (!blob) return;
+    if (state.previewUrl) URL.revokeObjectURL(state.previewUrl);
+    state.previewUrl = URL.createObjectURL(blob);
+    el.sourceThumb.src = state.previewUrl;
+  } catch { /* the original stays on screen; the warning still says why */ }
 }
 
 function isHeif(file) {
