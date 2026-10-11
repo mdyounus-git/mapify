@@ -179,6 +179,7 @@ class AnalysisEngine:
         self.geocoder = get_geocoder()
         self.geocoder.use_geonames = cfg.models.geonames_enabled
         self._memory = None           # the street-photo memory, loaded when first used
+        self._lid = None              # the language identifier, likewise
         self.table = get_table()
         self.fusion = FusionEngine(cfg.fusion, self.geocoder, self.table)
 
@@ -624,11 +625,25 @@ class AnalysisEngine:
                 report.ocr_reader_hint = "+".join(extra_group)
         if ocr_result.text.strip():
             script_reading = script_detect.analyse(ocr_result.text)
+            if self.cfg.models.language_id_enabled and ocr_result.language is None:
+                ocr_result.language = self._language_of(ocr_result.text)
         report.ocr = ocr_result.as_dict()
         if script_reading:
             report.ocr["scripts"] = script_reading.as_dict()
         return _Look(raw, embedding, evidence, extra, ocr_result,
                      script_reading, extra_group)
+
+    def _language_of(self, text: str) -> dict[str, Any] | None:
+        """The language of the recognised text and where it is spoken
+        (evidence/language_id.py). Reported in technique 12; it moves
+        nothing until measured."""
+        if self._lid is None:
+            from .evidence.language_id import LanguageIdentifier
+            self._lid = LanguageIdentifier()
+        try:
+            return self._lid.identify(text)
+        except Exception:                         # a damaged model file
+            return None
 
     def _remembered(self, embedding, raw: list[RawCandidate],
                     report: AnalysisReport) -> list[RawCandidate]:

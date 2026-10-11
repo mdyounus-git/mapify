@@ -43,6 +43,8 @@ class OcrResult:
     engine: str | None = None
     languages: list[str] = field(default_factory=list)
     error: str | None = None
+    # The language of the text, identified afterwards (evidence/language_id.py).
+    language: dict[str, Any] | None = None
 
     @property
     def text(self) -> str:
@@ -56,6 +58,7 @@ class OcrResult:
             "line_count": len(self.lines),
             "lines": [line.as_dict() for line in self.lines],
             "text": self.text,
+            "language": self.language,
         }
 
 

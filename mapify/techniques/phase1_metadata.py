@@ -529,16 +529,31 @@ def script(ctx: Context) -> Finding:
     summary = ", ".join(f"{code} {share:.0%}" for code, share in dominant)
     if langs:
         summary += " — wording suggests " + ", ".join(c for c, _ in langs)
+    detail = reading.as_dict()
+    language = getattr(ctx.ocr, "language", None) if ctx.ocr is not None else None
+    sources = [_SRC_OCR, "Unicode script ranges (ISO 15924)"]
+    if language:
+        from ..data.countries import get_table
+        table = get_table()
+        where = [(table.get(c["country"]).name if table.get(c["country"]) else c["country"])
+                 for c in language["countries"][:3]]
+        summary += (f"; language {language['language']} (GlotLID "
+                    f"{language['probability']:.2f})"
+                    + (", spoken most in " + ", ".join(where) if where else "")
+                    + " — reported only, not yet weighed")
+        detail["language"] = language
+        sources += ["GlotLID language identification (Apache-2.0)",
+                    "Unicode CLDR territory data (Unicode License v3)"]
     top_script, top_share = dominant[0]
     return Finding(
         technique=12, key=spec.key, name=spec.name, phase=PHASE,
         ran=True, found=True, summary=summary,
-        detail=reading.as_dict(),
+        detail=detail,
         confidence=top_share,
         constraint=Constraint(kind="script", value=top_script,
                               strength=top_share,
                               note="countries that sign in this script"),
-        sources=[_SRC_OCR, "Unicode script ranges (ISO 15924)"],
+        sources=sources,
     )
 
 

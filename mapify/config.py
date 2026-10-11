@@ -195,6 +195,11 @@ class ModelConfig:
     # street-level photographs (OpenStreetView-5M, CC BY-SA 4.0; built by
     # scripts/build_retrieval.py). Off until measured on the benchmark.
     retrieval_enabled: bool = False
+    # The language of text read off the photograph (GlotLID, Apache-2.0 plus
+    # notice) and the countries that speak it (Unicode CLDR). Reported in
+    # technique 12, weight zero until measured; the 1.7 GB model is loaded
+    # only when enough letters were read.
+    language_id_enabled: bool = True
     max_image_side: int = 1600
 
 

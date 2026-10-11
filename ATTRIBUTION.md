@@ -32,6 +32,8 @@ components below, which keep their own terms.
 | **PyTorch** | BSD-3-Clause | Keep the notice | Installed as a dependency, notice ships in the wheel |
 | **Hugging Face Transformers** | Apache-2.0 | Keep the notice and NOTICE file | Installed as a dependency |
 | **EasyOCR** (optional) | Apache-2.0 | Keep the notice | Optional; only loaded if the user installs it |
+| **GlotLID** — language identification of the text read off a photograph (fastText model, about 2,000 languages), through **fasttext-wheel** (MIT) | Apache-2.0 **plus notices**: the authors make no representation about the licensing of the data it was trained on, and invite rights holders to ask for exclusion | Keep the licence and its notices (`models/glotlid/LICENSE`) | Downloaded once by `scripts/fetch_research_data.py glotlid`; the finding is reported in technique 12 with weight zero until measured (`models.language_id_enabled`) |
+| **Unicode CLDR** — which countries speak each language, and how many of their people (`supplementalData.xml`, `supplementalMetadata.xml`) | Unicode License v3 | Keep the copyright and permission notice (`models/cldr/LICENSE`) | Downloaded once by `scripts/fetch_research_data.py cldr` and read locally |
 | **pi-heif** (optional) — reads HEIC/HEIF photographs | Code BSD-3-Clause; its wheels bundle libheif and libde265, both LGPL-3.0, and no encoder | Keep the notices; libheif and libde265 stay separate, replaceable DLLs (LGPL) | Optional; only loaded if the user installs it. HEVC, the codec inside HEIC, is covered by patents in some countries, which is why it is not installed by default. Not `pillow-heif`: its wheels carry the GPL-2.0 x265 encoder |
 
 GeoCLIP citation:
