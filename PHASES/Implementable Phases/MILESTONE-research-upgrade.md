@@ -25,22 +25,30 @@ on the user. Updated 2026-10-09.
 | `166f597d` | Pinpoint asks Panoramax (no account, Etalab 2.0 / CC BY-SA 4.0, camera heading) — searched newest-first in three shells, one picture per sequence per 15 m |
 | `50816763` | 3D view: national aerial photographs for France, the Netherlands, Switzerland, Spain and Japan, each only at home; flat-fill tiles recognised as missing; dropped tile connections retried |
 | `461ae491` | 3D view: bare-earth terrain from Mapterhorn (Dam Square 1.8 m where the AWS tiles read 13.8 m of roofs), the AWS tiles as fallback (ocean, outage, offline) |
+| `af3945d6` | Pinpoint finds landmarks through Wikidata (CC0) and searches their Commons category first: Red Square, Kremlin, St. Basil's for Moscow; the Great Pyramid and the Sphinx for Giza; Christ the Redeemer for Corcovado. Cities, things no longer standing and transit networks left out |
+| `9d90f82c` | Terrain past zoom 15 cut from the deepest tile as heights, so finer ground never just vanishes |
+| `a80055c1` | `GET /api/events/near`: earthquakes (USGS) and natural events (NASA EONET) around the place, at the photograph's time or lately; public domain, no key, context only |
+
+The user's direction (2026-10-11): the inspiration is "God's Eye". Taken as
+fusing every open clue with its evidence shown, the globe-to-street dive and
+live public layers around a place -- never finding or tracking people (no
+face recognition, no private or hacked camera feeds).
 
 ## In the working tree, waiting on a measurement
 
 **The mirror test.** A selfie camera or a flipped repost reverses the
 scene, and "Turkish text read backwards" is evidence against Turkey. When the
 first OCR reading is poor (quality < 0.6), the flipped copy is read with the
-same reader; if it reads clearly better (>= 0.6 and +0.2), the analysis runs
+same reader; if it reads clearly better (>= 0.6 and +0.1), the analysis runs
 again on the flipped copy, says so, shows the photograph flipped, and
 Pinpoint matches it flipped. `scripts/measure_mirror.py` reads every
 photograph both ways and reports wrong flips and catches:
 
 - benchmark (163, mostly little text): **0 wrongly flipped** at every
-  threshold tried; 3 of the 4 with well-read text caught when mirrored;
-- text set (`samples/text/`, being fetched): pending.
-
-Commit once the text set has been measured, with the thresholds it supports.
+  threshold tried; all 7 with well-read text caught when mirrored; a second
+  reading for 59 (those whose text reads poorly);
+- text set (`samples/text/`, 15 fetched of the 70 approved): **0 wrongly
+  flipped**; every one with well-read text caught.
 
 ## Measured coverage (Panoramax, 800 m radius)
 
@@ -62,9 +70,12 @@ Each is accepted or rejected by the benchmark, as everything else is.
 
 ## Next, without downloads
 
-1. Finish the mirror test (above), then `eval_pinpoint.py --panoramax` on the
-   11 landmarks once the text fetch has stopped searching Commons.
-2. Wikidata -> Commons category for named landmarks (Moscow, Giza, Rio).
+1. Finish the mirror test (above), then `eval_pinpoint.py --names --panoramax`
+   on the 11 landmarks (`bench/eval-pinpoint-true-v4-names-panoramax.log`)
+   while nothing else searches Commons.
+2. In the working tree: the walk's ground at zoom 16 under the walker (eye
+   height read there too) and "Around here" in the 3D view (the events
+   above) -- to be seen in the headless harness before committing.
 3. Walk terrain finer than z14 in Mapterhorn's lidar countries.
 4. The rebuild and portable ZIP from the previous milestone, which now also
    need to include everything above.
