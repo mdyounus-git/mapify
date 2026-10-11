@@ -304,17 +304,33 @@ accuracy boost, and the benchmark says so rather than implying otherwise.
 
 ---
 
+### Optional: iPhone photographs (HEIC)
+
+```bash
+.venv\Scripts\pip install pi-heif
+```
+
+The iPhone saves photographs as HEIC. With `pi-heif` installed (code
+BSD-3-Clause; its wheels bundle the LGPL-3.0 libheif and libde265, and no
+encoder) Mapify reads them like any other photograph. It is not installed by
+default, and not in the built package, because HEVC -- the codec inside HEIC
+-- is covered by patents in some countries; whether to add it is yours.
+Without it, a HEIC photograph is recognised and Mapify says how to add the
+decoder, or to export the photograph as JPG.
+
 ## How it works
 
 ```
    image
      │
      ├─ decode ─────────── format checked from the bytes, never the extension
+     │                     (HEIC too, with the optional decoder)
      │
      ├─ EXIF ───────────── read, and held apart as a claim, not an answer
      │
      ├─ GeoCLIP ────────── 12 candidate coordinates from a 100k-point gallery,
-     │                     plus the CLIP embedding it already computed
+     │                     plus the CLIP embedding it already computed; a
+     │                     360° panorama is read as four views of one moment
      │
      ├─ zero-shot ──────── that same embedding scored against a prompt bank:
      │                     traffic side, signage script, world region,
@@ -324,6 +340,10 @@ accuracy boost, and the benchmark says so rather than implying otherwise.
      │
      ├─ OCR ────────────── if installed; feeds script detection and gazetteer
      │                     matching in ~30 languages
+     │
+     ├─ mirror ─────────── text that reads properly only flipped means a
+     │                     mirrored photograph (a selfie camera, a flipped
+     │                     repost): it is analysed flipped, and the report says so
      │
      ├─ gate ───────────── is this a photograph of a place at all? A poster, a
      │                     screenshot or a close-up gets no coordinate — not a
@@ -446,6 +466,41 @@ policy is derived from whatever host you configure, and a non-https URL
 disables tiles rather than opening the policy up.
 
 ---
+
+## Finding the exact spot, and walking it
+
+**Pinpoint** (the button on a result) tries to go from "this area" to "this
+spot": it compares your photograph, on this machine, with geotagged
+photographs taken near the candidates, and adopts a location only when enough
+points match under one pair of camera positions. The references come from
+Wikimedia Commons (searched by distance, and by the landmarks Wikidata knows
+near each candidate, through their Commons categories), Panoramax street
+pictures (no account) and, with your own token, Mapillary. Only coordinates go
+out, never the photograph.
+
+Measured at the true spot of 11 landmark photographs: **6 pinpointed, median
+error 8 m** (Tower Bridge, Sydney Opera House 0 m; Rome 1 m; Tokyo 8 m;
+Eiffel Tower 16 m; Athens 22 m), Golden Gate "possible", and Moscow, Beijing,
+Giza and Rio not found -- the photographs near those spots do not show the
+same view, and Pinpoint says "not found" rather than guessing. It is a step
+further, not a guarantee.
+
+**The 3D view and the walk.** From the globe's closest zoom the view hands over
+to a 3D street scene: buildings and streets from OpenStreetMap, the ground's
+real height, and imagery under it. The ground comes from Mapterhorn: in about
+30 countries bare-earth national models at 0.25-2 m, so the walker stands on
+the street, not on the roofs; elsewhere Copernicus at 30 m, a surface model
+that still carries some of the buildings and trees. The imagery is the best open source for the country: aerial
+photographs at 8-25 cm in France, the Netherlands, Switzerland, Spain and
+Japan, about 2 m in the United States, 30 m Landsat elsewhere. **Walk here**
+puts you at eye height (1.7 m) on that ground, the sky and weather drawn from
+Open-Meteo's record for the hour, your photograph laid over the view if you
+want to compare. "Around here" lists the earthquakes (USGS) and natural events
+(NASA EONET) near the place, at the photograph's time when it is known.
+
+What it is not: photographic facades, or the cars and people that were there.
+Those are not available from any free source, and "Ambience" -- moving cars,
+people and birds -- is labelled as illustration, off by default.
 
 ## Free, and legally so
 
