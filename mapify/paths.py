@@ -339,7 +339,15 @@ def apply_model_cache_env() -> Path | None:
     _point_torch_hub_at_models()
     if os.environ.get("HF_HOME") or os.environ.get("HF_HUB_CACHE"):
         return None
-    if not is_frozen() and _default_hf_cache_has_weights():
+    try:
+        ours = (models_dir() / "hub" / _CLIP_CACHE_DIR / "snapshots").is_dir()
+    except OSError:
+        ours = False
+    # A checkout uses the models directory when it already holds the weights,
+    # even if the system drive's shared cache does too: the owner keeps
+    # nothing of Mapify's on C:, and downloads made now must land beside the
+    # rest. The shared cache is used only when it is the one copy there is.
+    if not is_frozen() and not ours and _default_hf_cache_has_weights():
         base = os.environ.get("XDG_CACHE_HOME")
         _go_offline_if_complete(
             (Path(base) if base else Path.home() / ".cache") / "huggingface" / "hub")

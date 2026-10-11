@@ -97,13 +97,32 @@ class TestWritablePaths:
             "paths.py and firstrun.COMPONENTS disagree about the model"
         )
 
-    def test_a_populated_shared_cache_is_left_alone(self, monkeypatch):
-        """Relocating someone's existing download would be rude."""
+    def test_a_populated_shared_cache_is_left_alone(self, monkeypatch, tmp_path):
+        """When it is the only copy, relocating it would cost a download."""
         monkeypatch.delenv("HF_HOME", raising=False)
         monkeypatch.delenv("HF_HUB_CACHE", raising=False)
         monkeypatch.setattr(paths, "_default_hf_cache_has_weights", lambda: True)
+        monkeypatch.setattr(paths, "models_dir", lambda: tmp_path / "empty")
         assert paths.is_frozen() is False
         assert paths.apply_model_cache_env() is None
+
+    def test_the_models_directory_wins_when_it_holds_the_weights(self, monkeypatch,
+                                                                tmp_path):
+        """The owner keeps nothing of Mapify's on C:; a copy beside the app
+        is used even though the shared cache has one too."""
+        monkeypatch.setenv("HF_HOME", "unset-below")
+        monkeypatch.delenv("HF_HOME")
+        monkeypatch.setenv("HF_HUB_CACHE", "unset-below")
+        monkeypatch.delenv("HF_HUB_CACHE")
+        monkeypatch.setenv("HF_HUB_OFFLINE", "unset-below")
+        monkeypatch.delenv("HF_HUB_OFFLINE")
+        monkeypatch.setenv("TRANSFORMERS_OFFLINE", "unset-below")
+        monkeypatch.delenv("TRANSFORMERS_OFFLINE")
+        (tmp_path / "hub" / paths._CLIP_CACHE_DIR / "snapshots").mkdir(parents=True)
+        monkeypatch.setattr(paths, "_default_hf_cache_has_weights", lambda: True)
+        monkeypatch.setattr(paths, "models_dir", lambda: tmp_path)
+        assert paths.apply_model_cache_env() == tmp_path
+        assert os.environ["HF_HUB_CACHE"] == str(tmp_path / "hub")
 
     def test_an_empty_shared_cache_falls_back_to_the_project(self, monkeypatch):
         """Nothing to preserve, so use the copy the project already has."""
