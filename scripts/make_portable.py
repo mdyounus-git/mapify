@@ -95,7 +95,10 @@ def entries(models: Path, gallery: list[Path]) -> list[tuple[Path, str]]:
             if "_dev" in rel.parts:
                 continue                       # test copies (web/vendor/_dev)
             out.append((p, f"Mapify/{rel.as_posix()}"))
-    for sub in ("hub", "easyocr"):
+    # CLIP and the OCR models only: the optional research parts (PLONK,
+    # GlotLID, GeoNames, the street-photo memory) are off by default and
+    # fetched by whoever turns them on (scripts/fetch_research_data.py).
+    for sub in (f"hub/{CLIP_DIR}", "easyocr"):
         for p in sorted((models / sub).rglob("*")):
             if p.is_file() and not p.name.endswith((".lock", ".incomplete")):
                 out.append((p, f"Mapify/models/{p.relative_to(models).as_posix()}"))

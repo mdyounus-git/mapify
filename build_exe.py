@@ -132,6 +132,7 @@ def build(console: bool, clean: bool) -> int:
         # owner's decision (see mapify/heif.py). Without it the built app
         # explains how to add it when given a HEIC photograph.
         "--exclude-module", "pi_heif",
+        *c2pa_library(),
 
         # Not mapify/__main__.py: PyInstaller runs the entry script as a
         # top-level module with no parent package, so its relative imports
@@ -147,6 +148,18 @@ def build(console: bool, clean: bool) -> int:
     print(f"\n  PyInstaller finished in {time.time() - started:.0f}s "
           f"(exit {result.returncode})")
     return result.returncode
+
+
+def c2pa_library() -> list[str]:
+    """c2pa-python loads its native library from c2pa/libs at import, which
+    PyInstaller cannot see. Only the DLL: the folder also holds a 283 MB
+    static library and debug symbols that nothing loads."""
+    import importlib.util
+    spec = importlib.util.find_spec("c2pa")
+    if spec is None or not spec.origin:
+        return []
+    dll = Path(spec.origin).parent / "libs" / "c2pa_c.dll"
+    return ["--add-binary", f"{dll}{os_sep()}c2pa/libs"] if dll.is_file() else []
 
 
 def os_sep() -> str:

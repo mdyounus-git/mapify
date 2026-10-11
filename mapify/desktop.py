@@ -639,6 +639,30 @@ def _selftest() -> int:
         return (f"{' and '.join(missing)} not here yet ({root}): downloaded on "
                 f"first run, which needs the internet")
 
+    def _optional() -> str:
+        """The research upgrade's optional parts: which are in this copy.
+        Absent is not a failure -- each is off or reports nothing without
+        its data -- but a library that is bundled and cannot load is."""
+        import importlib
+        import importlib.util
+
+        from .paths import models_dir
+        have = []
+        for label, module in (("C2PA", "c2pa"), ("language ID", "fasttext"),
+                              ("second matcher", "kornia"), ("PLONK", "plonk")):
+            if importlib.util.find_spec(module) is None:
+                continue
+            importlib.import_module(module)    # bundled must mean loadable
+            have.append(label)
+        root = models_dir()
+        data = [label for label, path in (
+            ("GlotLID", root / "glotlid" / "model.bin"),
+            ("GeoNames", root / "geonames" / "geonames.sqlite"),
+            ("street memory", root / "osv5m" / "index"),
+        ) if path.exists() and (path.is_file() or any(path.glob("*.npz")))]
+        return (f"libraries: {', '.join(have) or 'none'}; "
+                f"data: {', '.join(data) or 'none'}")
+
     check("torch", _torch)
     check("model stack", _models)
     check("pywebview", _webview)
@@ -650,6 +674,7 @@ def _selftest() -> int:
     check("headless startup", _headless_startup)
     check("writable state", _state_is_writable)
     check("model weights", _weights)
+    check("optional parts", _optional)
 
     width = max(len(label) for label, _ in checks)
     for label, result in checks:

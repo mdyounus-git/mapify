@@ -61,7 +61,7 @@ def _read_c2pa(data: bytes) -> dict[str, Any] | None:
         import json
 
         import c2pa
-    except ImportError:
+    except Exception:              # not installed, or its native library missing
         return None
     if data[:3] == b"\xff\xd8\xff":
         mime = "image/jpeg"
