@@ -208,6 +208,65 @@ SITES: list[tuple[str, float, float, str, str, str]] = [
 ]
 
 
+# One country, densely: the owner works from India, and the world frame has
+# a single Indian photograph (Mumbai), which cannot show whether India is
+# placed in India. Every state's kind of place -- metros and towns, the
+# coasts, the plains, the hills and the north-east -- with the scene mix of
+# the world frame. Regions here are the parts of India.
+INDIA_SITES = [
+    ("in-delhi-cp",          28.6315, 77.2167, "North",      "street",    "Connaught Place, Delhi"),
+    ("in-delhi-chandni",     28.6506, 77.2303, "North",      "street",    "Chandni Chowk, Delhi"),
+    ("in-delhi-station",     28.6430, 77.2194, "North",      "transport", "New Delhi station"),
+    ("in-jaipur",            26.9239, 75.8267, "North",      "street",    "Jaipur"),
+    ("in-udaipur",           24.5764, 73.6835, "North",      "coastal",   "Udaipur lakes"),
+    ("in-lucknow",           26.8500, 80.9462, "North",      "street",    "Hazratganj, Lucknow"),
+    ("in-varanasi",          25.3109, 83.0107, "North",      "coastal",   "Varanasi ghats"),
+    ("in-amritsar",          31.6200, 74.8765, "North",      "street",    "Amritsar"),
+    ("in-chandigarh",        30.7398, 76.7827, "North",      "street",    "Chandigarh"),
+    ("in-shimla",            31.1048, 77.1734, "North",      "street",    "Mall Road, Shimla"),
+    ("in-rishikesh",         30.0869, 78.2676, "North",      "street",    "Rishikesh"),
+    ("in-srinagar",          34.0837, 74.7973, "North",      "coastal",   "Dal Lake, Srinagar"),
+    ("in-leh",               34.1642, 77.5848, "North",      "rural",     "Leh"),
+    ("in-mumbai-dadar",      19.0178, 72.8478, "West",       "street",    "Dadar, Mumbai"),
+    ("in-mumbai-cst",        18.9398, 72.8355, "West",       "transport", "CSMT, Mumbai"),
+    ("in-pune",              18.5236, 73.8411, "West",       "street",    "Pune"),
+    ("in-ahmedabad",         23.0258, 72.5873, "West",       "street",    "Ahmedabad"),
+    ("in-surat",             21.1702, 72.8311, "West",       "street",    "Surat"),
+    ("in-goa",               15.4989, 73.8278, "West",       "coastal",   "Panaji, Goa"),
+    ("in-nagpur",            21.1458, 79.0882, "Central",    "street",    "Nagpur"),
+    ("in-bhopal",            23.2599, 77.4126, "Central",    "street",    "Bhopal"),
+    ("in-indore",            22.7196, 75.8577, "Central",    "street",    "Indore"),
+    ("in-bengaluru-mg",      12.9756, 77.6066, "South",      "street",    "MG Road, Bengaluru"),
+    ("in-bengaluru-majestic", 12.9767, 77.5713, "South",     "transport", "Majestic, Bengaluru"),
+    ("in-chennai-tnagar",    13.0418, 80.2341, "South",      "street",    "T. Nagar, Chennai"),
+    ("in-chennai-marina",    13.0500, 80.2824, "South",      "coastal",   "Marina, Chennai"),
+    ("in-hyderabad-old",     17.3616, 78.4747, "South",      "street",    "Old City, Hyderabad"),
+    ("in-hyderabad-hitec",   17.4435, 78.3772, "South",      "street",    "HITEC City, Hyderabad"),
+    ("in-kochi",              9.9658, 76.2421, "South",      "coastal",   "Fort Kochi"),
+    ("in-trivandrum",         8.4875, 76.9525, "South",      "street",    "Thiruvananthapuram"),
+    ("in-alappuzha",          9.4981, 76.3388, "South",      "rural",     "Alappuzha backwaters"),
+    ("in-munnar",            10.0889, 77.0595, "South",      "rural",     "Munnar"),
+    ("in-madurai",            9.9195, 78.1193, "South",      "street",    "Madurai"),
+    ("in-coimbatore",        11.0168, 76.9558, "South",      "street",    "Coimbatore"),
+    ("in-mysuru",            12.3051, 76.6551, "South",      "street",    "Mysuru"),
+    ("in-mangaluru",         12.8698, 74.8430, "South",      "street",    "Mangaluru"),
+    ("in-hampi",             15.3350, 76.4600, "South",      "rural",     "Hampi"),
+    ("in-vizag",             17.7128, 83.3200, "South",      "coastal",   "Visakhapatnam"),
+    ("in-vijayawada",        16.5062, 80.6480, "South",      "street",    "Vijayawada"),
+    ("in-kolkata",           22.5646, 88.3510, "East",       "street",    "Esplanade, Kolkata"),
+    ("in-kolkata-howrah",    22.5839, 88.3426, "East",       "transport", "Howrah"),
+    ("in-patna",             25.6093, 85.1376, "East",       "street",    "Patna"),
+    ("in-bhubaneswar",       20.2961, 85.8245, "East",       "street",    "Bhubaneswar"),
+    ("in-puri",              19.7983, 85.8249, "East",       "coastal",   "Puri"),
+    ("in-guwahati",          26.1806, 91.7539, "North-east", "street",    "Guwahati"),
+    ("in-shillong",          25.5788, 91.8933, "North-east", "street",    "Shillong"),
+    ("in-gangtok",           27.3314, 88.6138, "North-east", "street",    "Gangtok"),
+    ("in-imphal",            24.8170, 93.9368, "North-east", "street",    "Imphal"),
+]
+
+FRAMES = {"world": SITES, "india": INDIA_SITES}
+
+
 def by_region() -> dict[str, int]:
     out: dict[str, int] = {}
     for _, _, _, region, _, _ in SITES:

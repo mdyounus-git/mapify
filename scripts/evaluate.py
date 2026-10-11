@@ -159,9 +159,10 @@ def main() -> int:
     ap.add_argument("--json", type=str, default=None)
     ap.add_argument("--quiet", action="store_true",
                     help="summary only, no per-sample lines")
-    ap.add_argument("--set", choices=("bench", "text"), default="bench",
-                    help="the 163-photograph benchmark, or the text-bearing set "
-                         "(samples/text, fetch_text_samples.py)")
+    ap.add_argument("--set", choices=("bench", "text", "india"), default="bench",
+                    help="the 163-photograph benchmark, the text-bearing set "
+                         "(samples/text, fetch_text_samples.py) or the India frame "
+                         "(samples/india, fetch_samples.py --frame india)")
     ap.add_argument("--geonames", action="store_true",
                     help="look read place names up in GeoNames too (geonames_enabled)")
     ap.add_argument("--retrieval", action="store_true",
@@ -169,7 +170,7 @@ def main() -> int:
     ap.add_argument("--plonk", action="store_true",
                     help="add the second locator, PLONK (plonk_enabled)")
     args = ap.parse_args()
-    samples_dir = SAMPLES if args.set == "bench" else SAMPLES / "text"
+    samples_dir = SAMPLES if args.set == "bench" else SAMPLES / args.set
 
     logging.basicConfig(level=logging.ERROR)
 

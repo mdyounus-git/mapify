@@ -10,7 +10,10 @@ file's title, licence, author, source page and true coordinate, so attribution
 travels with the data. ``samples/`` is git-ignored: this fetches inputs for
 local evaluation, it does not redistribute anyone's photographs.
 
-    python scripts/fetch_samples.py [--per-site 1]
+    python scripts/fetch_samples.py [--per-site 1] [--frame india]
+
+``--frame india`` fetches the India frame (sample_sites.INDIA_SITES) into
+``samples/india/`` instead, with a manifest of its own.
 
 Wikimedia asks for a descriptive User-Agent and reasonable request rates; both
 are honoured here.
@@ -42,7 +45,7 @@ UA = (
 # argued with on its own. 165 sites, with Africa and South America
 # deliberately over-sampled relative to their share of photo corpora, because
 # that is where GeoCLIP is known to fail.
-from sample_sites import SITES
+from sample_sites import FRAMES
 
 ALLOWED_LICENCE_MARKERS = (
     "cc0", "cc by", "cc-by", "public domain", "pd-", "attribution",
@@ -121,9 +124,15 @@ def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--per-site", type=int, default=1)
     ap.add_argument("--radius", type=int, default=600)
+    ap.add_argument("--frame", choices=sorted(FRAMES), default="world",
+                    help="which sampling frame to fetch (india: samples/india/)")
     ap.add_argument("--refetch", action="store_true",
                     help="ignore what is already downloaded")
     args = ap.parse_args()
+    global OUT
+    if args.frame != "world":
+        OUT = OUT / args.frame
+    sites = FRAMES[args.frame]
 
     OUT.mkdir(parents=True, exist_ok=True)
     manifest: list[dict] = []
@@ -145,7 +154,7 @@ def main() -> int:
             print(f"resuming: {len(have)} sites already fetched\n")
             manifest.extend(have.values())
 
-    for slug, lat, lon, region, scene, label in SITES:
+    for slug, lat, lon, region, scene, label in sites:
         if slug in have:
             continue
         print(f"{slug:16s} {region:<14} {scene:<9} {label}")
