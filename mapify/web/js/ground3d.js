@@ -245,6 +245,7 @@ export class Ground3D {
       </div>
       <div class="g3d-legend" aria-label="Legend"></div>
       <div class="g3d-notes"></div>
+      <div class="g3d-around" hidden></div>
       <div class="g3d-status" role="status"></div>
       <div class="g3d-hint">Drag to pan &middot; right-drag or Ctrl-drag to rotate and tilt &middot; scroll to zoom &middot; zoom out to return to the globe &middot; F to walk</div>
       <div class="g3d-walkhud" hidden>
@@ -274,6 +275,7 @@ export class Ground3D {
       sub: this.host.querySelector(".g3d-sub"),
       legend: this.host.querySelector(".g3d-legend"),
       notes: this.host.querySelector(".g3d-notes"),
+      around: this.host.querySelector(".g3d-around"),
       status: this.host.querySelector(".g3d-status"),
       attrib: this.host.querySelector(".g3d-attrib"),
       imagery: this.host.querySelector(".g3d-imagery"),
@@ -353,6 +355,7 @@ export class Ground3D {
     this.host.hidden = false;
     this.el.place.textContent = target.label || "Location";
     this.el.sub.textContent = `${target.lat.toFixed(5)}, ${target.lon.toFixed(5)}`;
+    this._loadEvents(target);              // not awaited: the view does not wait for it
     this._status("Loading the 3D renderer…");
     let deck;
     try {
@@ -1241,6 +1244,47 @@ export class Ground3D {
       `<div class="g3d-note">${esc(n)}</div>`).join("");
   }
 
+  /** Earthquakes (USGS) and natural events (NASA EONET) around the place:
+   *  when the photograph was taken if that is known, otherwise lately.
+   *  Context only -- the estimate does not use it. Nothing shown when
+   *  there is nothing, when offline, or when it is switched off. */
+  async _loadEvents(target) {
+    const at = target.capturedAt;
+    const key = `${target.lat.toFixed(2)},${target.lon.toFixed(2)},${at || "now"}`;
+    if (this._eventsKey === key) return;
+    this._eventsKey = key;
+    this.events = null;
+    this.el.around.hidden = true;
+    try {
+      const q = `lat=${target.lat.toFixed(5)}&lon=${target.lon.toFixed(5)}`
+        + (at ? `&at=${encodeURIComponent(at)}` : "");
+      const resp = await fetch(`/api/events/near?${q}`);
+      if (!resp.ok || this._eventsKey !== key) return;
+      this.events = await resp.json();
+    } catch (_) {
+      return;
+    }
+    const ev = this.events;
+    if (!ev?.available) return;
+    const day = (iso) => {
+      const d = new Date(iso);
+      return Number.isNaN(d.getTime()) ? ""
+        : d.toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
+    };
+    const rows = [
+      ...(ev.events || []).slice(0, 3).map((e) =>
+        `${e.category || "Event"}: ${e.title} · ${Math.round(e.km)} km · ${day(e.date)}`),
+      ...(ev.earthquakes || []).slice(0, 3).map((q) =>
+        `M${q.magnitude.toFixed(1)} earthquake · ${Math.round(q.km)} km · ${day(q.time)}`),
+    ];
+    if (!rows.length) return;
+    this.el.around.innerHTML =
+      `<div class="g3d-around-head">Around here ${at ? "when it was taken" : "lately"}</div>`
+      + rows.map((r) => `<div class="g3d-around-row">${esc(r)}</div>`).join("");
+    this.el.around.hidden = false;
+    this._attrib();
+  }
+
   _attrib() {
     const parts = [];
     for (const s of this.sources.values()) {
@@ -1257,6 +1301,7 @@ export class Ground3D {
       if (ov) parts.push(esc(ov.attribution));
     }
     if (this.walking && this.weather?.available) parts.push(esc(this.weather.attribution));
+    if (!this.el.around.hidden && this.events?.attribution) parts.push(esc(this.events.attribution));
     if (this._terrainExt(window.deck)) parts.push(esc(TERRAIN_CREDIT));
     parts.push("Rendered with deck.gl (MIT)");
     this.el.attrib.innerHTML = parts.join(" &middot; ");
