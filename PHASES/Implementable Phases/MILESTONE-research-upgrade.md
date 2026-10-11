@@ -28,13 +28,18 @@ on the user. Updated 2026-10-09.
 | `af3945d6` | Pinpoint finds landmarks through Wikidata (CC0) and searches their Commons category first: Red Square, Kremlin, St. Basil's for Moscow; the Great Pyramid and the Sphinx for Giza; Christ the Redeemer for Corcovado. Cities, things no longer standing and transit networks left out |
 | `9d90f82c` | Terrain past zoom 15 cut from the deepest tile as heights, so finer ground never just vanishes |
 | `a80055c1` | `GET /api/events/near`: earthquakes (USGS) and natural events (NASA EONET) around the place, at the photograph's time or lately; public domain, no key, context only |
+| `511789ef` | Mirrored photographs (selfie cameras, flipped reposts) analysed the right way round; 0 of 177 photographs wrongly flipped, all 14 mirrored ones with readable text caught |
+| `2519b672` | The walk's ground at zoom 16 under the walker, eye height read there (Bern: 540.4 m bare earth, eye 542.1 m) |
+| `6ad5ebed` | "Around here" in the 3D view: natural events and the strongest earthquakes near the place, with distance and date |
+| `70f42e5d` | The optional HEIC decoder kept out of the built package (the owner's call) |
+| `d06f817d` | 360-degree panoramas read as four views of one moment, their opinions averaged |
 
 The user's direction (2026-10-11): the inspiration is "God's Eye". Taken as
 fusing every open clue with its evidence shown, the globe-to-street dive and
 live public layers around a place -- never finding or tracking people (no
 face recognition, no private or hacked camera feeds).
 
-## In the working tree, waiting on a measurement
+## The mirror test (`511789ef`)
 
 **The mirror test.** A selfie camera or a flipped repost reverses the
 scene, and "Turkish text read backwards" is evidence against Turkey. When the
@@ -53,8 +58,30 @@ photograph both ways and reports wrong flips and catches:
 ## Measured coverage (Panoramax, 800 m radius)
 
 Eiffel Tower 150 pictures / 9 sequences; Berlin Alexanderplatz 14; Nairobi 17
-(nearest 723 m); Lagos none. `eval_pinpoint.py --panoramax` (11 landmarks) has
-not been run yet: it must not run while another process searches Commons.
+(nearest 723 m); Lagos none.
+
+## Pinpoint at the true spot, with Wikidata names and Panoramax (2026-10-11)
+
+`eval_pinpoint.py --names --panoramax`, radius 800 m, budget 400
+(`bench/eval-pinpoint-true-v4-names-panoramax.log`), against the v3 runs:
+
+| Landmark | Now | Before |
+|---|---|---|
+| Eiffel Tower | pinpointed, 16 m, 58 s | 7 m, 206 s |
+| Tower Bridge | 0 m, 58 s | 0 m, 109 s |
+| Rome (Celio) | 1 m | 1 m |
+| Athens | 22 m | 6 m |
+| Tokyo (Senso-ji) | **8 m** | 24 m |
+| Sydney Opera House | 0 m, 54 s | 0 m, 58 s |
+| Golden Gate | possible, 24 | possible, 24 |
+| Moscow, Beijing, Giza, Rio | none (best 15, 13, 11, 16) | none |
+
+**6 of 11, the same as before**; median 8 m (was 3.5 m), mostly faster. The
+Wikidata category search did find photographs of St. Basil's, the Pyramid
+of Khafre and Christ the Redeemer, but none shows the samples' own view, so
+the four hard cases stay unmatched -- the limit is still the references, not
+the names. Every winning match was a Commons photograph; Panoramax added
+references but no pinpoint here.
 
 ## Waiting on the user (downloads need permission)
 
@@ -70,12 +97,9 @@ Each is accepted or rejected by the benchmark, as everything else is.
 
 ## Next, without downloads
 
-1. Finish the mirror test (above), then `eval_pinpoint.py --names --panoramax`
-   on the 11 landmarks (`bench/eval-pinpoint-true-v4-names-panoramax.log`)
-   while nothing else searches Commons.
-2. In the working tree: the walk's ground at zoom 16 under the walker (eye
-   height read there too) and "Around here" in the 3D view (the events
-   above) -- to be seen in the headless harness before committing.
+1. The 600 m-offset evaluation with Wikidata names
+   (`bench/eval-pinpoint-offset600-v4.log`), the case named search exists for.
+2. Rebuild, make the portable ZIP and reinstall, so the app has all of this.
 3. Walk terrain finer than z14 in Mapterhorn's lidar countries.
 4. The rebuild and portable ZIP from the previous milestone, which now also
    need to include everything above.
