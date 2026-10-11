@@ -85,6 +85,13 @@ REFINE_TOP = 15
 PROBES_PER_AREA = 13          # the centre and two hexagonal rings
 DENSE_PROBES = 6              # then a small ring round the nearest crowded spot
 PANORAMAX_PER_AREA = 60       # street pictures (2048 px, ~0.45 MB each) per area
+# Panoramax pictures fill the budget behind the photographs of the place,
+# not ahead of them. Ranked by distance alone, 60 street pictures near a
+# centre 600 m off pushed the Sydney Opera House's matching photograph out
+# of the 400 compared, and across the 11-landmark evaluation every match
+# came from Commons. Pushed back beyond any search radius, they are still
+# compared wherever Commons runs short.
+SOURCE_PENALTY_M = {"panoramax": 2000.0}
 MAX_PROBES = 26
 BUDGET = 400
 MAX_BUDGET = 3000
@@ -294,8 +301,11 @@ class PinpointEngine:
                     notes.append(f"Commons could not be searched for {term} "
                                  f"({type(exc).__name__})")
             if name in categories:
+                # Interleaved with the searches by name, not ahead of them:
+                # put first, the category pushed the Sydney Opera House's
+                # matching photograph from 395th past the budget of 400.
                 try:
-                    found.insert(0, commons_category_near(
+                    found.append(commons_category_near(
                         categories[name], a.lat, a.lon, int(a.radius_m), self.cache))
                 except Exception as exc:
                     notes.append(f"Commons could not be searched for the category "
@@ -504,6 +514,7 @@ class PinpointEngine:
             step_m = REPEAT_PENALTY_M / len(members)
             for k, (d, idx, r) in enumerate(members):
                 ranked.append((d + k * step_m + idx * AREA_PENALTY_M
+                               + SOURCE_PENALTY_M.get(r.source, 0.0)
                                - lifts.get(r.key, 0.0), r))
         ranked.sort(key=lambda t: (t[0], t[1].key))
         return [r for _, r in ranked], notes, coverage

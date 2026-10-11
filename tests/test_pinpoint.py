@@ -650,4 +650,25 @@ def test_named_search_looks_in_the_landmarks_category_first(tmp_path, monkeypatc
     assert not any(kind == "category" and "GUM" in what for kind, what in searched)
     name, refs = named[0]
     assert name == "Saint Basil's Cathedral"
-    assert refs[0].id == "File:cat-Saint Basil's Cathedral.jpg"     # the category leads
+    # Interleaved with the name searches: their first results and the
+    # category's both come first.
+    assert "File:cat-Saint Basil's Cathedral.jpg" in {r.id for r in refs[:3]}
+
+
+def test_panoramax_pictures_queue_behind_the_photographs_of_the_place(tmp_path, monkeypatch):
+    """Ranked by distance alone, street pictures near a wrong centre pushed
+    the Sydney Opera House's matching photograph out of the budget."""
+    monkeypatch.setattr(engine_mod, "commons_listing",
+                        lambda lat, lon, radius, cache: [_bare("the-landmark", lat + 0.008, lon)])
+
+    def near(lat, lon, radius, cache, limit=150):
+        return [Reference(source="panoramax", id=f"street-{i}", lat=lat + i * 1e-5, lon=lon,
+                          thumb_url="", page_url="", licence="CC BY-SA 4.0", author="a")
+                for i in range(5)]
+
+    monkeypatch.setattr(engine_mod, "panoramax_near", near)
+    order, _, _ = PinpointEngine(tmp_path, panoramax=True)._plan(
+        [Area(-33.8568, 151.2153, 1500)], lambda k, m: None, set())
+    ids = [r.id for r in order]
+    assert ids[0] == "File:the-landmark.jpg", ids        # 900 m away, still first
+    assert set(ids[1:]) == {f"street-{i}" for i in range(5)}
