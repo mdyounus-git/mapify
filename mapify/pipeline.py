@@ -177,6 +177,8 @@ class AnalysisEngine:
     def __init__(self, cfg: Config):
         self.cfg = cfg
         self.geocoder = get_geocoder()
+        self.geocoder.use_geonames = cfg.models.geonames_enabled
+        self._memory = None           # the street-photo memory, loaded when first used
         self.table = get_table()
         self.fusion = FusionEngine(cfg.fusion, self.geocoder, self.table)
 
@@ -419,6 +421,7 @@ class AnalysisEngine:
             if read_places:
                 ceiling = max((c.score for c in raw), default=0.05)
                 extra_pool.extend(readplace.to_candidates(read_places, ceiling))
+            extra_pool.extend(self._remembered(embedding, raw, report))
 
             # ---- is this a photograph of a place? --------------------------
             #
@@ -626,6 +629,32 @@ class AnalysisEngine:
             report.ocr["scripts"] = script_reading.as_dict()
         return _Look(raw, embedding, evidence, extra, ocr_result,
                      script_reading, extra_group)
+
+    def _remembered(self, embedding, raw: list[RawCandidate],
+                    report: AnalysisReport) -> list[RawCandidate]:
+        """Places where photographs like this one were taken, from the
+        street-photo memory (models/retrieval.py), as positions for the
+        fusion to score. The same embedding as GeoCLIP's, so not a second
+        vote: scored below GeoCLIP's best, they win only on the evidence."""
+        if not self.cfg.models.retrieval_enabled or embedding is None:
+            return []
+        if self._memory is None:
+            from .models.retrieval import RetrievalMemory
+            self._memory = RetrievalMemory()
+        if not self._memory.available():
+            return []
+        try:
+            places = self._memory.candidates(embedding)
+        except Exception as exc:                  # a damaged index
+            report.warnings.append(f"Street-photo memory unavailable: {exc}")
+            return []
+        ceiling = max((c.score for c in raw), default=0.05)
+        report.evidence["street_memory"] = {
+            "photographs": self._memory.size,
+            "places": [{"lat": round(c.latitude, 5), "lon": round(c.longitude, 5),
+                        "share": round(c.score, 3)} for c in places]}
+        return [RawCandidate(c.latitude, c.longitude, c.score * ceiling * 0.5, c.source)
+                for c in places]
 
     def _mirrored_reading(self, image: Image.Image,
                           look: _Look) -> OcrResult | None:

@@ -159,11 +159,19 @@ def main() -> int:
     ap.add_argument("--json", type=str, default=None)
     ap.add_argument("--quiet", action="store_true",
                     help="summary only, no per-sample lines")
+    ap.add_argument("--set", choices=("bench", "text"), default="bench",
+                    help="the 163-photograph benchmark, or the text-bearing set "
+                         "(samples/text, fetch_text_samples.py)")
+    ap.add_argument("--geonames", action="store_true",
+                    help="look read place names up in GeoNames too (geonames_enabled)")
+    ap.add_argument("--retrieval", action="store_true",
+                    help="add the street-photo memory's places (retrieval_enabled)")
     args = ap.parse_args()
+    samples_dir = SAMPLES if args.set == "bench" else SAMPLES / "text"
 
     logging.basicConfig(level=logging.ERROR)
 
-    manifest_path = SAMPLES / "manifest.json"
+    manifest_path = samples_dir / "manifest.json"
     if not manifest_path.exists():
         print("No samples. Run: python scripts/fetch_samples.py",
               file=sys.stderr)
@@ -179,6 +187,8 @@ def main() -> int:
     cfg = load_config()
     cfg.network.offline_only = args.offline
     cfg.models.ocr_enabled = args.ocr
+    cfg.models.geonames_enabled = args.geonames
+    cfg.models.retrieval_enabled = args.retrieval
 
     print(f"Loading models (offline={args.offline}, ocr={args.ocr})…",
           flush=True)
@@ -199,7 +209,7 @@ def main() -> int:
     started = time.time()
 
     for i, s in enumerate(samples, 1):
-        path = SAMPLES / s["file"]
+        path = samples_dir / s["file"]
         if not path.exists():
             continue
         try:
@@ -238,7 +248,7 @@ def main() -> int:
             "site": s["site"],
             "region": s.get("region"),
             "scene": s.get("scene"),
-            "expected": s["expected_label"],
+            "expected": s.get("expected_label", ""),
             "true": [s["true_lat"], s["true_lon"]],
             "predicted": [est["latitude"], est["longitude"]],
             "error_km": round(km, 2),

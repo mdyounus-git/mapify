@@ -185,6 +185,16 @@ class ModelConfig:
     # Extra EasyOCR language groups for a multi-script sweep.  Each group is a
     # separate model load, so this is slow; empty by default.
     ocr_extra_groups: list[list[str]] = field(default_factory=list)
+    # Place names read off a sign are also looked up in GeoNames (CC BY 4.0;
+    # built by scripts/fetch_research_data.py geonames, then
+    # python -m mapify.geo.geonames) when Natural Earth knows no such place.
+    # Off until measured on the text-bearing benchmark: a match moves the
+    # estimate, and nothing moves it before it has been measured to help.
+    geonames_enabled: bool = False
+    # Where photographs like this one were taken, from a local memory of
+    # street-level photographs (OpenStreetView-5M, CC BY-SA 4.0; built by
+    # scripts/build_retrieval.py). Off until measured on the benchmark.
+    retrieval_enabled: bool = False
     max_image_side: int = 1600
 
 

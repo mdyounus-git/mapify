@@ -231,6 +231,10 @@ class OfflineGeocoder:
         self._place_points: list[tuple[float, float, dict[str, Any]]] | None = None
         self._place_index: dict[str, list[int]] | None = None
         self._lock = threading.Lock()
+        # Asked when Natural Earth knows no place by a name (geonames.py);
+        # off until the engine turns it on from its configuration.
+        self.use_geonames = False
+        self._geonames = None
 
     # ---------------------------------------------------------------- status
 
@@ -411,12 +415,14 @@ class OfflineGeocoder:
 
         Case- and diacritic-insensitive, so OCR that loses an accent still
         matches.  Results are ordered by population, because a sign reading
-        "Springfield" is far more likely to be the large one.
+        "Springfield" is far more likely to be the large one. Where Natural
+        Earth knows no such place, GeoNames is asked, when it is switched on
+        and built.
         """
         try:
             self._ensure_places()
         except GeodataMissing:
-            return []
+            return self._from_geonames(name, limit)
         assert self._place_index is not None and self._place_points is not None
         hits = self._place_index.get(_normalise(name), [])
         out: list[GazetteerMatch] = []
@@ -444,7 +450,18 @@ class OfflineGeocoder:
                 )
             )
         out.sort(key=lambda m: -(m.population or 0))
-        return out[:limit]
+        return out[:limit] if out else self._from_geonames(name, limit)
+
+    def _from_geonames(self, name: str, limit: int) -> list[GazetteerMatch]:
+        if not self.use_geonames:
+            return []
+        if self._geonames is None:
+            from .geonames import GeoNames
+            self._geonames = GeoNames()
+        try:
+            return self._geonames.find(name, limit)
+        except Exception:                 # a damaged or half-built index
+            return []
 
     def locate(self, lat: float, lon: float, place_limit: int = 5
                ) -> OfflineLocation:
