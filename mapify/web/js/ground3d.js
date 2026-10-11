@@ -111,6 +111,17 @@ const ZOOM_BUILDINGS = 13.5;   // closer than this, buildings are worth loading
 const ZOOM_HANDBACK = 9.6;     // further than this, the globe does it better
 const MAX_BUILDINGS = 90000;   // held in memory before the farthest go
 const WALK_FOVY = 72;
+// The walk's terrain mesh may stray this far from the heights it is made
+// from, and the streets laid on it sit this far above those heights, so the
+// mesh never swallows them; at eye height the lift is not noticeable.
+const WALK_MESH_ERROR_M = 0.5;
+const WALK_LIFT_M = 0.35;
+// The walk is drawn relative to a height near the walker's ground, not to
+// sea level: deck.gl's lighting failed on geometry hundreds of metres up
+// under the first-person camera, and Bengaluru's lit buildings (927 m) did
+// not draw at all where Chennai's (14 m) did. Moved when the walker has
+// climbed or descended this far from it.
+const WALK_REF_STEP_M = 60;
 // Zooming in past one of these levels (district, street, close up) settles
 // the camera into a steeper view, with a pulse where it landed.
 const ZOOM_BANDS = [14, 16, 18];
@@ -184,7 +195,9 @@ export class Ground3D {
     this._walkLayers = [];
     this.terrainOn = true;        // the ground's real height (terrain.js)
     this.sampler = new TerrainSampler(null, WALK_Z);   // the walker's eye height
+    this.coarse = new TerrainSampler(null, SAMPLE_Z);  // the ground further out
     this._groundZ = 0;
+    this._walkRef = 0;            // the height the walk is drawn relative to
     this.walker = new Walker({
       getState: () => this.viewState,
       setState: (v) => {
@@ -754,9 +767,11 @@ export class Ground3D {
     this.el.photoKeys.hidden = !photo;
     this.el.ambBtn.hidden = false;
     this.fovy = WALK_FOVY;
-    if (this._terrainExt(deck)) {
+    if (this.terrainOn) {
       await this.sampler.load(lon, lat);
       this._groundZ = this.sampler.heightAt(lon, lat) ?? 0;
+      this._walkRef = Math.round(this._groundZ);
+      this._groundAround(lon, lat);
     }
     this.viewState = this._onGround({ longitude: lon, latitude: lat,
                                       position: [0, 0, EYE_HEIGHT_M],
@@ -863,19 +878,20 @@ export class Ground3D {
   }
 
   /** Where the matching reference photographs were taken. */
-  _matchLayers(deck, walking) {
+  _matchLayers(deck, walking, ground = () => 0) {
     const m = this.target?.matches;
     if (!m?.length) return [];
     return [
       new deck.ColumnLayer({
         id: "matches-pole", data: m, diskResolution: 10,
         radius: walking ? 0.22 : 1.4, extruded: true,
-        getPosition: (p) => [p.lon, p.lat], getElevation: walking ? 2.4 : 26,
+        getPosition: (p) => [p.lon, p.lat, ground(p.lon, p.lat)],
+        getElevation: walking ? 2.4 : 26,
         getFillColor: [240, 160, 60, 235],
       }),
       new deck.TextLayer({
         id: "matches-label", data: m, characterSet: "auto",
-        getPosition: (p) => [p.lon, p.lat, walking ? 2.7 : 28],
+        getPosition: (p) => [p.lon, p.lat, (walking ? 2.7 : 28) + ground(p.lon, p.lat)],
         getText: (p) => p.label, getSize: 12, sizeUnits: "pixels", billboard: true,
         getColor: [24, 18, 8, 255], background: true,
         getBackgroundColor: [244, 176, 76, 235], backgroundPadding: [4, 2],
@@ -973,7 +989,7 @@ export class Ground3D {
           if (now - drawn > 50 && this.deck && window.deck) {   // ~20 frames a second
             drawn = now;
             this.deck.setProps({ layers: [...this._walkLayers,
-              ...onTerrain(this.ambience.layers(window.deck), this._terrainExt(window.deck))] });
+              ...this.ambience.layers(window.deck, this._walkGround())] });
           }
         };
         this._ambRaf = requestAnimationFrame(tick);
@@ -1004,7 +1020,8 @@ export class Ground3D {
     this._hudAt = now;
     // The ground under the walker comes in tiles: a new one, a new render.
     const t = tileOf(lon, lat, SAMPLE_Z);
-    if (this._terrainExt(window.deck) && this._walkTile !== `${t.x}/${t.y}`) {
+    if (this.terrainOn) this._groundAround(lon, lat);
+    if (this.terrainOn && this._walkTile !== `${t.x}/${t.y}`) {
       this._walkTile = `${t.x}/${t.y}`;
       this._render();
     }
@@ -1045,13 +1062,25 @@ export class Ground3D {
     const v = this.viewState;
     const here = [v.longitude, v.latitude];
     const buildings = [...d.buildings.values()];
-    if (!this._floors) this._floors = floorLines(buildings, here[0], here[1]);
-    const layers = [...(this._terrainExt(deck) ? this._walkTerrain(deck, here) : []),
-                    ...groundLayers(deck, d, this._walkOrigin || here)];
+    // The walk puts everything at the ground's height itself. deck.gl's
+    // terrain extension lifts layers onto the terrain under the overview's
+    // map camera, not under a first-person one: there the buildings stayed
+    // at sea level and the ground, drawn at its real height (about 14 m in
+    // Chennai, 900 m in Bengaluru), covered every one of them.
+    const ground = this._walkGround();
+    const baseOf = new Map(buildings.map((b) => [b.id,
+      (b.base || 0) + (b.centroid ? ground(b.centroid[0], b.centroid[1])
+        : this._groundZ - this._walkRef)]));
+    if (!this._floors) this._floors = floorLines(buildings, here[0], here[1], 650, ground);
+    const layers = [...(this.terrainOn ? this._walkTerrain(deck, here) : []),
+                    ...groundLayers(deck, d, this._walkOrigin || here,
+                                    this.terrainOn ? ground : null, WALK_LIFT_M)];
     layers.push(new deck.SolidPolygonLayer({
       id: "buildings", data: buildings, extruded: true,
-      getPolygon: (b) => b.polygon.map((ring) =>
-        ring.map((p) => [p[0], p[1], b.base || 0])),
+      getPolygon: (b) => {
+        const z = baseOf.get(b.id) ?? (b.base || 0);
+        return b.polygon.map((ring) => ring.map((p) => [p[0], p[1], z]));
+      },
       getElevation: (b) => Math.max(0.6, (b.height || 3) - (b.base || 0)),
       getFillColor: (b) => (b.source === "gob" ? WALK_COLOUR.gob
         : WALK_COLOUR[b.height_source] || WALK_COLOUR.assumed),
@@ -1064,7 +1093,9 @@ export class Ground3D {
       getPath: (f) => f.path, widthUnits: "pixels", getWidth: 2,
       getColor: [44, 50, 62, 190],
     }));
-    const labels = streetLabels(d.roads.values(), here[0], here[1]);
+    const labels = streetLabels(d.roads.values(), here[0], here[1]).map((l) => ({
+      ...l, position: [l.position[0], l.position[1], l.position[2] + ground(l.position[0], l.position[1])],
+    }));
     layers.push(new deck.TextLayer({
       id: "walk-streets", data: labels, characterSet: "auto",
       getPosition: (l) => l.position, getText: (l) => l.name,
@@ -1082,7 +1113,8 @@ export class Ground3D {
     // ("getCollisionPriority is not a function").
     layers.push(new deck.TextLayer({
       id: "walk-pois", data: named, characterSet: "auto",
-      getPosition: (n) => [n.p.position[0], n.p.position[1], 4.5],
+      getPosition: (n) => [n.p.position[0], n.p.position[1],
+        4.5 + ground(n.p.position[0], n.p.position[1])],
       getText: (n) => n.p.name, getSize: 12, sizeUnits: "pixels",
       getColor: [236, 242, 250, 235], background: true,
       getBackgroundColor: [12, 16, 24, 175], backgroundPadding: [3, 1],
@@ -1094,17 +1126,42 @@ export class Ground3D {
     if (t && t.origin !== "camera") {
       layers.push(new deck.ColumnLayer({
         id: "target-beam", data: [t], diskResolution: 16, radius: 0.6,
-        extruded: true, getPosition: (p) => [p.lon, p.lat],
+        extruded: true, getPosition: (p) => [p.lon, p.lat, ground(p.lon, p.lat)],
         getElevation: 40, getFillColor: [90, 184, 240, 170],
       }));
     }
-    layers.push(...this._matchLayers(deck, true));
-    const ext = this._terrainExt(deck);
-    this._walkLayers = onTerrain(layers, ext);
+    layers.push(...this._matchLayers(deck, true, ground));
+    this._walkLayers = layers;
     this.deck.setProps({ layers: this.ambienceOn
-      ? [...this._walkLayers, ...onTerrain(this.ambience.layers(deck), ext)]
+      ? [...this._walkLayers, ...this.ambience.layers(deck, ground)]
       : this._walkLayers });
     this._attrib();
+  }
+
+  /** The ground's height under a point, for the walk: the fine tiles near
+   *  the walker, the coarse ones the far meshes are made from beyond them,
+   *  the walker's own height past those (or while they load); level 0 with
+   *  terrain off. It only reads tiles already here: a coastline or a park
+   *  reaching kilometres away must not send for a tile per corner. */
+  _walkGround() {
+    if (!this.terrainOn) return () => 0;
+    const ref = this._walkRef;
+    return (lon, lat) => {
+      const h = this.sampler.peek(lon, lat) ?? this.coarse.peek(lon, lat);
+      return (h != null && Number.isFinite(h) ? h : this._groundZ) - ref;
+    };
+  }
+
+  /** Fetches the ground around the walker -- fine tiles within about 1.5 km,
+   *  coarse ones as far as the terrain is drawn -- and draws again once new
+   *  ones are in, so what stood at the walker's height takes its own. */
+  _groundAround(lon, lat) {
+    Promise.all([this.sampler.around(lon, lat, 2), this.coarse.around(lon, lat, 1)])
+      .then(([a, b]) => {
+        if (!(a || b) || !this.walking || !this.isOpen) return;
+        this._floors = null;            // they stood at the walker's height
+        this._render();
+      });
   }
 
   /** deck.gl's terrain extension while terrain is on, else null. */
@@ -1118,13 +1175,19 @@ export class Ground3D {
    *  ground's height is not known yet, or terrain is off). */
   _onGround(v) {
     if (!this.walking || !v) return v;
-    if (this._terrainExt(window.deck)) {
+    if (this.terrainOn) {
       const h = this.sampler.heightAt(v.longitude, v.latitude);
       if (h != null && Number.isFinite(h)) this._groundZ = h;
+      if (Math.abs(this._groundZ - this._walkRef) > WALK_REF_STEP_M) {
+        this._walkRef = Math.round(this._groundZ);
+        this._floors = null;
+        queueMicrotask(() => { if (this.walking && this.isOpen) this._render(); });
+      }
     } else {
       this._groundZ = 0;
+      this._walkRef = 0;
     }
-    return { ...v, position: [0, 0, EYE_HEIGHT_M + this._groundZ] };
+    return { ...v, position: [0, 0, EYE_HEIGHT_M + this._groundZ - this._walkRef] };
   }
 
   /** The overview's ground: the terrain, with the chosen imagery on it. */
@@ -1154,12 +1217,14 @@ export class Ground3D {
   _walkTerrain(deck, here) {
     const t = tileOf(here[0], here[1], SAMPLE_Z);
     const fine = 2 ** (WALK_Z - SAMPLE_Z);
+    const ref = this._walkRef;
+    const decoder = { ...TERRARIUM, offset: TERRARIUM.offset - ref };
     const mesh = (z, x, y) => new deck.TerrainLayer({
-      id: `walk-terrain-${z}-${x}-${y}`,
+      id: `walk-terrain-${z}-${x}-${y}-${ref}`,
       elevationData: TERRAIN_URL.replace("{z}", z).replace("{x}", x).replace("{y}", y),
       bounds: tileBounds(x, y, z),
-      elevationDecoder: TERRARIUM, texture: null, color: [150, 148, 138],
-      meshMaxError: 1.5, operation: "terrain+draw",
+      elevationDecoder: decoder, texture: null, color: [150, 148, 138],
+      meshMaxError: WALK_MESH_ERROR_M, operation: "draw",
       loaders: [TerrainMeshLoader],
       loadOptions: { worker: false, terrain: { skirtHeight: 20, meshStep: 2 } },
     });

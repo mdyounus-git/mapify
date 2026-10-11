@@ -240,8 +240,12 @@ const FOOTWAY = [180, 170, 150];
 const SIDEWALK = [188, 184, 176];
 const GROUND = [158, 156, 146];
 
-/** Floor lines -- one outline per three-metre storey -- for nearby buildings. */
-export function floorLines(buildings, lon, lat, radiusM = 650) {
+const LEVEL = () => 0;
+
+/** Floor lines -- one outline per three-metre storey -- for nearby buildings.
+ *  ``ground(lon, lat)`` is the ground's height under a building (level 0
+ *  when there is no terrain). */
+export function floorLines(buildings, lon, lat, radiusM = 650, ground = LEVEL) {
   const ax = kx(lat);
   const out = [];
   for (const b of buildings) {
@@ -251,8 +255,9 @@ export function floorLines(buildings, lon, lat, radiusM = 650) {
     if (dx * dx + dy * dy > radiusM * radiusM) continue;
     const top = b.height || 0;
     const base = b.base || 0;
+    const g = top - 0.8 > base + 3 ? ground(b.centroid[0], b.centroid[1]) : 0;
     for (let z = base + 3; z < top - 0.8; z += 3) {
-      out.push({ path: ring.map((p) => [p[0], p[1], z]) });
+      out.push({ path: ring.map((p) => [p[0], p[1], g + z]) });
     }
   }
   return out;
@@ -280,46 +285,65 @@ export function streetLabels(roads, lon, lat, radiusM = 450) {
   return out.sort((a, b) => a.dist - b.dist).slice(0, 40);
 }
 
-/** The layers that make the street-level scene, beneath the buildings. */
-export function groundLayers(deck, data, origin) {
+/** The layers that make the street-level scene, beneath the buildings.
+ *  ``ground(lon, lat)``: the ground's height at a point, with terrain on; the
+ *  level plane is then left out, since the terrain itself is the ground, and
+ *  everything sits ``lift`` above it so the terrain's mesh (an approximation
+ *  of the same heights) does not swallow it. Heights are read here, before
+ *  the layers are made, so a tile still on its way is noticed at once. */
+export function groundLayers(deck, data, origin, ground = null, lift = 0) {
   const [lon, lat] = origin;
   const span = 0.03;                      // ~3 km of ground in every direction
   const roads = [...data.roads.values()];
-  const layers = [
+  const green = [...data.green.values()];
+  const water = [...data.water.values()];
+  const at = ground || LEVEL;
+  const heights = new Map();
+  const of = (pts) => {
+    let h = heights.get(pts);
+    if (!h) { h = pts.map((p) => at(p[0], p[1]) + lift); heights.set(pts, h); }
+    return h;
+  };
+  for (const r of roads) if (r.path) of(r.path);
+  for (const f of [...green, ...water]) for (const ring of f.polygon) of(ring);
+  const on = (pts, off) => { const h = of(pts); return pts.map((p, i) => [p[0], p[1], h[i] + off]); };
+  const layers = ground ? [] : [
     new deck.SolidPolygonLayer({
       id: "walk-ground",
       data: [[[lon - span, lat - span], [lon + span, lat - span],
               [lon + span, lat + span], [lon - span, lat + span]]],
       getPolygon: (p) => p, getFillColor: GROUND,
     }),
+  ];
+  layers.push(
     new deck.SolidPolygonLayer({
-      id: "walk-green", data: [...data.green.values()],
-      getPolygon: (f) => f.polygon.map((r) => r.map((p) => [p[0], p[1], 0.02])),
+      id: "walk-green", data: green,
+      getPolygon: (f) => f.polygon.map((r) => on(r, 0.02)),
       getFillColor: [96, 138, 82],
     }),
     new deck.SolidPolygonLayer({
-      id: "walk-water", data: [...data.water.values()],
-      getPolygon: (f) => f.polygon.map((r) => r.map((p) => [p[0], p[1], 0.03])),
+      id: "walk-water", data: water,
+      getPolygon: (f) => f.polygon.map((r) => on(r, 0.03)),
       getFillColor: [64, 118, 168],
     }),
     new deck.PathLayer({
       id: "walk-sidewalks", data: roads.filter((r) => WITH_SIDEWALK.has(r.class)),
-      getPath: (r) => r.path.map((p) => [p[0], p[1], 0.04]),
+      getPath: (r) => on(r.path, 0.04),
       widthUnits: "meters", getWidth: (r) => r.width + 3.4,
       getColor: SIDEWALK, capRounded: true, jointRounded: true,
     }),
     new deck.PathLayer({
       id: "walk-roads", data: roads,
-      getPath: (r) => r.path.map((p) => [p[0], p[1], 0.06]),
+      getPath: (r) => on(r.path, 0.06),
       widthUnits: "meters", getWidth: (r) => r.width,
       getColor: (r) => (VEHICULAR.has(r.class) ? ASPHALT : FOOTWAY),
       capRounded: true, jointRounded: true, pickable: true,
     }),
-  ];
+  );
   if (deck.PathStyleExtension) {
     layers.push(new deck.PathLayer({
       id: "walk-markings", data: roads.filter((r) => MARKED.has(r.class)),
-      getPath: (r) => r.path.map((p) => [p[0], p[1], 0.08]),
+      getPath: (r) => on(r.path, 0.08),
       widthUnits: "meters", getWidth: 0.15, getColor: [232, 232, 222],
       getDashArray: [20, 40], dashJustified: true,
       extensions: [new deck.PathStyleExtension({ dash: true })],

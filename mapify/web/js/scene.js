@@ -427,19 +427,23 @@ export class Ambience {
     this.frame += 1;
   }
 
-  layers(deck) {
+  /** ``ground(lon, lat)``: the ground's height, when the walk has terrain. */
+  layers(deck, ground = () => 0) {
     const cars = this.cars.map((c) => {
       const at = along(c.seg.path, c.s);
       const heading = at.heading + (c.dir < 0 ? Math.PI : 0);
       // Each keeps to the right of its own way (right-hand traffic; illustrative).
       const lane = Math.min(3.2, c.seg.width / 4);
-      return { polygon: box(at.lon, at.lat, heading, 4.4, 1.8, lane), colour: c.colour };
+      const z = ground(at.lon, at.lat);
+      return { polygon: box(at.lon, at.lat, heading, 4.4, 1.8, lane).map((p) => [p[0], p[1], z]),
+               colour: c.colour };
     });
     const people = this.people.map((p) => {
       const at = along(p.seg.path, p.s);
       const k = Math.cos((at.lat * Math.PI) / 180);
       const rx = Math.cos(at.heading), ry = -Math.sin(at.heading);
-      return { position: [at.lon + (rx * p.side) / (M_PER_DEG * k), at.lat + (ry * p.side) / M_PER_DEG],
+      return { position: [at.lon + (rx * p.side) / (M_PER_DEG * k), at.lat + (ry * p.side) / M_PER_DEG,
+                          ground(at.lon, at.lat)],
                colour: p.colour };
     });
     return [

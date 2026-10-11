@@ -48,6 +48,22 @@ await walking.load(2.2945, 48.8584);
 assert.equal(walking.heightAt(2.2945, 48.8584), 123, "the walk reads its own, finer zoom");
 assert.ok(WALK_Z > SAMPLE_Z);
 
+// peek reads only what is here: a coastline reaching far out to sea must
+// not send for a tile per corner (it exhausted the browser's connections).
+let fetched = 0;
+const quiet = new TerrainSampler(async () => { fetched += 1; return decoded; }, WALK_Z);
+assert.equal(quiet.peek(80.2341, 13.0418), null);
+assert.equal(fetched, 0, "peek never fetches");
+// around fetches the block about a point once, and says whether it did.
+assert.equal(await quiet.around(80.2341, 13.0418, 2), true);
+assert.equal(fetched, 25, "a 5 x 5 block");
+assert.equal(quiet.peek(80.2341, 13.0418), 123);
+assert.equal(await quiet.around(80.2342, 13.0418, 2), false, "nothing new: no redraw asked for");
+assert.equal(fetched, 25);
+const gone = new TerrainSampler(async () => { throw new Error("404"); }, WALK_Z);
+assert.equal(await gone.around(0, 0, 1), true);
+assert.equal(await gone.around(0, 0, 1), false, "a failed tile is not asked for again and again");
+
 // Lifting layers onto the terrain: standing things offset, flat things draped.
 class L { constructor(id, props = {}) { this.id = id; this.props = props; }
           clone(p) { return new L(this.id, { ...this.props, ...p }); } }

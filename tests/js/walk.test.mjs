@@ -8,7 +8,7 @@ import { resolve } from "node:path";
 
 const here = resolve(process.argv[2] || ".");
 const walk = await import(pathToFileURL(resolve(here, "mapify/web/js/walk.js")).href);
-const { BuildingIndex, nearestRoadPoint, floorLines, streetLabels, Walker } = walk;
+const { BuildingIndex, nearestRoadPoint, floorLines, streetLabels, groundLayers, Walker } = walk;
 
 // A 20 m square building north-east of the origin, with a 4 m courtyard.
 const ring = [[77.0001, 12.0001], [77.0003, 12.0001], [77.0003, 12.0003],
@@ -42,6 +42,24 @@ assert.equal(nearestRoadPoint([road], 77.01, 12.01, 100), null, "too far is noth
 assert.equal(floorLines([building], 77.0002, 12.0002).length, 3, "12 m: lines at 3, 6, 9");
 assert.equal(floorLines([{ ...building, height: 3 }], 77.0002, 12.0002).length, 0);
 assert.equal(floorLines([building], 77.05, 12.05).length, 0, "far away: nothing");
+// on ground 40 m up (the walk draws relative to its own height), the
+// storeys stand on that ground, not at the sea's level
+const raised = floorLines([building], 77.0002, 12.0002, 650, () => 40);
+assert.deepEqual([...new Set(raised.map((f) => f.path[0][2]))], [43, 46, 49]);
+
+// the street scene follows the ground when there is terrain: no level plane
+// (the terrain is the ground), and every street a lift above its heights
+class FakeLayer { constructor(props) { this.props = props; this.id = props.id; } }
+const fakeDeck = { SolidPolygonLayer: FakeLayer, PathLayer: FakeLayer };
+const data = { roads: new Map([["r", road]]), green: new Map(), water: new Map() };
+const flat = groundLayers(fakeDeck, data, [77.0002, 12.0002]);
+assert.ok(flat.some((l) => l.id === "walk-ground"), "level ground without terrain");
+const hilly = groundLayers(fakeDeck, data, [77.0002, 12.0002], (lon) => (lon - 77) * 1e5, 0.35);
+assert.ok(!hilly.some((l) => l.id === "walk-ground"), "the terrain is the ground");
+const roadsLayer = hilly.find((l) => l.id === "walk-roads");
+const path = roadsLayer.props.getPath(road);
+road.path.forEach((p, i) => assert.ok(Math.abs(path[i][2] - ((p[0] - 77) * 1e5 + 0.35 + 0.06)) < 1e-6,
+                                      "each point at its own ground, lifted"));
 
 // street names, once each, nearest first
 const labels = streetLabels([road, { ...road }], 77.0002, 12.0002);

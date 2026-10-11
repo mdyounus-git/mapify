@@ -81,6 +81,29 @@ export class TerrainSampler {
     return this.tiles.get(key);
   }
 
+  /** The height if its tile is already here, else null -- never fetching. */
+  peek(lon, lat) {
+    const t = tileOf(lon, lat, this.z);
+    const h = this.tiles.get(`${this.z}/${t.x}/${t.y}`);
+    return h && !(h instanceof Promise) ? sampleHeights(h, t.px, t.py) : null;
+  }
+
+  /** The tiles within ``reach`` tiles of a point, fetched once; resolves when
+   *  the ones not already here have come in (true if there were any). */
+  around(lon, lat, reach) {
+    const t = tileOf(lon, lat, this.z);
+    const jobs = [];
+    for (let dy = -reach; dy <= reach; dy += 1) {
+      for (let dx = -reach; dx <= reach; dx += 1) {
+        const key = `${this.z}/${t.x + dx}/${t.y + dy}`;
+        if (this.tiles.has(key)) continue;        // here, failed, or on its way
+        const [w, s, e, n] = tileBounds(t.x + dx, t.y + dy, this.z);
+        jobs.push(this.load((w + e) / 2, (s + n) / 2));
+      }
+    }
+    return Promise.all(jobs).then(() => jobs.length > 0);
+  }
+
   /** The height now, or null while its tile is still loading (or missing). */
   heightAt(lon, lat) {
     const t = tileOf(lon, lat, this.z);
