@@ -126,6 +126,12 @@ def build(console: bool, clean: bool) -> int:
         "--exclude-module", "IPython",
         "--exclude-module", "notebook",
         "--exclude-module", "pytest",
+        # The HEIC decoder is optional and not shipped: its wheels bundle
+        # LGPL libraries and HEVC is covered by patents in some countries,
+        # so whether it goes into a package someone else receives is the
+        # owner's decision (see mapify/heif.py). Without it the built app
+        # explains how to add it when given a HEIC photograph.
+        "--exclude-module", "pi_heif",
 
         # Not mapify/__main__.py: PyInstaller runs the entry script as a
         # top-level module with no parent package, so its relative imports
