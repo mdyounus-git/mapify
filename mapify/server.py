@@ -929,6 +929,29 @@ def create_app(cfg: Config | None = None, token: str | None = None,
             return {"available": False, "reason": "no weather data for this place and time"}
         return {"available": True, **got}
 
+    @app.get("/api/events/near")
+    def events_near(lat: float, lon: float, at: str | None = None) -> dict[str, Any]:
+        """Earthquakes (USGS) and natural events (NASA EONET) around a place:
+        around ``at`` (the photograph's time, ISO) when given, else lately.
+        Context for the reader; it never moves the estimate. Only a
+        coordinate and dates go out. Off when offline or switched off."""
+        _coord(lat, lon)
+        net = cfg.network
+        if net.offline_only or not net.events_enabled:
+            return {"available": False,
+                    "reason": "offline" if net.offline_only else "events are switched off"}
+        when = None
+        if at:
+            from datetime import datetime, timezone
+            try:
+                when = datetime.fromisoformat(at.replace("Z", "+00:00"))
+            except ValueError as exc:
+                raise HTTPException(status_code=400, detail="bad time") from exc
+            if when.tzinfo is None:
+                when = when.replace(tzinfo=timezone.utc)
+        from .geodata.events import NearbyEvents
+        return NearbyEvents(cache_dir() / "events").near(lat, lon, when)
+
     @app.get("/api/tiles/{source}/{z}/{x}/{y}")
     def tile(source: str, z: int, x: int, y: int, date: str | None = None):
         data, why = tiles().get(source, z, x, y, date)

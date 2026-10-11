@@ -58,6 +58,11 @@ class NetworkConfig:
     # non-commercial use; a commercial deployment needs Open-Meteo's paid
     # plan, or this switched off.
     weather_history_enabled: bool = True
+    # Earthquakes (the USGS catalogue) and natural events (NASA EONET:
+    # fires, volcanoes, storms) around the located place, at the
+    # photograph's time or lately: context in the 3D view, never evidence.
+    # Both public domain, no key. Only a coordinate and dates are sent.
+    events_enabled: bool = True
     # Pinpoint (mapify/pinpoint): asks Wikimedia Commons which freely
     # licensed geotagged photographs exist near the candidates, downloads
     # their thumbnails and matches them locally. Coordinates go out; the
