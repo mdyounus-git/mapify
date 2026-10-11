@@ -231,7 +231,12 @@ class GeoClipLocator:
         model = self._model
         encoder = model.image_encoder
 
-        pixel_values = encoder.preprocess_image(image.convert("RGB")).to(self.device)
+        # Several views of one moment (a panorama's, see mapify/panorama.py)
+        # are one observation: their distributions are averaged, and their
+        # embeddings too, rather than treated as separate photographs.
+        images = list(image) if isinstance(image, (list, tuple)) else [image]
+        pixel_values = torch.cat([encoder.preprocess_image(im.convert("RGB"))
+                                  for im in images]).to(self.device)
         with torch.no_grad():
             clip_feats = encoder.CLIP.get_image_features(pixel_values=pixel_values)
             clip_feats = _as_tensor(clip_feats)
@@ -240,9 +245,10 @@ class GeoClipLocator:
             logits = model.logit_scale.exp() * (
                 image_features @ self.gallery_features().t()
             )
-            probs = logits.softmax(dim=-1)[0].cpu().numpy().astype(np.float64)
+            probs = logits.softmax(dim=-1).mean(dim=0).cpu().numpy().astype(np.float64)
             normed = clip_feats / clip_feats.norm(dim=-1, keepdim=True)
-            embedding = normed[0].cpu().numpy().astype(np.float32)
+            mean = normed.mean(dim=0)
+            embedding = (mean / mean.norm()).cpu().numpy().astype(np.float32)
 
         coords = self.gallery_coords()
         if coords is None:
@@ -394,7 +400,10 @@ class GeoClipLocator:
         model = self._model
         encoder = model.image_encoder
 
-        pixel_values = encoder.preprocess_image(image.convert("RGB")).to(self.device)
+        # Several views of one moment are averaged (see locate_modes).
+        images = list(image) if isinstance(image, (list, tuple)) else [image]
+        pixel_values = torch.cat([encoder.preprocess_image(im.convert("RGB"))
+                                  for im in images]).to(self.device)
 
         with torch.no_grad():
             clip_feats = encoder.CLIP.get_image_features(pixel_values=pixel_values)
@@ -407,7 +416,7 @@ class GeoClipLocator:
             logits = model.logit_scale.exp() * (
                 image_features @ self.gallery_features().t()
             )
-            probs = logits.softmax(dim=-1)
+            probs = logits.softmax(dim=-1).mean(dim=0, keepdim=True)
             k = max(1, min(int(top_k), int(model.gps_gallery.shape[0])))
             top = torch.topk(probs, k, dim=1)
             coords = model.gps_gallery.index_select(0, top.indices[0]).cpu().numpy()
@@ -416,7 +425,8 @@ class GeoClipLocator:
             # The zero-shot side wants the normalised CLIP embedding, not the
             # GeoCLIP projection.
             normed = clip_feats / clip_feats.norm(dim=-1, keepdim=True)
-            embedding = normed[0].cpu().numpy().astype(np.float32)
+            mean = normed.mean(dim=0)
+            embedding = (mean / mean.norm()).cpu().numpy().astype(np.float32)
 
         candidates = [
             RawCandidate(

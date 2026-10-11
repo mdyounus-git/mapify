@@ -30,6 +30,8 @@ from PIL import Image, ImageOps
 
 from . import heif
 from .config import ACCEPTED_EXTENSIONS, ACCEPTED_FORMATS, Config
+from .panorama import is_equirectangular
+from .panorama import views as panorama_views
 from .data.countries import get_table
 from .evidence import script_detect
 from .evidence.fusion import Candidate, FusionEngine, FusionResult
@@ -367,9 +369,15 @@ class AnalysisEngine:
 
             image = self._prepare(source, self.cfg.models.max_image_side)
             report.image["analysed_size"] = [image.width, image.height]
+            # A 360-degree panorama is read as four ordinary views of one
+            # moment (mapify/panorama.py); the file's own tag says so, and
+            # it has gone from the prepared copy, so ask the source.
+            views = panorama_views(image) if is_equirectangular(source) else None
+            if views:
+                report.image["panorama"] = True
 
             warnings_before = len(report.warnings)
-            look = self._look(image, report, step)
+            look = self._look(image, report, step, views=views)
             mirrored = self._mirrored_reading(image, look)
             if mirrored is not None:
                 # A selfie camera or a flipped repost reverses the whole
@@ -378,7 +386,8 @@ class AnalysisEngine:
                 # it really is, so the analysis starts again on that copy.
                 image = ImageOps.mirror(image)
                 del report.warnings[warnings_before:]
-                look = self._look(image, report, step, ocr=mirrored)
+                views = panorama_views(image) if views else None
+                look = self._look(image, report, step, ocr=mirrored, views=views)
                 report.image["mirrored"] = True
                 report.warnings.append(MIRRORED_NOTE)
             raw, embedding, evidence = look.raw, look.embedding, look.evidence
@@ -507,7 +516,8 @@ class AnalysisEngine:
 
     def _look(self, image: Image.Image, report: AnalysisReport,
               step: Callable[[str, str], None],
-              ocr: OcrResult | None = None) -> _Look:
+              ocr: OcrResult | None = None,
+              views: list[Image.Image] | None = None) -> _Look:
         """Locate, read the visual clues and the text: everything that looks
         at the pixels. Run again on a flipped copy when the photograph turns
         out to be mirrored, with the text already read from that copy.
@@ -529,14 +539,14 @@ class AnalysisEngine:
                          and hasattr(self.geoclip, "locate_modes"))
                 if modes:
                     raw, embedding = self.geoclip.locate_modes(
-                        image,
+                        views or image,
                         self.cfg.models.geoclip_top_k,
                         self.cfg.models.geoclip_mode_radius_km,
                         focus_km=self.cfg.models.geoclip_mode_focus_km,
                     )
                 else:
                     raw, embedding = self.geoclip.locate_with_embedding(
-                        image, self.cfg.models.geoclip_top_k
+                        views or image, self.cfg.models.geoclip_top_k
                     )
             except Exception as exc:
                 report.warnings.append(
