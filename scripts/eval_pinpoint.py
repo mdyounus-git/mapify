@@ -58,6 +58,8 @@ def main() -> int:
                          "(loads CLIP from the local model cache)")
     ap.add_argument("--panoramax", action="store_true",
                     help="also ask Panoramax for street pictures, as the app does")
+    ap.add_argument("--second-matcher", action="store_true",
+                    help="let DISK + LightGlue look again at SIFT's close calls")
     ap.add_argument("--sites", default="",
                     help="comma-separated sample sites to run (default: all of the scene)")
     args = ap.parse_args()
@@ -72,7 +74,11 @@ def main() -> int:
         items = [i for i in items if i["site"] in keep]
     if args.limit:
         items = items[:args.limit]
-    engine = PinpointEngine(state_dir() / "pinpoint", panoramax=args.panoramax)
+    if args.second_matcher:
+        from mapify.paths import apply_model_cache_env
+        apply_model_cache_env()
+    engine = PinpointEngine(state_dir() / "pinpoint", panoramax=args.panoramax,
+                            second_matcher=args.second_matcher)
     clip = None
     if args.names:
         os.environ.setdefault("HF_HUB_OFFLINE", "1")      # the weights already here
@@ -110,6 +116,10 @@ def main() -> int:
               f"{res['searched']['references']:>3} refs  {time.time() - t0:>4.0f}s  "
               f"{res['searched'].get('listed', 0):>4} listed  "
               f"{best.get('title', '')[:50]}", flush=True)
+        second = res["searched"].get("second_look")
+        if second:
+            print(f"{'':<16} second matcher: best {second['best_inliers']} inliers "
+                  f"on {second['compared']} close calls", flush=True)
         for note in res.get("notes") or []:
             print(f"{'':<16} note: {note}", flush=True)
         for area in res["searched"].get("areas") or []:

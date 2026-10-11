@@ -78,6 +78,11 @@ class NetworkConfig:
     # France and Germany, sparse or absent elsewhere. Only a coordinate box
     # is sent.
     pinpoint_panoramax: bool = True
+    # When SIFT confirms nothing, a second matcher (DISK + LightGlue, all
+    # Apache-2.0, weights in the models directory) looks again at its close
+    # calls, by thresholds of its own. Local only; adds 10-60 s. Off until
+    # measured on the landmark evaluation.
+    pinpoint_second_matcher: bool = False
     # A Mapillary access token, from your own free Mapillary account, adds
     # its street-level imagery (CC BY-SA 4.0) to Pinpoint. Empty: Commons
     # only. Kept in your config file; never written anywhere else.

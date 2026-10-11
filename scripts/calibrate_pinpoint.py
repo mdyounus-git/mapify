@@ -14,7 +14,10 @@ chosen:
     looks like (real second photographs of a scene score lower than
     this, and well above the negatives when they match at all).
 
-    python scripts/calibrate_pinpoint.py [--pairs 400]
+    python scripts/calibrate_pinpoint.py [--pairs 400] [--matcher lightglue]
+
+``--matcher lightglue`` measures the second matcher (DISK + LightGlue,
+mapify/pinpoint/deep_match.py) the same way; its thresholds are its own.
 """
 
 from __future__ import annotations
@@ -66,10 +69,12 @@ def main() -> int:
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--pairs", type=int, default=400, help="negative pairs to try")
     ap.add_argument("--positives", type=int, default=60)
+    ap.add_argument("--matcher", choices=("sift", "lightglue"), default="sift")
     args = ap.parse_args()
+    if args.matcher == "lightglue":
+        return _lightglue(args)
 
-    manifest = json.loads((ROOT / "samples" / "manifest.json").read_text(encoding="utf-8"))
-    items = [i for i in manifest["samples"] if (ROOT / "samples" / i["file"]).is_file()]
+    items = _items()
     rng = random.Random(7)
     print(f"{len(items)} benchmark photographs; extracting features…", flush=True)
     # Exactly the engine's settings: the query by area with 6000 points,
@@ -98,6 +103,46 @@ def main() -> int:
         m = match(q_feats[it["site"]], ref)
         positives.append((m.inliers, m.homography_inliers, it["site"]))
 
+    _report(negatives, positives)
+    return 0
+
+
+def _items():
+    manifest = json.loads((ROOT / "samples" / "manifest.json").read_text(encoding="utf-8"))
+    return [i for i in manifest["samples"] if (ROOT / "samples" / i["file"]).is_file()]
+
+
+def _lightglue(args) -> int:
+    """The same negatives and positives through DISK + LightGlue: one
+    feature set per photograph, each pair matched once."""
+    from mapify.paths import apply_model_cache_env
+    apply_model_cache_env()
+    from mapify.pinpoint.deep_match import DeepMatcher
+    dm = DeepMatcher()
+    items = _items()
+    rng = random.Random(7)
+    print(f"{len(items)} benchmark photographs; DISK features…", flush=True)
+    feats = {it["site"]: dm.features(Image.open(ROOT / "samples" / it["file"]))
+             for it in items}
+    negatives = []
+    while len(negatives) < args.pairs:
+        a, b = rng.sample(items, 2)
+        if haversine_km(a["true_lat"], a["true_lon"], b["true_lat"], b["true_lon"]) < 50:
+            continue
+        m = dm.match_features(feats[a["site"]], feats[b["site"]])
+        negatives.append((m.inliers, m.homography_inliers, a["site"], b["site"]))
+        if len(negatives) % 50 == 0:
+            print(f"  {len(negatives)} pairs", flush=True)
+    positives = []
+    for it in rng.sample(items, min(args.positives, len(items))):
+        img = Image.open(ROOT / "samples" / it["file"])
+        m = dm.match_features(feats[it["site"]], dm.features(_warp(img, rng)))
+        positives.append((m.inliers, m.homography_inliers, it["site"]))
+    _report(negatives, positives)
+    return 0
+
+
+def _report(negatives, positives) -> None:
     ni = [n[0] for n in negatives]
     pi = [p[0] for p in positives]
     print(f"\nNEGATIVES ({len(ni)} pairs of different places)")
@@ -108,7 +153,6 @@ def main() -> int:
     print(f"\nPOSITIVES ({len(pi)} photographs against a warped copy)")
     print(f"  inliers: min {min(pi)}, p10 {_pct(pi, .1)}, median {statistics.median(pi):.0f}")
     print(f"  homography inliers: min {min(p[1] for p in positives)}")
-    return 0
 
 
 if __name__ == "__main__":

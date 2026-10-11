@@ -346,6 +346,63 @@ def test_the_search_stops_once_a_match_confirms(tmp_path, fake_commons, monkeypa
     assert res["searched"]["references"] == 2 and res["searched"]["listed"] == 5
 
 
+class _SecondMatcher:
+    """Stands in for DISK + LightGlue: inliers by reference key (the engine
+    opens cached thumbnails, which are named by it)."""
+
+    def __init__(self, inliers: dict[str, int]):
+        self.inliers = inliers
+        self.asked: list[str] = []
+
+    def features(self, image):
+        return Path(getattr(image, "filename", "") or "query").stem
+
+    def match_features(self, query, ref):
+        from mapify.pinpoint.features import MatchResult
+        self.asked.append(ref)
+        n = self.inliers.get(ref, 3)
+        return MatchResult(n + 5, n, n // 2, n / (n + 5))
+
+
+def test_the_second_matcher_confirms_what_sift_only_nearly_saw(tmp_path, fake_commons):
+    lookalike = _ref(tmp_path, "other-light", _scene(31), 12.9711, 77.5822)
+    fake_commons += [lookalike, _ref(tmp_path, "unrelated", _scene(32), 12.9700, 77.5800)]
+    eng = PinpointEngine(tmp_path / "cache", workers=2)
+    eng.deep = _SecondMatcher({lookalike.key: engine_mod.DEEP_STRONG + 10})
+    res = eng.run(_scene(1), [Area(12.97, 77.58, 1500)])
+    assert res["verdict"] == "pinpointed"
+    assert res["location"]["lat"] == pytest.approx(12.9711)
+    assert "second matcher" in res["message"]
+    assert str(engine_mod.DEEP_NEGATIVE_MAX) in res["message"]
+    assert res["best"]["title"] == "other-light.jpg"
+    assert res["best"]["second_match"]["inliers"] == engine_mod.DEEP_STRONG + 10
+    assert res["threshold"]["second_matcher"]["strong"] == engine_mod.DEEP_STRONG
+    assert res["searched"]["second_look"]["compared"] == 2
+    json.dumps(res)
+
+
+def test_the_second_matcher_below_its_own_line_changes_nothing(tmp_path, fake_commons):
+    fake_commons += [_ref(tmp_path, f"other-{i}", _scene(20 + i), 12.97, 77.58)
+                     for i in range(3)]
+    eng = PinpointEngine(tmp_path / "cache", workers=2)
+    eng.deep = _SecondMatcher({fake_commons[0].key: engine_mod.DEEP_NEGATIVE_MAX})
+    res = eng.run(_scene(1), [Area(12.97, 77.58, 1500)])
+    assert res["verdict"] == "none" and res["location"] is None
+
+
+def test_the_second_matcher_is_not_asked_once_sift_confirms(tmp_path, fake_commons):
+    fake_commons.append(_ref(tmp_path, "same-corner", _second_view(_scene(1)), 12.9794, 77.585))
+    eng = PinpointEngine(tmp_path / "cache", workers=2)
+    eng.deep = _SecondMatcher({})
+    res = eng.run(_scene(1), [Area(12.97, 77.58, 1500)])
+    assert res["verdict"] == "pinpointed" and "second matcher" not in res["message"]
+    assert eng.deep.asked == [] and "second_look" not in res["searched"]
+
+
+def test_the_second_matcher_is_off_unless_asked_for(tmp_path):
+    assert PinpointEngine(tmp_path / "cache").deep is None
+
+
 def test_the_budget_caps_the_comparison_and_says_what_is_left(tmp_path, fake_commons):
     fake_commons += [_ref(tmp_path, f"other-{i}", _scene(40 + i), 12.97 + i * 1e-4, 77.58)
                      for i in range(4)]

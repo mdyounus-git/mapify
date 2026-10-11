@@ -16,6 +16,12 @@ thresholds:
   none        nothing near the candidates shows this scene. Said plainly;
               the estimate stands as it was.
 
+When SIFT confirms nothing, an optional second matcher (DISK features with
+LightGlue, deep_match.py) looks again at SIFT's best and its near misses --
+the same scene under other light or from another side, where hand-made
+features fail and learned ones hold. It confirms by its own thresholds,
+measured on the same unrelated pairs, never by SIFT's.
+
 The search covers each area rather than its middle. One Commons geo search
 returns the nearest 500 files, which in a city centre reach a few hundred
 metres; when it is cut short, more searches are placed on a hexagonal grid
@@ -57,6 +63,7 @@ from .sources import (LISTING_CAP, Reference, commons_category_near,
                       commons_details, commons_listing, commons_search_near,
                       fetch_thumb, mapillary_near, panoramax_near, touch,
                       wikidata_landmarks)
+from ..geo.geodesy import haversine_km
 
 log = logging.getLogger("mapify.pinpoint")
 
@@ -70,6 +77,17 @@ __all__ = ["Area", "PinpointEngine", "STRONG_INLIERS", "WEAK_INLIERS", "NEGATIVE
 NEGATIVE_MAX = 14
 WEAK_INLIERS = 20
 STRONG_INLIERS = 40
+# The second matcher's own line, measured the same way
+# (scripts/calibrate_pinpoint.py --matcher lightglue, 2026-10-11): 400 pairs
+# of different places reached at most 34 inliers (median 10, 99th
+# percentile 24) -- learned features find more chance agreement than SIFT --
+# and a warped copy at least 630. Confirmation sits near three times the
+# worst chance score, as SIFT's does; "possible" clears that score.
+DEEP_NEGATIVE_MAX = 34
+DEEP_WEAK = 50
+DEEP_STRONG = 100
+DEEP_TOP = 10                 # SIFT's best ten, or every near miss up to DEEP_MAX
+DEEP_MAX = 20
 # Two people photographing the same facade usually stand within a street
 # or two of each other, and Commons camera positions are themselves
 # placed by hand or by phone GPS.
@@ -138,6 +156,20 @@ class Area:
     lon: float
     radius_m: float
     label: str = "the estimate"
+
+
+def _centre(strong: list[tuple[int, Reference]], best: Reference) -> dict[str, Any]:
+    """Several confirmed matches of one scene: their inlier-weighted centre,
+    and the spread between them as the honest radius."""
+    near = [(n, r) for n, r in strong
+            if haversine_km(best.lat, best.lon, r.lat, r.lon) <= 0.4]
+    wsum = sum(n for n, _ in near)
+    lat = sum(n * r.lat for n, r in near) / wsum
+    lon = sum(n * r.lon for n, r in near) / wsum
+    spread = max(haversine_km(lat, lon, r.lat, r.lon) * 1000 for _, r in near)
+    precision = max(PRECISION_M, spread)
+    return {"lat": round(lat, 6), "lon": round(lon, 6),
+            "precision_m": round(precision), "matched_photographs": len(near)}
 
 
 def _fmt_m(m: float) -> str:
@@ -258,11 +290,17 @@ def choose_names(names: list[str], scores: list[float]) -> list[str]:
 class PinpointEngine:
     def __init__(self, cache_dir: Path, online: bool = True, mapillary_token: str = "",
                  workers: int = 6, cache_mb: int = 2048,
-                 landmarks: LandmarksFn | None = None, panoramax: bool = False):
+                 landmarks: LandmarksFn | None = None, panoramax: bool = False,
+                 second_matcher: bool = False):
         self.cache = Path(cache_dir)
         self.online = online
         self.token = mapillary_token or ""
         self.panoramax = panoramax
+        self.deep = None
+        if second_matcher:
+            from .deep_match import DeepMatcher
+            matcher = DeepMatcher()
+            self.deep = matcher if matcher.available() else None
         self.workers = workers
         self.cache_mb = cache_mb
         self.landmarks = landmarks or merged_landmarks(online, self.cache)
@@ -370,7 +408,6 @@ class PinpointEngine:
               lift: LiftFn | None = None, namer: NamerFn | None = None
               ) -> tuple[list[Reference], list[str], list[dict]]:
         """Every photograph listed in the areas, in the order to compare them."""
-        from ..geo.geodesy import haversine_km
         notes: list[str] = []
         coverage: list[dict] = []
         found: dict[str, tuple[float, int, Reference]] = {}     # key -> (dist, area, ref)
@@ -537,6 +574,31 @@ class PinpointEngine:
         save(feats, path)
         return feats
 
+    def _second_look(self, image: Image.Image, scored: list,
+                     step: ProgressFn) -> dict[str, Any]:
+        """The second matcher on SIFT's close calls: its best DEEP_TOP, or
+        every near miss (NEGATIVE_MAX or more) up to DEEP_MAX."""
+        near = sum(1 for m, _ in scored if m.inliers >= NEGATIVE_MAX)
+        pick = scored[:max(DEEP_TOP, min(DEEP_MAX, near))]
+        step("second-look", f"A second matcher looks again at {len(pick)} close "
+                            f"call{'' if len(pick) == 1 else 's'}")
+        try:
+            query = self.deep.features(image)
+        except Exception as exc:
+            log.warning("the second matcher failed on the photograph: %s", exc)
+            return {}
+        out: dict[str, Any] = {}
+        for _m, r in pick:
+            thumb = fetch_thumb(r, self.cache)
+            if thumb is None:
+                continue
+            try:
+                with Image.open(thumb) as im:
+                    out[r.key] = self.deep.match_features(query, self.deep.features(im))
+            except Exception:                               # a broken thumbnail
+                continue
+        return out
+
     # ------------------------------------------------------------- run
 
     def run(self, image: Image.Image, areas: list[Area],
@@ -568,6 +630,10 @@ class PinpointEngine:
                     + (["Mapillary"] if self.token else [])}
         threshold = {"strong": STRONG_INLIERS, "weak": WEAK_INLIERS,
                      "unrelated_photographs_reach": NEGATIVE_MAX}
+        if self.deep is not None:
+            threshold["second_matcher"] = {"name": "DISK + LightGlue",
+                                           "strong": DEEP_STRONG, "weak": DEEP_WEAK,
+                                           "unrelated_photographs_reach": DEEP_NEGATIVE_MAX}
         base = {"searched": searched, "threshold": threshold, "matches": [],
                 "best": None, "location": None, "notes": []}
         if not self.online:
@@ -670,8 +736,27 @@ class PinpointEngine:
             scored = [(refined.get(r.key, m), r) for m, r in scored]
             scored.sort(key=lambda mr: (-mr[0].inliers, mr[1].distance_m))
 
-        top = [{**r.as_dict(), "match": m.as_dict(), "area": r.extra.get("area")}
-               for m, r in scored[:6]]
+        deep: dict[str, Any] = {}
+        if self.deep is not None and scored and scored[0][0].inliers < STRONG_INLIERS:
+            deep = self._second_look(image, scored, step)
+        deep_best = max(((deep[r.key], r) for _m, r in scored if r.key in deep),
+                        key=lambda dr: dr[0].inliers, default=None)
+        if deep:
+            searched["second_look"] = {"compared": len(deep),
+                                       "best_inliers": deep_best[0].inliers}
+
+        def row(m, r) -> dict:
+            out = {**r.as_dict(), "match": m.as_dict(), "area": r.extra.get("area")}
+            if r.key in deep:
+                out["second_match"] = deep[r.key].as_dict()
+            return out
+
+        shown = scored[:6]
+        if deep_best is not None and deep_best[0].inliers >= DEEP_WEAK:
+            # The second matcher's best leads the list whenever it counts.
+            lead = next((m, r) for m, r in scored if r.key == deep_best[1].key)
+            shown = [lead] + [(m, r) for m, r in scored[:6] if r.key != lead[1].key][:5]
+        top = [row(m, r) for m, r in shown]
         base["matches"] = top
         if not scored:
             # Nothing was compared: that is a failure to search, never a
@@ -685,31 +770,43 @@ class PinpointEngine:
         best_m, best_r = scored[0]
         base["best"] = top[0]
         if best_m.inliers >= STRONG_INLIERS:
-            strong = [(m, r) for m, r in scored if m.inliers >= STRONG_INLIERS]
-            # Several confirmed matches of one scene: their inlier-weighted
-            # centre, and the spread between them as the honest radius.
-            from ..geo.geodesy import haversine_km
-            near = [(m, r) for m, r in strong
-                    if haversine_km(best_r.lat, best_r.lon, r.lat, r.lon) <= 0.4]
-            wsum = sum(m.inliers for m, _ in near)
-            lat = sum(m.inliers * r.lat for m, r in near) / wsum
-            lon = sum(m.inliers * r.lon for m, r in near) / wsum
-            spread = max(haversine_km(lat, lon, r.lat, r.lon) * 1000 for _, r in near)
-            precision = max(PRECISION_M, spread)
-            location = {"lat": round(lat, 6), "lon": round(lon, 6),
-                        "precision_m": round(precision), "matched_photographs": len(near)}
+            location = _centre([(m.inliers, r) for m, r in scored
+                                if m.inliers >= STRONG_INLIERS], best_r)
+            n = location["matched_photographs"]
             return {**base, "verdict": "pinpointed", "location": location,
                     "message": (f"Pinpointed: this photograph shows the same scene as "
-                                f"{'a photograph' if len(near) == 1 else f'{len(near)} photographs'} "
+                                f"{'a photograph' if n == 1 else f'{n} photographs'} "
                                 f"taken here -- {best_m.inliers} matching points that one "
                                 f"pair of camera positions explains, where unrelated "
                                 f"photographs reach at most {NEGATIVE_MAX}. The camera "
-                                f"stood within roughly {_fmt_m(precision)} of this spot.")}
+                                f"stood within roughly "
+                                f"{_fmt_m(location['precision_m'])} of this spot.")}
+        if deep_best is not None and deep_best[0].inliers >= DEEP_STRONG:
+            d_m, d_r = deep_best
+            location = _centre([(deep[r.key].inliers, r) for _m, r in scored
+                                if r.key in deep and deep[r.key].inliers >= DEEP_STRONG],
+                               d_r)
+            n = location["matched_photographs"]
+            return {**base, "verdict": "pinpointed", "location": location,
+                    "message": (f"Pinpointed by the second matcher: this photograph shows "
+                                f"the same scene as "
+                                f"{'a photograph' if n == 1 else f'{n} photographs'} "
+                                f"taken here -- {d_m.inliers} points matched by DISK and "
+                                f"LightGlue that one pair of camera positions explains, "
+                                f"where unrelated photographs reach at most "
+                                f"{DEEP_NEGATIVE_MAX} with it. The camera stood within "
+                                f"roughly {_fmt_m(location['precision_m'])} of this spot.")}
         if best_m.inliers >= WEAK_INLIERS:
             return {**base, "verdict": "possible",
                     "message": (f"A possible match ({best_m.inliers} matching points), "
                                 f"below the {STRONG_INLIERS} needed to confirm it: shown "
                                 f"for you to judge by eye, and no location is adopted.")}
+        if deep_best is not None and deep_best[0].inliers >= DEEP_WEAK:
+            return {**base, "verdict": "possible",
+                    "message": (f"A possible match ({deep_best[0].inliers} points by the "
+                                f"second matcher), below the {DEEP_STRONG} it needs to "
+                                f"confirm one: shown for you to judge by eye, and no "
+                                f"location is adopted.")}
         unread = len(order) - compared
         return {**base, "verdict": "none",
                 "message": (f"None of the {compared} photographs compared near the "
