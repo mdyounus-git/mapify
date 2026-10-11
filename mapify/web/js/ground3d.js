@@ -31,7 +31,7 @@ import { BuildingIndex, EYE_HEIGHT_M, Walker, floorLines, groundLayers,
          nearestRoadPoint, streetLabels } from "./walk.js";
 import { AMBIENCE_NOTE, Ambience, SceneFx, describeWeather, lightFor, readWeather,
          skyFor } from "./scene.js";
-import { SAMPLE_Z, TERRAIN_CREDIT, TERRAIN_URL, TERRARIUM, TerrainMeshLoader,
+import { SAMPLE_Z, TERRAIN_CREDIT, TERRAIN_URL, TERRARIUM, TerrainMeshLoader, WALK_Z,
          TerrainSampler, onTerrain, tileBounds, tileOf } from "./terrain.js";
 
 const DECK_SRC = "vendor/deck/dist.min.js";
@@ -183,7 +183,7 @@ export class Ground3D {
     this.ambienceOn = false;
     this._walkLayers = [];
     this.terrainOn = true;        // the ground's real height (terrain.js)
-    this.sampler = new TerrainSampler();
+    this.sampler = new TerrainSampler(null, WALK_Z);   // the walker's eye height
     this._groundZ = 0;
     this.walker = new Walker({
       getState: () => this.viewState,
@@ -1143,22 +1143,31 @@ export class Ground3D {
   }
 
   /** The walk's ground: the nine elevation tiles around the walker, each
-   *  one mesh (a first-person view does not pick tiles the way a map does). */
+   *  one mesh (a first-person view does not pick tiles the way a map does).
+   *  The one the walker stands in is drawn as its sixteen finer children,
+   *  at the zoom the eye height is read from; the eight around it stay
+   *  coarse, so open country still reaches the horizon. Skirts hide the
+   *  seam between the two. */
   _walkTerrain(deck, here) {
     const t = tileOf(here[0], here[1], SAMPLE_Z);
+    const fine = 2 ** (WALK_Z - SAMPLE_Z);
+    const mesh = (z, x, y) => new deck.TerrainLayer({
+      id: `walk-terrain-${z}-${x}-${y}`,
+      elevationData: TERRAIN_URL.replace("{z}", z).replace("{x}", x).replace("{y}", y),
+      bounds: tileBounds(x, y, z),
+      elevationDecoder: TERRARIUM, texture: null, color: [150, 148, 138],
+      meshMaxError: 1.5, operation: "terrain+draw",
+      loaders: [TerrainMeshLoader],
+      loadOptions: { worker: false, terrain: { skirtHeight: 20, meshStep: 2 } },
+    });
     const out = [];
     for (let dy = -1; dy <= 1; dy += 1) {
       for (let dx = -1; dx <= 1; dx += 1) {
         const x = t.x + dx, y = t.y + dy;
-        out.push(new deck.TerrainLayer({
-          id: `walk-terrain-${SAMPLE_Z}-${x}-${y}`,
-          elevationData: TERRAIN_URL.replace("{z}", SAMPLE_Z).replace("{x}", x).replace("{y}", y),
-          bounds: tileBounds(x, y, SAMPLE_Z),
-          elevationDecoder: TERRARIUM, texture: null, color: [150, 148, 138],
-          meshMaxError: 1.5, operation: "terrain+draw",
-          loaders: [TerrainMeshLoader],
-          loadOptions: { worker: false, terrain: { skirtHeight: 20, meshStep: 2 } },
-        }));
+        if (dx || dy) { out.push(mesh(SAMPLE_Z, x, y)); continue; }
+        for (let j = 0; j < fine; j += 1) {
+          for (let i = 0; i < fine; i += 1) out.push(mesh(WALK_Z, x * fine + i, y * fine + j));
+        }
       }
     }
     return out;

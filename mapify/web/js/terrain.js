@@ -14,6 +14,9 @@
 export const TERRAIN_URL = "/api/tiles/terrain/{z}/{x}/{y}";
 export const TERRARIUM = { rScaler: 256, gScaler: 1, bScaler: 1 / 256, offset: -32768 };
 export const SAMPLE_Z = 14;            // ~10 m a pixel at mid-latitudes
+// Under the walker: ~2.4 m a pixel, which is bare-earth lidar where Mapterhorn
+// has it (and the coarser ground, enlarged as heights, where it has not).
+export const WALK_Z = 16;
 export const TERRAIN_CREDIT =
   "Terrain: Mapterhorn (national models; Copernicus WorldDEM-30 \u00a9 DLR e.V., "
   + "\u00a9 Airbus DS, provided under COPERNICUS by the EU and ESA) and Terrain Tiles "
@@ -59,16 +62,17 @@ export function sampleHeights(h, px, py, size = 256) {
 
 /** Reads the ground's height at a point, from tiles it fetches once. */
 export class TerrainSampler {
-  constructor(decode = null) {
+  constructor(decode = null, z = SAMPLE_Z) {
     this.tiles = new Map();          // "z/x/y" -> Float32Array | Promise | null
     this._decode = decode || decodePng;
+    this.z = z;
   }
 
   async load(lon, lat) {
-    const t = tileOf(lon, lat, SAMPLE_Z);
-    const key = `${SAMPLE_Z}/${t.x}/${t.y}`;
+    const t = tileOf(lon, lat, this.z);
+    const key = `${this.z}/${t.x}/${t.y}`;
     if (!this.tiles.has(key)) {
-      const url = TERRAIN_URL.replace("{z}", SAMPLE_Z).replace("{x}", t.x).replace("{y}", t.y);
+      const url = TERRAIN_URL.replace("{z}", this.z).replace("{x}", t.x).replace("{y}", t.y);
       const job = this._decode(url).then((h) => { this.tiles.set(key, h); return h; },
         () => { this.tiles.set(key, null); return null; });
       this.tiles.set(key, job);
@@ -79,8 +83,8 @@ export class TerrainSampler {
 
   /** The height now, or null while its tile is still loading (or missing). */
   heightAt(lon, lat) {
-    const t = tileOf(lon, lat, SAMPLE_Z);
-    const h = this.tiles.get(`${SAMPLE_Z}/${t.x}/${t.y}`);
+    const t = tileOf(lon, lat, this.z);
+    const h = this.tiles.get(`${this.z}/${t.x}/${t.y}`);
     if (!h || h instanceof Promise) {
       if (h === undefined) this.load(lon, lat);
       return null;

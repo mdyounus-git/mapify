@@ -7,7 +7,7 @@ import { resolve } from "node:path";
 
 const here = resolve(process.argv[2] || ".");
 const t = await import(pathToFileURL(resolve(here, "mapify/web/js/terrain.js")).href);
-const { tileOf, tileBounds, heightsFromRGBA, sampleHeights, TerrainSampler, onTerrain, SAMPLE_Z,
+const { tileOf, tileBounds, heightsFromRGBA, sampleHeights, TerrainSampler, onTerrain, SAMPLE_Z, WALK_Z,
         gridMesh, TerrainMeshLoader } = t;
 
 // Terrarium: R*256 + G + B/256 - 32768.
@@ -43,6 +43,10 @@ assert.equal(asked, 1, "a tile is fetched once");
 const missing = new TerrainSampler(async () => { throw new Error("404"); });
 await missing.load(0, 0);
 assert.equal(missing.heightAt(0, 0), null, "no tile: no height, and no endless retrying");
+const walking = new TerrainSampler(async (url) => { assert.ok(url.includes(`/${WALK_Z}/`)); return decoded; }, WALK_Z);
+await walking.load(2.2945, 48.8584);
+assert.equal(walking.heightAt(2.2945, 48.8584), 123, "the walk reads its own, finer zoom");
+assert.ok(WALK_Z > SAMPLE_Z);
 
 // Lifting layers onto the terrain: standing things offset, flat things draped.
 class L { constructor(id, props = {}) { this.id = id; this.props = props; }
