@@ -156,6 +156,8 @@ def main() -> int:
                     help="no outbound requests (faster, Natural Earth naming)")
     ap.add_argument("--ocr", action="store_true", help="enable OCR")
     ap.add_argument("--limit", type=int, default=0)
+    ap.add_argument("--offset", type=int, default=0,
+                    help="skip the first N samples (to resume a run that was stopped)")
     ap.add_argument("--json", type=str, default=None)
     ap.add_argument("--quiet", action="store_true",
                     help="summary only, no per-sample lines")
@@ -180,6 +182,8 @@ def main() -> int:
               file=sys.stderr)
         return 2
     samples = json.loads(manifest_path.read_text(encoding="utf-8"))["samples"]
+    if args.offset:
+        samples = samples[args.offset:]
     if args.limit:
         samples = samples[: args.limit]
 
