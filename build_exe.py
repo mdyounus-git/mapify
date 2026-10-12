@@ -132,6 +132,13 @@ def build(console: bool, clean: bool) -> int:
         # owner's decision (see mapify/heif.py). Without it the built app
         # explains how to add it when given a HEIC photograph.
         "--exclude-module", "pi_heif",
+        # PLONK, the second locator, stays out of the package: it is off,
+        # unmeasured, needs DINOv2 code from torch.hub besides its weights,
+        # and its geoopt compiles TorchScript at import, which failed the
+        # packaged self-test. A checkout runs it (models.plonk_enabled).
+        "--exclude-module", "plonk",
+        "--exclude-module", "geoopt",
+        "--exclude-module", "torchdiffeq",
         *c2pa_library(),
         # Our own PyInstaller hooks (build_hooks/): kornia ships its source.
         "--additional-hooks-dir", str(ROOT / "build_hooks"),
