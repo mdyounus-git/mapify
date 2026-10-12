@@ -1189,7 +1189,11 @@ class AnalysisEngine:
             if loc.admin1:
                 out["region"] = loc.admin1.name
             if loc.nearest_places:
-                near = loc.nearest_places[0]
+                # A city across a border is not where the point is: "Lahore,
+                # India" named a point on the Indian side, 27 km from Amritsar.
+                same = [p for p in loc.nearest_places
+                        if loc.country and p.admin0 == loc.country.name]
+                near = same[0] if same else loc.nearest_places[0]
                 out["city"] = near.name
                 out["nearest_place_km"] = near.distance_km
             out["offshore"] = loc.offshore

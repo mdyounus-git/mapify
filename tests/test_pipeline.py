@@ -467,3 +467,17 @@ class TestReadingQuality:
                                OcrLine("STATION", 0.9)])
         assert reading_quality(ocr) == pytest.approx(0.9)
         assert reading_quality(OcrResult()) == 0.0
+
+
+@requires_geodata
+def test_a_point_is_named_after_a_city_in_its_own_country(engine):
+    # On the Indian side of the Wagah border Lahore is nearer than Amritsar;
+    # "Lahore, India" names a city in the wrong country.
+    from mapify.evidence.fusion import Candidate
+    loc = engine.geocoder.locate(31.5948, 74.5664, place_limit=4)
+    assert loc.country.name == "India"
+    assert loc.nearest_places[0].admin0 == "Pakistan"
+    cand = Candidate(latitude=31.5948, longitude=74.5664, prior_score=1.0, score=1.0,
+                     location=loc)
+    named = engine._describe(cand)
+    assert named["country"] == "India" and named["city"] == "Amritsar"
