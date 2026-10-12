@@ -133,12 +133,31 @@ class TestEvidenceAdjustments:
             reading("signage_script", "Deva", "Devanagari script", 1.0),
             reading("world_region", "s_asia", "South Asia", 1.0),
         ])
-        result = engine.fuse([raw(12.9716, 77.5946, 0.01)], evidence=evidence)
-        top = result.candidates[0]
-        # The raw sum of agreements exceeds the clamp, but the multiplier
-        # actually applied is exp(clamp), not exp(sum).
-        assert top.total_adjustment > 0.5
-        assert top.score / top.prior_score == pytest.approx(math.exp(0.5), rel=1e-6)
+        result = engine.fuse([raw(12.9716, 77.5946, 0.01), raw(48.8584, 2.2945, 0.01)],
+                             evidence=evidence)
+        india = next(c for c in result.candidates if c.iso_a2 == "IN")
+        paris = next(c for c in result.candidates if c.iso_a2 == "FR")
+        # The evidence between them far exceeds the clamp, but it may move one
+        # against the other by exp(clamp) each way, no further.
+        assert india.total_adjustment - paris.total_adjustment > 1.0
+        lift = (india.score / india.prior_score) / (paris.score / paris.prior_score)
+        assert lift == pytest.approx(math.exp(1.0), rel=1e-6)
+
+    def test_evidence_every_candidate_shares_leaves_room_for_what_differs(self, engine):
+        # Coimbatore: Tamil script, South Asia and the country prior for every
+        # South Indian candidate used up an absolute cap, and the sign that
+        # named the city could no longer move the answer off Bengaluru.
+        cfg = FusionConfig()
+        cfg.max_total_adjustment = 1.0
+        engine.cfg = cfg
+        evidence = VisualEvidence(readings=[
+            reading("signage_script", "Taml", "Tamil script", 1.0),
+            reading("world_region", "s_asia", "South Asia", 1.0),
+        ])
+        ocr = OcrResult(lines=[OcrLine(text="Coimbatore", confidence=0.9)])
+        result = engine.fuse([raw(12.9716, 77.5946, 0.05), raw(11.0168, 76.9558, 0.005)],
+                             evidence=evidence, ocr=ocr)
+        assert result.candidates[0].location.nearest_places[0].name == "Coimbatore"
 
     def test_every_adjustment_carries_a_reason(self, engine):
         evidence = VisualEvidence(readings=[

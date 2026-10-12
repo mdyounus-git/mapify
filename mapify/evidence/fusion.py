@@ -22,6 +22,7 @@ locator actually saw.
 from __future__ import annotations
 
 import math
+import statistics
 from dataclasses import dataclass, field
 from typing import Any, Iterable
 
@@ -662,6 +663,7 @@ class FusionEngine:
                 )
 
         # Apply every evidence channel.
+        scored = []
         for cand in candidates:
             if cand.location is None:
                 continue
@@ -675,12 +677,25 @@ class FusionEngine:
                 self._apply_toponyms(cand, toponyms)
             if text_clues:
                 self._apply_text_clues(cand, text_clues)
+            scored.append(cand)
 
-            total = max(
-                -cfg.max_total_adjustment,
-                min(cfg.max_total_adjustment, cand.total_adjustment),
-            )
-            cand.score = max(1e-12, cand.prior_score * math.exp(total))
+        # The cap bounds how far evidence may move one candidate against the
+        # others, so it applies to each candidate's evidence relative to the
+        # rest. Capping the raw sum let evidence every candidate shares use up
+        # the allowance: on a Coimbatore bus stop, Tamil script, South Asia
+        # and the country prior came to 1.85 for every South Indian
+        # candidate, and the one thing that told them apart -- the sign
+        # reading Coimbatore, +1.55 -- was cut off at 2.5, so Bengaluru won.
+        # Shared evidence cancels in the normalisation anyway; where nothing
+        # reaches the cap, every probability is exactly what it was.
+        if scored:
+            middle = statistics.median(c.total_adjustment for c in scored)
+            for cand in candidates:
+                relative = (cand.total_adjustment if cand.location is not None
+                            else 0.0) - middle
+                total = max(-cfg.max_total_adjustment,
+                            min(cfg.max_total_adjustment, relative))
+                cand.score = max(1e-12, cand.prior_score * math.exp(total))
 
         candidates.sort(key=lambda c: -c.score)
 
