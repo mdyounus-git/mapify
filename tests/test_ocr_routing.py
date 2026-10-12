@@ -290,3 +290,28 @@ class TestLanguageHints:
         )
         for a in result.candidates[0].adjustments:
             assert a.detail
+
+
+class TestTamilAlphabet:
+    """EasyOCR 1.7.2 ships a Tamil alphabet cut short after zha, so its own
+    Tamil model would not load and no Tamil sign was ever read."""
+
+    def test_the_truncated_alphabet_is_completed_once(self, monkeypatch):
+        easyocr_config = pytest.importorskip("easyocr.config")
+        from mapify.models import ocr
+        model = easyocr_config.recognition_models["gen1"]["tamil_g1"]
+        cut = model["characters"].split("வ")[0]       # as 1.7.2 ships it
+        monkeypatch.setitem(model, "characters", cut)
+        assert ocr._repair_easyocr_alphabets() is True
+        assert len(model["characters"]) == len(cut) + 16
+        assert model["characters"].endswith("்")      # the virama last
+        assert ocr._repair_easyocr_alphabets() is False      # never twice
+
+    def test_a_complete_alphabet_is_left_alone(self, monkeypatch):
+        easyocr_config = pytest.importorskip("easyocr.config")
+        from mapify.models import ocr
+        model = easyocr_config.recognition_models["gen1"]["tamil_g1"]
+        whole = model["characters"].split("வ")[0] + ocr._TAMIL_TAIL
+        monkeypatch.setitem(model, "characters", whole)
+        assert ocr._repair_easyocr_alphabets() is False
+        assert model["characters"] == whole

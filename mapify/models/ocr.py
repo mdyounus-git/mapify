@@ -99,6 +99,31 @@ def group_for_language(lang: str) -> tuple[str, ...] | None:
     return LANGUAGE_TO_GROUP.get((lang or "").lower())
 
 
+# EasyOCR 1.7.2's Tamil alphabet stops after the letter zha: va, ssa,
+# sa, ha, the vowel signs and the virama are missing -- 126 characters where
+# its own Tamil model (tamil.pth, checksum as published) has 142. The model
+# then refused to load ("size mismatch ... [143, 512] ... [127, 512]") and no
+# Tamil was ever read: a Coimbatore bus stop reading "North Kovai" went to
+# Greenland. The sixteen, in the order of EasyOCR's own ta_char.txt, read
+# that sign back correctly.
+_TAMIL_TAIL = "\u0bb5\u0bb7\u0bb8\u0bb9\u0bbe\u0bbf\u0bc0\u0bc1\u0bc2\u0bc6\u0bc7\u0bc8\u0bca\u0bcb\u0bcc\u0bcd"
+
+
+def _repair_easyocr_alphabets() -> bool:
+    """Complete the truncated Tamil alphabet in EasyOCR's model table, in
+    memory; once, and only while it is still the truncated one."""
+    try:
+        from easyocr import config
+        model = config.recognition_models["gen1"]["tamil_g1"]
+    except Exception:
+        return False
+    chars = model.get("characters", "")
+    if _TAMIL_TAIL[0] in chars or not chars.endswith("\u0bb4"):
+        return False
+    model["characters"] = chars + _TAMIL_TAIL
+    return True
+
+
 class EasyOcrEngine:
     """EasyOCR adapter, loaded lazily and only when first used."""
 
@@ -131,6 +156,7 @@ class EasyOcrEngine:
             try:
                 import easyocr
 
+                _repair_easyocr_alphabets()
                 # EasyOCR defaults to ~/.EasyOCR, which puts 565 MB of
                 # detection and recognition weights on the system drive
                 # regardless of where the application was installed. It
