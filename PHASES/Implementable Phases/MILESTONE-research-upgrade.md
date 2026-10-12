@@ -11,7 +11,7 @@ checkpoints loading the non-commercial StreetCLIP, the deck.gl bundle lacking
 a 3D Tiles loader, PDOK, Mapterhorn and Panoramax all answering) and held.
 
 This records what has been built from it, what was measured, and what waits
-on the user. Updated 2026-10-09.
+on the user. Updated 2026-10-12 (paused here by the user).
 
 ---
 
@@ -33,6 +33,23 @@ on the user. Updated 2026-10-09.
 | `6ad5ebed` | "Around here" in the 3D view: natural events and the strongest earthquakes near the place, with distance and date |
 | `70f42e5d` | The optional HEIC decoder kept out of the built package (the owner's call) |
 | `d06f817d` | 360-degree panoramas read as four views of one moment, their opinions averaged |
+| `72497353` | Pinpoint: Panoramax pictures queue behind the photographs of the place (Sydney at 600 m back to 0 m) |
+| `0f434f0e` | GeoNames (CC BY 4.0, 13 M places, lookups under 1 ms) as the offline gazetteer's fallback, and a street-photo memory from OpenStreetView-5M (CC BY-SA 4.0); both off until measured |
+| `e3b47425` | The language of text read off a photograph (GlotLID) and the countries that speak it (CLDR); reported in technique 12, weight zero until measured |
+| `e768c507` | C2PA Content Credentials read and their signature checked (c2pa-python); "imagen" inside a camera tag no longer flags AI |
+| `9c3c9281` | A checkout uses the models directory's weights, never the system drive's caches |
+| `22fa17c3` | PLONK (MIT, YFCC checkpoint) as a second, independent locator; off until measured |
+| `614461a1` | Packaging: c2pa's DLL bundled alone, a self-test line for the optional parts, no PLONK in the ZIP |
+| `5d199612` | **Walk: buildings stand on the ground again** -- the terrain extension does not lift layers under the first-person camera (buildings at sea level under ground 14 m up in Chennai, 927 m in Bengaluru), and deck.gl's lighting failed hundreds of metres up; everything is now placed at its own ground, drawn relative to the walker's height |
+| `9b9b22cf` | An India test frame: 48 places (`fetch_samples.py --frame india`, `evaluate.py --set india`) |
+| `ca8c438b` | Pinpoint: DISK + LightGlue looks again at SIFT's close calls, calibrated on 400 unrelated pairs (chance max 34, strong 100); off until the 11-landmark run |
+| `04684d79` | **Tamil is read**: EasyOCR 1.7.2's Tamil alphabet is truncated (126 of 142), so its model never loaded |
+| `8cf32fee` | A lower-case word is not a place ("proven" = Prøven, Greenland); an offshore place keeps its country's codes |
+| `6c3cb0b1` | A point is named after a city in its own country ("Lahore, India" -> Amritsar) |
+| `5deb2883`, `cfa08ab2` | Build: kornia ships its source (TorchScript), PLONK stays out of the package |
+| `56a02e31` | GeoNames asked for non-Latin-script names only ("ROAD" = Rode, Somerset; "Bamboo", Jamaica) |
+| `139cee8e` | `evaluate.py --offset`, to resume a stopped run |
+| (this commit) | Fusion: the evidence cap applies to each candidate relative to the others |
 
 The user's direction (2026-10-11): the inspiration is "God's Eye". Taken as
 fusing every open clue with its evidence shown, the globe-to-street dive and
@@ -83,7 +100,7 @@ the four hard cases stay unmatched -- the limit is still the references, not
 the names. Every winning match was a Commons photograph; Panoramax added
 references but no pinpoint here.
 
-## Waiting on the user (downloads need permission)
+## Downloads (all approved by the user on 2026-10-11, all on E:)
 
 | Step | Download | Size | Why |
 |---|---|---|---|
@@ -93,15 +110,68 @@ references but no pinpoint here.
 | Second locator | PLONK_YFCC (MIT) + DINOv2 via torch.hub (Apache-2.0) | ~1.3 GB | An independent density that can score the existing candidates |
 | Near-miss matching | LightGlue + DISK weights (Apache-2.0) | small | A second pass on SIFT's near-misses, with its own calibrated threshold |
 
-Each is accepted or rejected by the benchmark, as everything else is.
+All five are downloaded into `app/models` (GeoNames 0.7 GB, GlotLID 1.6 GB,
+OSV-5M 13 GB with four shards, PLONK 0.1 GB plus DINOv2 1.2 GB with the DISK
+and LightGlue weights in `torch/`). Each is accepted or rejected by the
+benchmark, as everything else is; until then each is off or report-only.
 
-## Next, without downloads
+## India, measured (2026-10-12)
 
-1. The 600 m-offset evaluation with Wikidata names
-   (`bench/eval-pinpoint-offset600-v4.log`), the case named search exists for.
-2. Rebuild, make the portable ZIP and reinstall, so the app has all of this.
-3. Walk terrain finer than z14 in Mapterhorn's lidar countries.
-4. The rebuild and portable ZIP from the previous milestone, which now also
-   need to include everything above.
+The user reported Indian photographs placed in the United States or Europe
+and the walk showing no buildings. Both were real. The world frame holds one
+Indian photograph, so an India frame of 48 was fetched (two are not places
+and are refused: a map, code on a screen). Offline, OCR on:
+
+| | In India | <=25 km | <=750 km | <=2500 km | Median |
+|---|---|---|---|---|---|
+| Before the fixes | 70% | 26% | 48% | 78% | 800 km |
+| Tamil, word filter, offshore codes | 72% | 26% | 50% | 80% | 705 km |
+| + relative cap + GeoNames (non-Latin) | -- | 26% | 50% | 80% | 704 km; Coimbatore 228 -> 2 km |
+
+Found on the way: the Tamil reader never loaded; "proven" on an advert
+matched a Greenland village; the offshore fallback dropped country codes; the
+evidence cap was spent by evidence every candidate shares, so a sign reading
+"Coimbatore" could not move the answer off Bengaluru (relative cap). Tried and
+not adopted (re-fused on cached inputs, `bench/fusion_sweep.py`): doubling the
+region hint, a heavier script weight, other caps, and dividing GeoCLIP's modes
+by its gallery's density (country-level up 2-4 points, street-level halved).
+
+**What limits India now** is choosing among candidates, not finding them: a
+candidate within 25 km is on the list for 50% of photographs and chosen for
+26% (`bench/fusion-variants-india.json`). The visual model cannot tell Mumbai
+from Delhi or Chennai from Bengaluru; the evidence that could is new evidence
+-- the second locator (PLONK) and the street-photo memory -- both built, off,
+and next to measure.
+
+**Measuring cheaply.** `bench/fusion_variants.py <set>` runs the analysis once
+per photograph and caches its inputs to fusion (`bench/cache/fusion/<set>/`);
+variants then re-fuse in seconds. One analysis process at a time: each holds
+7-8 GB (a sign reader per script), and two made the machine swap.
+
+## Where it stopped (2026-10-12, user: "stop here, continue later")
+
+- **Installed app** (`E:\mapify\app`): the build of 16:20 -- walk fix, Tamil,
+  word filter, offshore codes, Telugu/Kannada readers (models folder). It does
+  *not* yet have: the same-country label, the GeoNames script rule, the
+  relative cap, PLONK left out (its self-test line still fails on PLONK, which
+  is off and unused).
+- **World check of the relative cap and GeoNames**: 96 of 163 photographs
+  cached; on the first 89 no variant changed any answer. Resume with
+  `bench\launch_hidden.ps1 -Cmd 'cmd.exe /c E:\mapify\bench\run-variants.cmd bench'`
+  (cached photographs are skipped), then `bench/variants_cached.py bench`.
+- **Then**: if nothing gets worse, turn `geonames_enabled` on, rebuild
+  (`bench\run-build.cmd`, hidden), `installer\install.ps1 -Force` with Mapify
+  closed, `app\Mapify.exe --selftest`.
+
+## Next
+
+1. Finish the world check above; ship the result in one rebuild and install.
+2. Measure PLONK on the India frame (`fusion_variants` with `plonk_enabled`),
+   then build the street-photo memory (about a day of CPU, hidden, resumable).
+3. The 11-landmark Pinpoint run with `--second-matcher`.
+4. OCR at more than 1,600 px for full-size phone photographs (small text);
+   the benchmark's 1,280 px thumbnails cannot measure it.
+5. A Latin-script GeoNames filter good enough for Indian town names
+   ("Tambaram") without "ROAD" and "Bamboo".
 
 The globe (`globe.js`) and its animation have not been touched.
