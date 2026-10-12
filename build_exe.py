@@ -133,6 +133,8 @@ def build(console: bool, clean: bool) -> int:
         # explains how to add it when given a HEIC photograph.
         "--exclude-module", "pi_heif",
         *c2pa_library(),
+        # Our own PyInstaller hooks (build_hooks/): kornia ships its source.
+        "--additional-hooks-dir", str(ROOT / "build_hooks"),
 
         # Not mapify/__main__.py: PyInstaller runs the entry script as a
         # top-level module with no parent package, so its relative imports
