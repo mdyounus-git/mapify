@@ -225,6 +225,24 @@ def cluster(raw: Iterable[RawCandidate], radius_km: float
 # the engine
 # --------------------------------------------------------------------------
 
+def _reads_as_name(text: str, match: Any) -> bool:
+    """Whether read text can stand for the place it matched.
+
+    A word in lower case is a word, not a name, unless it is the main name
+    of a large place: "proven", from "Clinically proven" on a toothpaste
+    advert in Coimbatore, matched Prøven -- the Danish name of a Greenland
+    village of 200 -- and outranked the Tamil sign beside it. Signs in
+    capitals or title case are read as written; scripts without case
+    (Tamil, Devanagari, Arabic, CJK...) have no lower case to fail on.
+    """
+    if not any(ch.isalpha() and ch.islower() for ch in text):
+        return True                          # capitals, or a caseless script
+    if any(ch.isupper() for ch in text):
+        return True                          # title case: "Coimbatore"
+    primary = getattr(match, "matched_field", "") in ("NAME", "NAMEASCII", "NAME_EN")
+    return primary and (getattr(match, "population", None) or 0) >= 100_000
+
+
 class FusionEngine:
     def __init__(self, cfg: FusionConfig, geocoder: OfflineGeocoder,
                  table: CountryTable | None = None):
@@ -250,6 +268,7 @@ class FusionEngine:
                 if key in seen or len(key) < 3:
                     continue
                 matches = self.geocoder.find_place(text, limit=3)
+                matches = [m for m in matches if _reads_as_name(text, m)]
                 if not matches:
                     continue
                 seen.add(key)

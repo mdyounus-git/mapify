@@ -226,6 +226,7 @@ class OfflineGeocoder:
     def __init__(self, data_dir: str | Path | None = None):
         self.data_dir = Path(data_dir) if data_dir else DEFAULT_DATA_DIR
         self._countries = _Layer(self.data_dir / COUNTRIES_LAYER)
+        self._country_names: dict[str, dict[str, Any]] | None = None
         self._admin1 = _Layer(self.data_dir / ADMIN1_LAYER)
         self._places = _Layer(self.data_dir / PLACES_LAYER)
         self._place_points: list[tuple[float, float, dict[str, Any]]] | None = None
@@ -280,6 +281,22 @@ class OfflineGeocoder:
 
     def country_at(self, lat: float, lon: float) -> CountryHit | None:
         rec = self._countries.locate(lon, lat)
+        return self._country_from_record(rec) if rec else None
+
+    def country_named(self, name: str | None) -> CountryHit | None:
+        """The country a place record names (its ADM0NAME), with its codes."""
+        if not name:
+            return None
+        if self._country_names is None:
+            self._countries.load()
+            names: dict[str, dict[str, Any]] = {}
+            for rec in self._countries.records:
+                for key in ("ADMIN", "NAME", "NAME_LONG", "GEOUNIT", "NAME_EN"):
+                    v = rec.get(key)
+                    if isinstance(v, str) and v.strip():
+                        names.setdefault(v.strip().casefold(), rec)
+            self._country_names = names
+        rec = self._country_names.get(name.strip().casefold())
         return self._country_from_record(rec) if rec else None
 
     def admin1_at(self, lat: float, lon: float) -> Admin1Hit | None:
@@ -475,9 +492,12 @@ class OfflineGeocoder:
         if loc.offshore and loc.nearest_places:
             # Coastal points often miss the polygon by a few hundred metres;
             # attribute them to the nearest settlement's country instead.
+            # The whole country, codes and all: with a name alone every check
+            # that compares countries passed it by -- a Greenland village
+            # escaped the Tamil script read on the same photograph.
             nearest = loc.nearest_places[0]
             if nearest.distance_km < 30.0 and nearest.admin0:
-                loc.country = CountryHit(
+                loc.country = self.country_named(nearest.admin0) or CountryHit(
                     name=nearest.admin0, name_long=None, iso_a2=None,
                     iso_a3=None, continent=None, subregion=None,
                 )

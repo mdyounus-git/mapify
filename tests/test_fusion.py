@@ -167,6 +167,23 @@ class TestToponyms:
         assert hits and hits[0].match.name == "Moscow"
         assert hits[0].match.matched_field == "NAME_RU"
 
+    def test_a_lower_case_word_is_not_a_small_places_other_name(self, engine):
+        # "Clinically proven" on a toothpaste advert in Coimbatore: "proven"
+        # matched Prøven, the Danish name of a Greenland village of 200.
+        ocr = OcrResult(lines=[OcrLine(text="Clinically proven", confidence=0.99)])
+        assert engine.find_toponyms(ocr) == []
+
+    def test_a_name_on_a_sign_still_reads_in_capitals_or_title_case(self, engine):
+        for text in ("BENGALURU", "Bengaluru"):
+            hits = engine.find_toponyms(OcrResult(lines=[OcrLine(text=text, confidence=0.9)]))
+            assert hits and hits[0].match.name == "Bengaluru", text
+
+    def test_an_offshore_place_keeps_its_countrys_codes(self, geocoder):
+        # Kangersuatsiaq sits just off Natural Earth's coastline; with a name
+        # and no code it escaped every check that compares countries.
+        loc = geocoder.locate(72.37964, -55.549119)
+        assert loc.offshore and loc.country and loc.country.iso_a2 == "GL"
+
     def test_low_confidence_ocr_is_ignored(self, engine):
         ocr = OcrResult(lines=[OcrLine(text="Bengaluru", confidence=0.1)])
         assert engine.find_toponyms(ocr) == []
