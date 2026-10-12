@@ -113,6 +113,28 @@ headline number hides it. And **landmarks are the easy case**: 82% within
 25 km against 34% for ordinary streets. Any geolocation benchmark built from
 tourist photography will look better than the tool really is.
 
+### India, measured on its own
+
+The 163 hold one Indian photograph, so India has its own frame: 48 freely
+licensed photographs from every part of the country (`scripts/fetch_samples.py
+--frame india`), offline, OCR on. Two of them are not photographs of places (a
+constituency map, code on a screen) and are refused as such.
+
+| | In India | ≤25 km | ≤750 km | ≤2500 km | Median |
+|---|---|---|---|---|---|
+| Before the October 2026 fixes | 70% | 26% | 48% | 78% | 800 km |
+| Now | 72% | 26% | 50% | 80% | 705 km |
+
+It is weak, and said so. Most of what lands outside India is close-ups --
+butterflies, a duck, orchids -- that no photograph-only method can place;
+those come back "insufficient" and nothing is flown to. The rest are
+neighbours confused for one another (Jama Masjid for Istanbul, the Ganga at
+Rishikesh for the Mekong) and the model's pull towards the cities it saw most
+(Chennai, Coimbatore and Hyderabad photographs answered "Bengaluru"). Half the
+time a candidate within 25 km is on the list but not first: the visual model
+cannot tell those cities apart, and the evidence that could -- signs read in
+the local script, a second independent locator -- is where the work is.
+
 Reproduce all of it:
 
 ```bash
