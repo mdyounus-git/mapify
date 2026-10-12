@@ -146,6 +146,11 @@ def _shape_contains(x: float, y: float, points: Sequence[Sequence[float]],
     return inside
 
 
+def _has_latin(text: str) -> bool:
+    """Whether any letter in the text is a Latin one."""
+    return any(ch.isalpha() and "LATIN" in unicodedata.name(ch, "") for ch in text)
+
+
 def _normalise(text: str) -> str:
     """Casefold and strip diacritics, for tolerant place-name matching."""
     decomposed = unicodedata.normalize("NFKD", text)
@@ -470,7 +475,16 @@ class OfflineGeocoder:
         return out[:limit] if out else self._from_geonames(name, limit)
 
     def _from_geonames(self, name: str, limit: int) -> list[GazetteerMatch]:
-        if not self.use_geonames:
+        """GeoNames, for names written in a script other than Latin only.
+
+        Its 13 million names carry ordinary English words as places: on
+        Indian photographs "ROAD" matched Rode, Somerset (spelled Road until
+        1919), "Bamboo" a Jamaican village, "SINDH" on a sign in Leh the
+        province of Pakistan. Where it adds what Natural Earth lacks is the
+        local scripts -- "கோவை" is Coimbatore -- and there an ordinary word
+        is far less likely to be a place somewhere else.
+        """
+        if not self.use_geonames or _has_latin(name):
             return []
         if self._geonames is None:
             from .geonames import GeoNames

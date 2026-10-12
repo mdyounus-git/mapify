@@ -68,10 +68,13 @@ def test_the_gazetteer_asks_geonames_only_when_switched_on(tmp_path, monkeypatch
     geo = offline.OfflineGeocoder(tmp_path / "no-natural-earth")
     monkeypatch.setattr(offline.OfflineGeocoder, "_ensure_places",
                         lambda self: (_ for _ in ()).throw(offline.GeodataMissing("x")))
-    assert geo.find_place("Saint-Etienne") == []          # off by default
+    assert geo.find_place("Сент-Этьен") == []             # off by default
     geo.use_geonames = True
     geo._geonames = GeoNames(db)
-    assert [m.name for m in geo.find_place("Saint-Etienne")] == ["Saint-Étienne"]
+    assert [m.name for m in geo.find_place("Сент-Этьен")] == ["Saint-Étienne"]
+    # Latin script is not asked at all: GeoNames' alternate names hold too
+    # many ordinary words ("ROAD" is Rode, Somerset; "Bamboo" in Jamaica).
+    assert geo.find_place("Saint-Etienne") == []
 
 
 def test_a_region_is_not_found_by_a_word_signs_say_for_other_reasons(tmp_path):
