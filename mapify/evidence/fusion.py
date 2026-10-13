@@ -491,6 +491,30 @@ class FusionEngine:
             )
         )
 
+    def _apply_second_opinion(self, candidates: list[Candidate], samples: Any) -> None:
+        """Multiply each candidate's score by (eps + share of the second
+        locator's samples within the judge radius) ** power."""
+        import numpy as np
+        pts = np.asarray(samples, dtype=float).reshape(-1, 2)
+        lat, lon = np.radians(pts[:, 0]), np.radians(pts[:, 1])
+        radius, power = self.cfg.second_opinion_radius_km, self.cfg.second_opinion_power
+        eps = self.cfg.second_opinion_floor
+        for cand in candidates:
+            la, lo = math.radians(cand.latitude), math.radians(cand.longitude)
+            a = (np.sin((lat - la) / 2) ** 2
+                 + math.cos(la) * np.cos(lat) * np.sin((lon - lo) / 2) ** 2)
+            km = 2 * 6371.0088 * np.arcsin(np.sqrt(np.clip(a, 0.0, 1.0)))
+            share = float((km <= radius).mean())
+            factor = (eps + share) ** power
+            cand.score = max(1e-12, cand.score * factor)
+            cand.adjustments.append(Adjustment(
+                source="second_locator",
+                detail=(f"PLONK, an independent locator: {share:.0%} of its samples "
+                        f"within {radius:.0f} km"),
+                delta=math.log(factor),
+                agreement=min(1.0, share * 4) if share else -0.5,
+            ))
+
     def _apply_toponyms(self, cand: Candidate, hits: list[ToponymHit]) -> None:
         for hit in hits:
             d = haversine_km(
@@ -566,7 +590,13 @@ class FusionEngine:
         script_reading: ScriptReading | None = None,
         extra_candidates: list[RawCandidate] | None = None,
         read_places: list[Any] | None = None,
+        second_opinion: Any = None,
     ) -> FusionResult:
+        """``second_opinion``: coordinates drawn from an independent locator's
+        density (PLONK's samples, N x 2 latitude, longitude). Each candidate
+        is weighed by how many of them fall near it -- two models trained on
+        different photographs agreeing -- rather than PLONK's places being
+        added as candidates of their own, which measured worse."""
         cfg = self.cfg
         notes: list[str] = []
 
@@ -696,6 +726,8 @@ class FusionEngine:
                 total = max(-cfg.max_total_adjustment,
                             min(cfg.max_total_adjustment, relative))
                 cand.score = max(1e-12, cand.prior_score * math.exp(total))
+        if second_opinion is not None and len(second_opinion):
+            self._apply_second_opinion(candidates, second_opinion)
 
         candidates.sort(key=lambda c: -c.score)
 

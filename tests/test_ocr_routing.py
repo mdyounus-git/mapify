@@ -109,6 +109,7 @@ class TestRoutingThroughThePipeline:
         cfg.network.offline_only = True
         cfg.models.geoclip_enabled = False
         cfg.models.clip_evidence_enabled = False
+        cfg.models.plonk_enabled = False     # a stand-in locator, alone
         eng = AnalysisEngine(cfg)
         eng.ocr = FakeOcr()
         return eng
@@ -192,6 +193,7 @@ class TestReaderSelectionThresholds:
         cfg.network.offline_only = True
         cfg.models.geoclip_enabled = False
         cfg.models.clip_evidence_enabled = False
+        cfg.models.plonk_enabled = False     # a stand-in locator, alone
         return AnalysisEngine(cfg)
 
     def choose(self, engine, readings=(), prior=None):

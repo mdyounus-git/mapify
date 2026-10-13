@@ -5,6 +5,8 @@ fixed samples, so nothing loads DINOv2.
 
 from __future__ import annotations
 
+import pytest
+
 import numpy as np
 from PIL import Image
 
@@ -45,14 +47,39 @@ def test_the_analysis_asks_plonk_only_when_switched_on():
     cfg = load_config()
     cfg.models.geoclip_enabled = cfg.models.clip_evidence_enabled = False
     cfg.models.ocr_enabled = False
+    cfg.models.plonk_enabled = False
     engine = AnalysisEngine(cfg)
     engine._plonk = PlonkLocator()
     engine._plonk._pipe = FakePipe(nairobi_and_a_stray())
-    raw = [RawCandidate(-1.0, 36.0, 0.4, "geoclip")]
     report = AnalysisReport(ok=False, elapsed_s=0)
     image = Image.new("RGB", (64, 64))
-    assert engine._second_opinion(image, raw, report) == []
+    assert engine._second_opinion(image, report) is None
     cfg.models.plonk_enabled = True
-    got = engine._second_opinion(image, raw, report)
-    assert got[0].source == SOURCE and got[0].score <= 0.4
+    got = engine._second_opinion(image, report)
+    assert got.shape[1] == 2 and len(got) == len(nairobi_and_a_stray())
     assert report.evidence["second_locator"]["model"] == "PLONK (YFCC)"
+
+
+def test_the_second_locator_judges_the_candidates_it_agrees_with():
+    """Its samples weigh GeoCLIP's candidates; they are not candidates."""
+    import numpy as np
+
+    from mapify.config import FusionConfig
+    from mapify.evidence.fusion import FusionEngine
+    from mapify.geo.offline import get_geocoder
+    from mapify.models.base import RawCandidate
+
+    geo = get_geocoder()
+    if not geo.available():
+        pytest.skip("Natural Earth not installed")
+    fe = FusionEngine(FusionConfig(), geo)
+    raw = [RawCandidate(19.07, 72.88, 0.30, "geoclip"),     # Mumbai, the model's favourite
+           RawCandidate(28.61, 77.21, 0.20, "geoclip")]     # Delhi
+    near_delhi = np.array([[28.6 + i * 0.01, 77.2] for i in range(48)]
+                          + [[19.0, 72.9]] * 4)
+    alone = fe.fuse(raw)
+    judged = fe.fuse(raw, second_opinion=near_delhi)
+    assert abs(alone.candidates[0].latitude - 19.07) < 0.1
+    assert abs(judged.candidates[0].latitude - 28.61) < 0.1
+    assert any(a.source == "second_locator" for a in judged.candidates[0].adjustments)
+    assert len(judged.candidates) == len(alone.candidates), "no candidates added"

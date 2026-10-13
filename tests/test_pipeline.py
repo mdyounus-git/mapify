@@ -76,6 +76,7 @@ def engine(tmp_path):
     cfg.models.ocr_enabled = False
     cfg.models.geoclip_enabled = False       # we inject a stub instead
     cfg.models.clip_evidence_enabled = False
+    cfg.models.plonk_enabled = False     # a stand-in locator, alone
     eng = AnalysisEngine(cfg)
     return eng
 

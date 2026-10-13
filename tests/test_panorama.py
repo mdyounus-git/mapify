@@ -80,6 +80,7 @@ def test_the_locator_is_handed_the_four_views(tmp_path):
     cfg.models.ocr_enabled = False
     cfg.models.geoclip_enabled = False
     cfg.models.clip_evidence_enabled = False
+    cfg.models.plonk_enabled = False     # a stand-in locator, alone
     engine = AnalysisEngine(cfg)
     engine.geoclip = Recording()
     buf = io.BytesIO()

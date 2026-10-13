@@ -70,6 +70,7 @@ def engine(tmp_path):
     cfg.network.overpass_enabled = False
     cfg.models.geoclip_enabled = False
     cfg.models.clip_evidence_enabled = False
+    cfg.models.plonk_enabled = False     # a stand-in locator, alone
     cfg.models.ocr_enabled = False
     eng = AnalysisEngine(cfg)
     eng.nominatim = CountingNominatim()
@@ -246,6 +247,7 @@ class TestLimits:
         cfg.network.offline_only = True
         cfg.models.geoclip_enabled = False
         cfg.models.clip_evidence_enabled = False
+        cfg.models.plonk_enabled = False     # a stand-in locator, alone
         cfg.models.ocr_enabled = False
         eng = AnalysisEngine(cfg)
         eng.nominatim = CountingNominatim()

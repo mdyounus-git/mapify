@@ -424,7 +424,7 @@ class AnalysisEngine:
                 ceiling = max((c.score for c in raw), default=0.05)
                 extra_pool.extend(readplace.to_candidates(read_places, ceiling))
             extra_pool.extend(self._remembered(embedding, raw, report))
-            extra_pool.extend(self._second_opinion(image, raw, report))
+            second = self._second_opinion(image, report)
 
             # ---- is this a photograph of a place? --------------------------
             #
@@ -441,7 +441,7 @@ class AnalysisEngine:
             fused = self.fusion.fuse(
                 raw, evidence=evidence, ocr=ocr_result,
                 script_reading=script_reading, extra_candidates=extra_pool,
-                read_places=read_places,
+                read_places=read_places, second_opinion=second,
             )
             report.toponyms = [t.as_dict() for t in fused.toponyms]
 
@@ -647,27 +647,26 @@ class AnalysisEngine:
         except Exception:                         # a damaged model file
             return None
 
-    def _second_opinion(self, image: Image.Image, raw: list[RawCandidate],
-                        report: AnalysisReport) -> list[RawCandidate]:
-        """PLONK's places, a second line independent of GeoCLIP (different
-        encoder, different training photographs), scored on the same scale
-        as GeoCLIP's own candidates. Off unless models.plonk_enabled."""
+    def _second_opinion(self, image: Image.Image, report: AnalysisReport):
+        """PLONK's samples, a second line independent of GeoCLIP (different
+        encoder, different training photographs), for the fusion to judge
+        GeoCLIP's candidates by. Off unless models.plonk_enabled; None when
+        it cannot run."""
         if not self.cfg.models.plonk_enabled:
-            return []
+            return None
         if self._plonk is None:
             from .models.plonk_locator import PlonkLocator
-            self._plonk = PlonkLocator()
+            self._plonk = PlonkLocator(samples=self.cfg.models.plonk_samples)
         if not self._plonk.available():
-            return []
+            return None
         try:
-            cands, summary = self._plonk.locate(image)
+            pts = self._plonk.sample(image)
+            _cands, summary = self._plonk.summarise(pts)
         except Exception as exc:
             report.warnings.append(f"The second locator did not run: {exc}")
-            return []
+            return None
         report.evidence["second_locator"] = {"model": "PLONK (YFCC)", **summary}
-        ceiling = max((c.score for c in raw), default=0.05)
-        return [RawCandidate(c.latitude, c.longitude, c.score * ceiling, c.source)
-                for c in cands]
+        return pts
 
     def _remembered(self, embedding, raw: list[RawCandidate],
                     report: AnalysisReport) -> list[RawCandidate]:

@@ -67,7 +67,9 @@ class PlonkLocator:
     def locate(self, image, top: int = 5) -> tuple[list[RawCandidate], dict]:
         """Places PLONK's samples gather in, and how spread out they are --
         a direct reading of whether the photograph can be placed at all."""
-        pts = self.sample(image)
+        return self.summarise(self.sample(image), top)
+
+    def summarise(self, pts: np.ndarray, top: int = 5) -> tuple[list[RawCandidate], dict]:
         cands = places(pts[:, 0], pts[:, 1], np.ones(len(pts)), SOURCE, top=top)
         centre = cands[0] if cands else None
         spread = (float(np.median(km_between(centre.latitude, centre.longitude,

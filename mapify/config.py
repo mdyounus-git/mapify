@@ -215,9 +215,11 @@ class ModelConfig:
     # only when enough letters were read.
     language_id_enabled: bool = True
     # A second, independent locator (PLONK, MIT; DINOv2, Apache-2.0): its
-    # places join the candidates and its spread says how placeable the
-    # photograph is. 10-20 s more an analysis on a CPU; off until measured.
-    plonk_enabled: bool = False
+    # samples judge the candidates (fusion.second_opinion_*, measured there)
+    # and their spread says how placeable the photograph is. 10-20 s more an
+    # analysis on a CPU. Without its weights it simply does not run.
+    plonk_enabled: bool = True
+    plonk_samples: int = 64
     max_image_side: int = 1600
 
 
@@ -245,6 +247,17 @@ class FusionConfig:
     # text-bearing benchmark before it may be anything but zero.
     w_text_clue: float = 0.0
     max_total_adjustment: float = 2.5
+    # The second locator (PLONK) judges the candidates: each is multiplied by
+    # (floor + share of PLONK's 64 samples within radius_km) ** power.
+    # Measured 2026-10-13 on cached inputs, re-fused (bench/plonk_variants.py):
+    # 250 km, power 0.5 -- world 161: 11 better, 6 worse, within 200 km 47 ->
+    # 50 %, median 317 -> 217 km; India 46: 5 better, 1 worse, within 2,500 km
+    # 80 -> 83 %, median 704 -> 563 km. Stronger judges (power 1-2) and adding
+    # PLONK's places as candidates moved more both ways and lost street-level
+    # hits; PLONK on its own was worse than GeoCLIP on both sets.
+    second_opinion_radius_km: float = 250.0
+    second_opinion_power: float = 0.5
+    second_opinion_floor: float = 0.02
     # ---- Confidence banding -------------------------------------------
     #
     # These are not guesses. They were fitted by scripts/tune_confidence.py

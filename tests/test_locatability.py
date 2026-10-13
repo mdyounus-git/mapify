@@ -199,6 +199,7 @@ def _engine():
     cfg.models.ocr_enabled = False
     cfg.models.geoclip_enabled = False
     cfg.models.clip_evidence_enabled = False
+    cfg.models.plonk_enabled = False     # a stand-in locator, alone
     return AnalysisEngine(cfg)
 
 

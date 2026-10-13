@@ -561,6 +561,7 @@ def test_the_server_validates_areas_and_thumbnail_keys(monkeypatch, tmp_path):
     cfg.network.offline_only = True
     cfg.models.geoclip_enabled = False
     cfg.models.clip_evidence_enabled = False
+    cfg.models.plonk_enabled = False     # a stand-in locator, alone
     cfg.models.ocr_enabled = False
     client = TestClient(create_app(cfg))
     buf = io.BytesIO()
