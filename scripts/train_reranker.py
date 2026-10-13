@@ -15,7 +15,7 @@ judge, models.plonk_enabled):
   * five-fold cross-validation on the training photographs, folds by country
     so no country is both learnt and tested;
   * the 46 India photographs and the 161 world benchmark photographs, from
-    their cached inputs (bench/fusion_variants.py, bench/plonk_cache.py),
+    their cached inputs (scripts/fusion_variants.py, scripts/plonk_cache.py),
     which the model never sees.
 
 ``--memory`` adds the street-photo memory's features: every photograph must
@@ -205,7 +205,7 @@ def main() -> int:
     for name, folder in (("india", ROOT / "samples" / "india"), ("bench", ROOT / "samples")):
         items = load_benchmark(name, folder)
         if args.memory and any(i["embedding"] is None for i in items):
-            print(f"{name}: embeddings missing (bench/embedding_cache.py); skipped")
+            print(f"{name}: embeddings missing (scripts/embedding_cache.py); skipped")
             continue
         report[name] = compare(model, build_rows(items, fe, memory), name)
     print("weights:", {f: round(w, 3) for f, w in zip(FEATURES, model["weights"])})

@@ -200,7 +200,7 @@ class ModelConfig:
     # scripts/fetch_research_data.py geonames, then python -m
     # mapify.geo.geonames) when Natural Earth knows no such place -- where
     # local names live that it lacks ("கோவை" is Coimbatore). Measured
-    # 2026-10-13 by re-fusing cached inputs (bench/fusion_variants.py): no
+    # 2026-10-13 by re-fusing cached inputs (scripts/fusion_variants.py): no
     # answer changed on the 161 world photographs; on the 46 Indian ones a
     # Coimbatore sign went from 228 km to 2 km and nothing got worse. Without
     # the index it simply finds nothing.
@@ -249,7 +249,7 @@ class FusionConfig:
     max_total_adjustment: float = 2.5
     # The second locator (PLONK) judges the candidates: each is multiplied by
     # (floor + share of PLONK's 64 samples within radius_km) ** power.
-    # Measured 2026-10-13 on cached inputs, re-fused (bench/plonk_variants.py):
+    # Measured 2026-10-13 on cached inputs, re-fused (scripts/plonk_variants.py):
     # 250 km, power 0.5 -- world 161: 11 better, 6 worse, within 200 km 47 ->
     # 50 %, median 317 -> 217 km; India 46: 5 better, 1 worse, within 2,500 km
     # 80 -> 83 %, median 704 -> 563 km. Stronger judges (power 1-2) and adding

@@ -129,7 +129,7 @@ constituency map, code on a screen) and are refused as such.
 | + PLONK judging the candidates (now) | — | 24% | 52% | 83% | 563 km |
 
 The last two rows are measured by re-fusing each photograph's cached
-analysis inputs (`bench/fusion_variants.py`, `bench/plonk_variants.py`), so
+analysis inputs (`scripts/fusion_variants.py`, `scripts/plonk_variants.py`), so
 every row sees exactly the same evidence. On the 161 world photographs the
 same two steps leave street and continent level unchanged and move the
 median from 317 km to 217 km (within 200 km: 47% → 50%).

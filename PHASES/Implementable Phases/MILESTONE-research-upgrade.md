@@ -132,18 +132,18 @@ Found on the way: the Tamil reader never loaded; "proven" on an advert
 matched a Greenland village; the offshore fallback dropped country codes; the
 evidence cap was spent by evidence every candidate shares, so a sign reading
 "Coimbatore" could not move the answer off Bengaluru (relative cap). Tried and
-not adopted (re-fused on cached inputs, `bench/fusion_sweep.py`): doubling the
+not adopted (re-fused on cached inputs, `scripts/fusion_sweep.py`): doubling the
 region hint, a heavier script weight, other caps, and dividing GeoCLIP's modes
 by its gallery's density (country-level up 2-4 points, street-level halved).
 
 **What limits India now** is choosing among candidates, not finding them: a
 candidate within 25 km is on the list for 50% of photographs and chosen for
-26% (`bench/fusion-variants-india.json`). The visual model cannot tell Mumbai
+26% (`python scripts/fusion_variants.py india`). The visual model cannot tell Mumbai
 from Delhi or Chennai from Bengaluru; the evidence that could is new evidence
 -- the second locator (PLONK) and the street-photo memory -- both built, off,
 and next to measure.
 
-**Measuring cheaply.** `bench/fusion_variants.py <set>` runs the analysis once
+**Measuring cheaply.** `scripts/fusion_variants.py <set>` runs the analysis once
 per photograph and caches its inputs to fusion (`bench/cache/fusion/<set>/`);
 variants then re-fuse in seconds. One analysis process at a time: each holds
 7-8 GB (a sign reader per script), and two made the machine swap.
@@ -158,7 +158,7 @@ variants then re-fuse in seconds. One analysis process at a time: each holds
 - **World check of the relative cap and GeoNames**: 96 of 163 photographs
   cached; on the first 89 no variant changed any answer. Resume with
   `bench\launch_hidden.ps1 -Cmd 'cmd.exe /c E:\mapify\bench\run-variants.cmd bench'`
-  (cached photographs are skipped), then `bench/variants_cached.py bench`.
+  (cached photographs are skipped), then `python scripts/fusion_variants.py bench --cached-only`.
 - **Then**: if nothing gets worse, turn `geonames_enabled` on, rebuild
   (`bench\run-build.cmd`, hidden), `installer\install.ps1 -Force` with Mapify
   closed, `app\Mapify.exe --selftest`.

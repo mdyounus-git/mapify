@@ -27,7 +27,7 @@ was measured since. Labels: **Measured** = run here; **Reported** = a paper's ow
 **The candidates usually contain the answer; the ranking does not choose it.** On the India
 frame, a candidate within 25 km of the truth is somewhere in the twelve the pipeline weighs for
 **50%** of photographs, and first for **26%**; within 200 km, 63% against 28%
-(`bench/fusion-variants-india.json`, Measured). The New Delhi skyline had a candidate 0 km
+(`python scripts/fusion_variants.py india`, Measured). The New Delhi skyline had a candidate 0 km
 from the truth and answered Mumbai; Guwahati had one at 2 km and answered 1,140 km away.
 
 What does *not* close that gap (re-fused on cached inputs, Measured, India): heavier script or
