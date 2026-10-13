@@ -124,7 +124,15 @@ constituency map, code on a screen) and are refused as such.
 | | In India | ≤25 km | ≤750 km | ≤2500 km | Median |
 |---|---|---|---|---|---|
 | Before the October 2026 fixes | 70% | 26% | 48% | 78% | 800 km |
-| Now | 72% | 26% | 50% | 80% | 705 km |
+| Tamil read, word filter, offshore codes | 72% | 26% | 50% | 80% | 705 km |
+| + GeoNames for local scripts, relative evidence cap | — | 26% | 50% | 80% | 704 km |
+| + PLONK judging the candidates (now) | — | 24% | 52% | 83% | 563 km |
+
+The last two rows are measured by re-fusing each photograph's cached
+analysis inputs (`bench/fusion_variants.py`, `bench/plonk_variants.py`), so
+every row sees exactly the same evidence. On the 161 world photographs the
+same two steps leave street and continent level unchanged and move the
+median from 317 km to 217 km (within 200 km: 47% → 50%).
 
 It is weak, and said so. Most of what lands outside India is close-ups --
 butterflies, a duck, orchids -- that no photograph-only method can place;
@@ -133,8 +141,12 @@ neighbours confused for one another (Jama Masjid for Istanbul, the Ganga at
 Rishikesh for the Mekong) and the model's pull towards the cities it saw most
 (Chennai, Coimbatore and Hyderabad photographs answered "Bengaluru"). Half the
 time a candidate within 25 km is on the list but not first: the visual model
-cannot tell those cities apart, and the evidence that could -- signs read in
-the local script, a second independent locator -- is where the work is.
+cannot tell those cities apart. What has helped is evidence from outside it:
+signs read in the local script (a Tamil bus-stop sign now places Coimbatore
+within 2 km) and a second, independent locator, PLONK, trained on other
+photographs with another encoder, weighing GeoCLIP's candidates by how many
+of its samples fall near each. Next measured: a memory of real street
+photographs and a re-ranker trained on photographs no benchmark holds.
 
 Reproduce all of it:
 
