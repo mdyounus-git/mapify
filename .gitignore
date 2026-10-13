@@ -80,6 +80,7 @@ bench/
 data/osm/
 data/geodata/
 data/tiles/
+data/basemap/
 data/tmp/
 data/cases/
 data/*.log

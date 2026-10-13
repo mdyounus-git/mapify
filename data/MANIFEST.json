@@ -117,6 +117,24 @@
     "sha256": "454e0bbb16c721cfbf952a92ff3e4362130346ed59a5bff56ae5d6fbebb651f7",
     "source": "https://unpkg.com/maplibre-gl@6.10.0/dist/maplibre-gl.mjs"
   },
+  "maplibre/LICENSE.txt": {
+    "bytes": 5984,
+    "license": "BSD-3-Clause (MapLibre)",
+    "sha256": "ee5fc05a0677eaf69601d2c7db0d9ecd6cc27c3abc1d0733bc9ed34707cf8ef2",
+    "source": "https://cdn.jsdelivr.net/npm/maplibre-gl@4.7.1/LICENSE.txt"
+  },
+  "maplibre/maplibre-gl.css": {
+    "bytes": 65534,
+    "license": "BSD-3-Clause (MapLibre)",
+    "sha256": "576b085fdd9487a65a19215328c1e086c07ce5bf6da09b666b3806d3d008dae9",
+    "source": "https://cdn.jsdelivr.net/npm/maplibre-gl@4.7.1/dist/maplibre-gl.css"
+  },
+  "maplibre/maplibre-gl.js": {
+    "bytes": 803086,
+    "license": "BSD-3-Clause (MapLibre)",
+    "sha256": "be9633c4d870e26fb37f1cfe5c5a77181667114003ea16207ac7850d8da8add1",
+    "source": "https://cdn.jsdelivr.net/npm/maplibre-gl@4.7.1/dist/maplibre-gl.js"
+  },
   "three.LICENSE.txt": {
     "bytes": 1081,
     "license": "MIT (three.js)",
