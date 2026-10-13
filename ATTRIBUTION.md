@@ -62,35 +62,33 @@ paper rather than relying on this file.
 |---|---|---|---|
 | **Natural Earth** — admin-0 countries, admin-1 states/provinces, populated places, 110m coastlines | Public domain | None; attribution requested as a courtesy | Credited in the application's status bar and on the globe |
 | **OpenStreetMap** via **Nominatim** (reverse geocoding) | Data: ODbL 1.0 | Attribute; respect the usage policy | See below |
-| **OpenStreetMap** via **Overpass** (nearby named features) | Data: ODbL 1.0 | Attribute; respect the usage policy | **Off by default** since the 3D work — see below |
-| **OpenStreetMap regional extracts** from **Geofabrik** (`download.geofabrik.de`), cut from the planet file | Data: ODbL 1.0 | Attribute; share-alike on derived databases | Imported into a local store on the user's machine (`scripts/import_osm.py`), never redistributed; attribution on the 3D view and in every export |
-| **OpenFreeMap** vector tiles (`tiles.openfreemap.org`), OpenStreetMap in the OpenMapTiles schema | Data: ODbL 1.0. Service: free, no key, "no limits on the number of map views or requests" | "OpenFreeMap © OpenMapTiles Data from OpenStreetMap" | Credited on the 3D view whenever its tiles are drawn; each z14 tile fetched once and kept |
-| **Google Research Open Buildings v3** — 1.8 billion footprints, read from the FlatGeobuf copy on Source Cooperative | CC BY 4.0 **or** ODbL 1.0, the user's choice; used here under CC BY 4.0 | Attribute | "Building footprints: Google Open Buildings v3 (CC BY 4.0)" on the 3D view and in every export |
+| **OpenStreetMap** via **Overpass** (nearby named features) | Data: ODbL 1.0 | Attribute; respect the usage policy | **Off by default** since the map work — see below |
+| **OpenStreetMap regional extracts** from **Geofabrik** (`download.geofabrik.de`), cut from the planet file | Data: ODbL 1.0 | Attribute; share-alike on derived databases | Imported into a local store on the user's machine (`scripts/import_osm.py`), never redistributed; attribution on the map and in every export |
+| **OpenFreeMap** vector tiles (`tiles.openfreemap.org`), OpenStreetMap in the OpenMapTiles schema | Data: ODbL 1.0. Service: free, no key, "no limits on the number of map views or requests" | "OpenFreeMap © OpenMapTiles Data from OpenStreetMap" | Credited on the 2D map, whose roads, boundaries and names come from these tiles; each tile fetched once through Mapify and kept. The labels' fonts (**Noto Sans**, SIL Open Font License 1.1) come from the same host the same way |
+| **Google Research Open Buildings v3** — 1.8 billion footprints, read from the FlatGeobuf copy on Source Cooperative | CC BY 4.0 **or** ODbL 1.0, the user's choice; used here under CC BY 4.0 | Attribute | "Buildings: OpenStreetMap; Google Open Buildings (CC BY 4.0)" on the 2D map and in every export |
 | **timezone-boundary-builder** data, used by `timezonefinder` | Data: ODbL 1.0 (derived from OSM) | Attribute | Credited in every report that carries a timezone |
 | **GeoNames** — `allCountries` and `alternateNamesV2` (`download.geonames.org`), indexed locally as settlements of at least 1,000 people and countries and regions | **CC BY 4.0** | Attribute "GeoNames geographical database, geonames.org" | Downloaded once by `scripts/fetch_research_data.py geonames` into the models directory and indexed by `python -m mapify.geo.geonames`; consulted only when Natural Earth knows no place by a name read off a sign, and only with `models.geonames_enabled` (off until measured). Credited wherever a match it supplied is shown |
 | **OpenStreetView-5M** (`huggingface.co/datasets/osv5m/osv5m`) — street-level photographs and where they were taken | **CC BY-SA 4.0**; imagery by Mapillary contributors | Attribute; share-alike on anything redistributed from it | `scripts/fetch_research_data.py osv5m-csv osv5m-shards ...` and `scripts/build_retrieval.py` build a local index of CLIP embeddings and positions in the models directory; the photographs can be deleted afterwards, and nothing derived from it is redistributed. Used only with `models.retrieval_enabled` (off until measured); credited "Street-level retrieval: OpenStreetView-5M (CC BY-SA 4.0), imagery by Mapillary contributors" |
 | **OpenStreetMap raster tiles** (optional ground detail) | Data: ODbL 1.0; tiles: OSMF usage policy | Attribute; respect the tile policy | Off by default; see below |
 
-### The 3D ground view, and where its buildings come from
+### The 2D map, and where its footprints come from
 
-Zooming past the globe's closest view — or pressing "View the buildings here
-in 3D" — opens a view of the actual buildings around a place, extruded to
-whatever heights are known. Three sources, in order of trust, each labelled
-on screen:
+Zooming past the globe's closest view — or pressing "View on the map" —
+opens a flat satellite map of the place with its building footprints drawn
+as outlines. Three sources, in order of trust:
 
 1. **An imported OpenStreetMap region.** The richest: every `height` and
    `building:levels` tag, and a record of which heights were measured. The
    Southern India extract holds 7,439,863 buildings, of which 10,832 carry a
    measured height and 53,652 a floor count — **under one percent** between
-   them. Everything else is drawn at a stated nominal height, in its own
-   colour.
+   them. (Heights are kept in the store for the exports; the map draws
+   footprints flat.)
 2. **OpenFreeMap tiles**, for everywhere without an import. OpenMapTiles
    folds OSM's height information into one number (`render_height`: the
-   height tag, else levels × 3.66 m, else 5 m) and does not say which, so a
-   building at exactly 5 m is drawn as unrecorded.
+   height tag, else levels × 3.66 m, else 5 m) and does not say which.
 3. **Google Open Buildings**, where OSM is thin. Machine detections with a
-   confidence score and no height, type or name; drawn in a colour of their
-   own and dropped wherever a mapped building already stands.
+   confidence score and no height, type or name; outlined in a colour of
+   their own and dropped wherever a mapped building already stands.
 
 The local store is a **derivative database** of OpenStreetMap under ODbL
 1.0. It is built on the user's machine and not distributed by this project.
@@ -98,43 +96,10 @@ A GeoPackage or kepler.gl file exported from it carries the same obligations,
 and carries a `notice` naming every source and licence so they travel with
 it.
 
-**The ground's height** comes first from **Mapterhorn** (mapterhorn.com,
-code BSD-3-Clause), which builds terrain tiles from 151 open elevation
-sources: Copernicus WorldDEM-30 everywhere ("produced using Copernicus
-WorldDEM-30 (c) DLR e.V. 2010-2014 and (c) Airbus Defence and Space GmbH
-2014-2018 provided under COPERNICUS by the European Union and ESA; all
-rights reserved") and bare-earth national terrain models at 0.25-2 m in
-about 30 countries, under CC BY 4.0, public domain (U.S. Government work),
-Licence Ouverte 2.0, Datenlizenz Deutschland, CC0 and the GSI terms of use
-(Japan). Every source, its producer and licence are listed at
-mapterhorn.com/attribution (and in its attribution.json); the 3D view
-credits Mapterhorn and Copernicus on screen. Tiles are fetched one at a
-time through Mapify's tile cache from `tiles.mapterhorn.com` and kept, so a
-place is asked for once.
-
-Where Mapterhorn has no tile -- the open ocean -- when it cannot be
-reached, and offline from what was kept before, the height comes from
-**Terrain Tiles** on the Registry of Open Data on AWS (Mapzen / Tilezen
-"terrarium" tiles), fetched through Mapify's own tile cache and kept on
-disk. Free to use with attribution to each source merged into them: SRTM, USGS 3DEP (formerly NED), GMTED2010 and
-ETOPO1 (public domain); EU-DEM (Copernicus, CC BY); Geoscience Australia
-(CC BY 4.0); LINZ, New Zealand (CC BY 3.0); Kartverket, Norway (CC BY 4.0);
-Austria DGM (CC BY 3.0); Canada CDEM (Open Government Licence – Canada); UK
-Environment Agency LIDAR (Open Government Licence v3); INEGI, Mexico; and
-ArcticDEM ("DEM(s) were created from DigitalGlobe, Inc., imagery and funded
-under National Science Foundation awards 1043681, 1559691, and 1542736").
-The 3D view credits them on screen; "Terrain" switches the ground's height
-off.
-
-**The walk's weather** — sky, light, rain, snow, fog and haze — is
-Open-Meteo's reading for the place (see *Weather, air and terrain records*
-below): ERA5 at the photograph's hour when that is known, otherwise
-Open-Meteo's current conditions and CAMS air quality. Only a coordinate and
-a time go out.
-
-**"Ambience" is not data.** Switched on, it adds people, vehicles and birds
-moving along the mapped streets. No source says who or what is there; they
-are drawn by Mapify and the walk says so while they are shown.
+**The 2D map** draws these as they are: roads, boundaries and names from
+the OpenFreeMap tiles, building footprints from the local store (OSM and
+Open Buildings) as flat outlines. Nothing is extruded and nothing is
+invented.
 
 ### Exports for QGIS and kepler.gl
 
@@ -217,14 +182,15 @@ tile source if you need more.
 | **NASA Earth at Night 2012** (Black Marble) — NASA Earth Observatory / NOAA NGDC | As above | As above |
 | **NASA Blue Marble cloud composite** | As above | As above |
 | **GEBCO_08 elevation and bathymetry**, rendered by NASA Earth Observatory | NASA rendering: as above. The underlying GEBCO grid is © GEBCO/BODC and free for non-commercial use with attribution | Credited; used only as a greyscale relief channel |
-| **USGS The National Map orthoimagery** (`USGSImageryOnly`, USDA NAIP) — 3D ground view, United States only | Public domain; USGS requests the credit "Map services and data available from U.S. Geological Survey, National Geospatial Program." | Credited on the 3D view whenever its tiles are drawn. The only free source here that resolves individual houses (~2 m a pixel at zoom 16); it returns nothing outside the US, and the view says so |
-| **IGN BD ORTHO** through the Geoplateforme (`data.geopf.fr`) — 3D ground view, France and its overseas departments | **Etalab Open Licence 2.0**; the Geoplateforme's general terms of use (cartes.gouv.fr/cgu) | Credited "IGN - BD ORTHO" whenever its tiles are drawn; offered only for a place in France |
-| **Beeldmateriaal Nederland** "Actueel" aerial photographs through PDOK — 3D ground view, the Netherlands | **CC BY 4.0**; PDOK states no fees and no access constraints | Credited "Beeldmateriaal Nederland (Kadaster), through PDOK"; offered only in the Netherlands |
-| **swisstopo SWISSIMAGE** (`wmts.geo.admin.ch`) — 3D ground view, Switzerland and Liechtenstein | Swiss federal open government data: free use with the source credited | Credited "(c) swisstopo - SWISSIMAGE"; offered only in Switzerland and Liechtenstein |
-| **PNOA** through IGN Espana (`ign.es/wmts/pnoa-ma`) — 3D ground view, Spain | **CC BY 4.0** (scne.es), as the service's own metadata states | Credited "PNOA cedido por (c) Instituto Geografico Nacional de Espana"; offered only in Spain. Over Portugal and the sea it answers with a flat fill, which is recognised and not drawn |
-| **GSI seamless aerial photographs** (`cyberjapandata.gsi.go.jp`) — 3D ground view, Japan | The GSI content terms of use (compatible with CC BY 4.0), with the credit "Chiriin tiles" (GSI tiles) | Credited on the view; offered only in Japan |
-| **NASA HLS L30** (Harmonized Landsat Sentinel-2, Landsat 8/9) via GIBS — dated imagery in the 3D view | Public domain; GIBS: Fees none, AccessConstraints none; Landsat courtesy of the USGS | Credited with the date shown. 30 m a pixel: the view says buildings are not visible in it |
-| **Landsat WELD** annual composite and **Global Human Built-up and Settlement Extent** (Landsat-derived, SEDAC) via GIBS | As above | Credited on the 3D view |
+| **Esri World Imagery** through the **ArcGIS Location Platform** — the 2D map, worldwide, **only with the owner's own API key** | ArcGIS Location Platform terms; free tier of 2,000,000 basemap tiles a month at the time of writing; attribution required | Used only when the owner has created a key himself and saved it in Mapify; credited "Esri, Maxar, Earthstar Geographics, and the GIS User Community" whenever its tiles are drawn. Tiles are passed through, never stored; the key stays in config.toml and never reaches the page |
+| **Mapbox Satellite** through the Raster Tiles API — the 2D map, worldwide, **only with the owner's own access token** | Mapbox terms of service; free monthly allowance on the owner's own account | As above, credited "(c) Mapbox (c) Maxar" |
+| **USGS The National Map orthoimagery** (`USGSImageryOnly`, USDA NAIP) — the 2D map, United States only | Public domain; USGS requests the credit "Map services and data available from U.S. Geological Survey, National Geospatial Program." | Credited on the map whenever its tiles are drawn; it returns nothing outside the US |
+| **IGN BD ORTHO** through the Geoplateforme (`data.geopf.fr`) — the 2D map, France and its overseas departments | **Etalab Open Licence 2.0**; the Geoplateforme's general terms of use (cartes.gouv.fr/cgu) | Credited "IGN - BD ORTHO" whenever its tiles are drawn; offered only for a place in France |
+| **Beeldmateriaal Nederland** "Actueel" aerial photographs through PDOK — the 2D map, the Netherlands | **CC BY 4.0**; PDOK states no fees and no access constraints | Credited "Beeldmateriaal Nederland (Kadaster), through PDOK"; offered only in the Netherlands |
+| **swisstopo SWISSIMAGE** (`wmts.geo.admin.ch`) — the 2D map, Switzerland and Liechtenstein | Swiss federal open government data: free use with the source credited | Credited "(c) swisstopo - SWISSIMAGE"; offered only in Switzerland and Liechtenstein |
+| **PNOA** through IGN Espana (`ign.es/wmts/pnoa-ma`) — the 2D map, Spain | **CC BY 4.0** (scne.es), as the service's own metadata states | Credited "PNOA cedido por (c) Instituto Geografico Nacional de Espana"; offered only in Spain. Over Portugal and the sea it answers with a flat fill, which is recognised and not drawn |
+| **GSI seamless aerial photographs** (`cyberjapandata.gsi.go.jp`) — the 2D map, Japan | The GSI content terms of use (compatible with CC BY 4.0), with the credit "Chiriin tiles" (GSI tiles) | Credited on the view; offered only in Japan |
+| **Landsat WELD** annual composite via GIBS — the 2D map everywhere else | Public domain; GIBS: Fees none, AccessConstraints none; Landsat courtesy of the USGS | Credited on the map. 30 m a pixel: the map says buildings are not visible in it and suggests a key |
 
 USGS **EarthExplorer** itself needs a personal account for downloads. Mapify
 does not handle anyone's credentials, so Landsat is reached through NASA
@@ -249,8 +215,6 @@ Earth vectors instead.
 | **Open-Meteo** historical weather API — the **ERA5** reanalysis (Copernicus Climate Change Service) — techniques 61, 95, 96 | Free for **non-commercial** use, no key, under 10,000 calls a day; data **CC BY 4.0**, credited as "Weather data by Open-Meteo.com" | Credited in every finding that uses it. One request a second at most, every answer cached on disk, so re-analysing an image asks nothing |
 | **Open-Meteo** air-quality API — **CAMS** (Copernicus Atmosphere Monitoring Service), from 2013 — technique 97 | As above | As above |
 | **Open-Meteo** elevation API — the **Copernicus DEM GLO-90**, © DLR e.V. 2010-2014 and © Airbus Defence and Space GmbH 2014-2018, provided under COPERNICUS by the European Union and ESA — techniques 127, 128 | As above for the service; the DEM's own credit line is required | The full DEM credit is carried by both findings |
-| **USGS earthquake catalogue** (FDSN event web service) — earthquakes around the located place, in the 3D view | U.S. Government work, **public domain**; no key | Credited "U.S. Geological Survey" with every list; one request a second at most, recent answers kept an hour and past ones a month. Context only: it never moves the estimate. Outside the US the catalogue is complete only for the larger earthquakes, so an empty list says "none in the catalogue" |
-| **NASA EONET** (Earth Observatory Natural Event Tracker, v3) — wildfires, volcanoes, severe storms and other natural events around the located place | NASA, **public domain**; no key | Credited "NASA EONET"; each event links to the source EONET names. Same pace and caching as above; `network.events_enabled = false` switches both off |
 
 Only a coordinate and a date go out — the leading candidate's, never the
 photograph and never anything read from it. A **commercial** user of Mapify
@@ -316,14 +280,14 @@ files used longest ago removed first). Nothing from them is redistributed.
 | **pyshp** | MIT |
 | **timezonefinder** | MIT (code) |
 | **httpx** | BSD-3-Clause |
-| **deck.gl** — the 3D ground view (with luma.gl, math.gl, loaders.gl, bundled) | MIT |
+| **MapLibre GL JS** — the 2D map | BSD-3-Clause |
 | **pyosmium** — reading OpenStreetMap extracts (optional; imports only) | BSD-2-Clause; **libosmium** inside it: Boost Software License 1.0 |
 | **pytest** | MIT |
 | **pyogrio** / **GDAL** — test-only independent reader for GeoPackage and FlatGeobuf | MIT / MIT-X11 |
 
-three.js and deck.gl are vendored into `mapify/web/vendor/` by
+three.js and MapLibre GL JS are vendored into `mapify/web/vendor/` by
 `scripts/fetch_data.py`, which also fetches each `LICENSE` file, unmodified.
-deck.gl is pinned to a version and checked against a SHA-256 before it is
+MapLibre is pinned to a version and checked against a SHA-256 before it is
 kept: it is a script the page executes.
 
 The FlatGeobuf and vector-tile readers (`mapify/geodata/fgb.py`,
@@ -353,8 +317,9 @@ requests, per their
 
 ## What is deliberately absent
 
-No Google Maps, Places, Street View or Vision API. No Mapbox, no HERE, no
-Bing. No commercial geolocation or reverse-image service. No paid model
+No Google Maps, Places, Street View or Vision API. No HERE, no Bing. Esri
+or Mapbox imagery only if the owner creates a key of his own and saves it --
+never required, and nothing else of theirs is used. No commercial geolocation or reverse-image service. No paid model
 endpoint. No proprietary gazetteer. No scraped imagery, no leaked dataset, no
 dataset whose terms forbid this use.
 

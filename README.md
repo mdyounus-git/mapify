@@ -5,7 +5,8 @@
 **Work out where a photograph was taken — on your own machine, with open models and open data, for nothing.**
 
 A Windows desktop application. Open an image, and Mapify estimates where it was
-taken, shows you the evidence it used, and flies a 3D Earth to the coordinate.
+taken, shows you the evidence it used, and flies the globe to the coordinate, then
+down to a satellite map of the place.
 
 </div>
 
@@ -489,7 +490,7 @@ disables tiles rather than opening the policy up.
 
 ---
 
-## Finding the exact spot, and walking it
+## Finding the exact spot, and seeing it on the map
 
 **Pinpoint** (the button on a result) tries to go from "this area" to "this
 spot": it compares your photograph, on this machine, with geotagged
@@ -507,26 +508,42 @@ Giza and Rio not found -- the photographs near those spots do not show the
 same view, and Pinpoint says "not found" rather than guessing. It is a step
 further, not a guarantee.
 
-**The 3D view and the walk.** From the globe's closest zoom the view hands over
-to a 3D street scene: buildings and streets from OpenStreetMap, the ground's
-real height, and imagery under it. The ground comes from Mapterhorn: in about
-30 countries bare-earth national models at 0.25-2 m, so the walker stands on
-the street, not on the roofs; elsewhere Copernicus at 30 m, a surface model
-that still carries some of the buildings and trees. The imagery is the best open source for the country: aerial
-photographs at 8-25 cm in France, the Netherlands, Switzerland, Spain and
-Japan, about 2 m in the United States, 30 m Landsat elsewhere. **Walk here**
-puts you at eye height (1.7 m) on that ground, the sky and weather drawn from
-Open-Meteo's record for the hour, your photograph laid over the view if you
-want to compare. "Around here" lists the earthquakes (USGS) and natural events
-(NASA EONET) near the place, at the photograph's time when it is known.
+**The map.** From the globe's closest zoom -- or "View on the map" on a
+result -- the globe hands over to a flat satellite map of the same place at
+the same scale: real imagery, OpenStreetMap's roads, boundaries and place
+names, and building footprints drawn as outlines (OpenStreetMap, and Google
+Open Buildings where OSM is thin -- most of India, Africa and South-East
+Asia). The result's pin and its uncertainty circle sit in the tiles' own
+coordinates, so the coordinate is drawn where it is; the coordinate under the
+cursor is shown as you move. Zoom out and the globe takes over again,
+unchanged.
 
-What it is not: photographic facades, or the cars and people that were there.
-Those are not available from any free source, and "Ambience" -- moving cars,
-people and birds -- is labelled as illustration, off by default.
+What the imagery shows depends on where you are and on one choice of yours:
+
+| | Without a key (open sources) | With your own free key |
+|---|---|---|
+| France, Netherlands, Switzerland, Spain, Japan | National aerial photographs, 8-25 cm: houses, cars, road markings | Same, or Esri/Mapbox |
+| United States | USGS orthoimagery, about 1 m | Esri/Mapbox, sub-metre |
+| India, the rest of Asia, Africa, the Americas, islands | 30 m Landsat: districts and fields, **not buildings** | Esri World Imagery or Mapbox Satellite: about 0.3-0.5 m in most cities, coarser and sometimes years old in the countryside |
+
+The key is the one exception to "no account": building-level imagery of the
+whole world exists only from commercial providers. Create a free key on
+**ArcGIS Location Platform** (location.arcgis.com: an API key with the
+basemaps privilege, free up to 2,000,000 tiles a month) or **Mapbox** (an
+access token), then paste it under "Imagery key" on the map. It is kept in
+your `config.toml` and used by Mapify's own server; the page never sees it,
+and the tiles are passed through, not stored. Without it everything else
+works as before. The map says which imagery it is showing, how sharp it is,
+and when you have zoomed closer than it resolves.
+
+What it is not: photographic facades or 3D buildings -- footprints are
+outlines, never invented shapes -- and imagery is as current as the provider's
+last capture of that place.
 
 ## Free, and legally so
 
-No paid API, no key, no account, no subscription, nowhere. Every model, dataset
+No paid API, no account, no subscription -- with one optional exception you
+choose yourself: a free imagery key for the map (above). Every model, dataset
 and library is openly licensed, and **[ATTRIBUTION.md](ATTRIBUTION.md) is the
 ledger** — each component with its actual licence, the obligation that licence
 creates, and how this project meets it.
