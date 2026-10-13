@@ -195,12 +195,16 @@ class ModelConfig:
     # Extra EasyOCR language groups for a multi-script sweep.  Each group is a
     # separate model load, so this is slow; empty by default.
     ocr_extra_groups: list[list[str]] = field(default_factory=list)
-    # Place names read off a sign are also looked up in GeoNames (CC BY 4.0;
-    # built by scripts/fetch_research_data.py geonames, then
-    # python -m mapify.geo.geonames) when Natural Earth knows no such place.
-    # Off until measured on the text-bearing benchmark: a match moves the
-    # estimate, and nothing moves it before it has been measured to help.
-    geonames_enabled: bool = False
+    # Place names read off a sign in a script other than Latin are also
+    # looked up in GeoNames (CC BY 4.0; built by
+    # scripts/fetch_research_data.py geonames, then python -m
+    # mapify.geo.geonames) when Natural Earth knows no such place -- where
+    # local names live that it lacks ("கோவை" is Coimbatore). Measured
+    # 2026-10-13 by re-fusing cached inputs (bench/fusion_variants.py): no
+    # answer changed on the 161 world photographs; on the 46 Indian ones a
+    # Coimbatore sign went from 228 km to 2 km and nothing got worse. Without
+    # the index it simply finds nothing.
+    geonames_enabled: bool = True
     # Where photographs like this one were taken, from a local memory of
     # street-level photographs (OpenStreetView-5M, CC BY-SA 4.0; built by
     # scripts/build_retrieval.py). Off until measured on the benchmark.
