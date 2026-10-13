@@ -58,11 +58,6 @@ class NetworkConfig:
     # non-commercial use; a commercial deployment needs Open-Meteo's paid
     # plan, or this switched off.
     weather_history_enabled: bool = True
-    # Earthquakes (the USGS catalogue) and natural events (NASA EONET:
-    # fires, volcanoes, storms) around the located place, at the
-    # photograph's time or lately: context in the 3D view, never evidence.
-    # Both public domain, no key. Only a coordinate and dates are sent.
-    events_enabled: bool = True
     # Pinpoint (mapify/pinpoint): asks Wikimedia Commons which freely
     # licensed geotagged photographs exist near the candidates, downloads
     # their thumbnails and matches them locally. Coordinates go out; the
@@ -87,6 +82,16 @@ class NetworkConfig:
     # its street-level imagery (CC BY-SA 4.0) to Pinpoint. Empty: Commons
     # only. Kept in your config file; never written anywhere else.
     mapillary_token: str = ""
+    # Satellite imagery for the 2D map from a provider that needs a key you
+    # create yourself, on its free tier: an ArcGIS Location Platform API key
+    # (Esri World Imagery) or a Mapbox access token (Mapbox Satellite). With
+    # one, buildings can be seen from above anywhere in the world; without,
+    # only where a country publishes aerial photographs (France, the
+    # Netherlands, Switzerland, Spain, Japan, the United States) and 30 m
+    # Landsat elsewhere. Kept in this file only -- the page never sees it --
+    # and the tiles it fetches are passed through, never stored.
+    esri_api_key: str = ""
+    mapbox_token: str = ""
     overpass_endpoint: str = "https://overpass-api.de/api/interpreter"
     overpass_min_interval_s: float = 2.0
     overpass_timeout_s: float = 25.0
@@ -342,3 +347,48 @@ def load_config(path: str | os.PathLike[str] | None = None) -> Config:
     if os.environ.get("MAPIFY_OFFLINE") in {"1", "true", "yes"}:
         cfg.network.offline_only = True
     return cfg
+
+
+
+def save_settings(section: str, values: dict[str, Any],
+                  path: str | os.PathLike[str] | None = None) -> Path:
+    """Write ``values`` into ``[section]`` of the user's config.toml, line by
+    line, so everything else in the file -- comments included -- stays as
+    it was. Creates the file (beside the executable, or in the checkout)
+    when there is none. Strings, numbers and booleans only."""
+    import json
+
+    target = Path(path) if path else config_path()
+    lines = target.read_text(encoding="utf-8").splitlines() if target.is_file() else []
+
+    def literal(v: Any) -> str:
+        if isinstance(v, bool):
+            return "true" if v else "false"
+        if isinstance(v, (int, float)):
+            return repr(v)
+        return json.dumps(str(v), ensure_ascii=False)
+
+    header = f"[{section}]"
+    start = next((i for i, ln in enumerate(lines) if ln.strip() == header), None)
+    if start is None:
+        if lines and lines[-1].strip():
+            lines.append("")
+        lines.append(header)
+        start = len(lines) - 1
+    end = next((i for i in range(start + 1, len(lines))
+                if lines[i].strip().startswith("[")), len(lines))
+    while end - 1 > start and not lines[end - 1].strip():
+        end -= 1                     # new keys go above the blank line
+    for key, value in values.items():
+        new = f"{key} = {literal(value)}"
+        at = next((i for i in range(start + 1, end)
+                   if lines[i].split("=", 1)[0].strip() == key
+                   and not lines[i].lstrip().startswith("#")), None)
+        if at is None:
+            lines.insert(end, new)
+            end += 1
+        else:
+            lines[at] = new
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    return target

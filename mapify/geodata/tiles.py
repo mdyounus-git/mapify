@@ -1,28 +1,31 @@
-"""Ground imagery, fetched once per tile and kept in the Mapify folder.
+"""Satellite and aerial imagery for the 2D map, fetched by the application.
 
-The 3D view lays buildings over imagery, and imagery comes from public
-tile services. Rather than widen the page's content policy to each of
-them, every tile is fetched here, by the application, and written to
-disk: a place visited once can be revisited offline, a tile is never
-asked for twice, and the page keeps talking only to its own origin.
+The map shows real imagery under the streets and building footprints. The
+page's content policy lets it talk to Mapify's own server only, so every
+tile is fetched here and handed on; where the source allows it, the tile is
+also written to disk, so a place visited once can be revisited offline and
+no tile is asked for twice.
 
 Sources, and what each honestly shows
 -------------------------------------
 
-  usgs     USGS The National Map orthoimagery (USDA NAIP). Public
-           domain. The only free source here that resolves individual
-           houses -- about 2 m a pixel at zoom 16 -- and it covers the
-           United States only. Outside it the service returns nothing.
-  hls      NASA's Harmonized Landsat Sentinel-2 (Landsat 8/9, "L30")
-           via GIBS: dated, recent, 30 m a pixel. A house is a fraction
-           of one pixel. Good for land cover and season, not buildings.
-  weld     Landsat WELD annual composite via GIBS: cloud-free, 30 m,
-           around the year 2000.
-  builtup  The Landsat-derived Human Built-up and Settlement Extent: an
-           overlay marking where settlements are, at the same 30 m.
+With a key the owner creates himself (free tiers; see ATTRIBUTION.md), one
+of two worldwide sources of sub-metre imagery -- the only way to see
+buildings from above in most of the world, India, Africa and South-East
+Asia included:
 
-National aerial photographs, each offered only inside its own country, in
-which houses, cars and road markings are visible:
+  esri     Esri World Imagery, through the ArcGIS Location Platform: about
+           0.3-0.5 m a pixel in most cities, coarser in the countryside.
+           Free tier 2,000,000 basemap tiles a month (location.arcgis.com).
+  mapbox   Mapbox Satellite, through the Raster Tiles API, with a token.
+
+Neither documents permission to store tiles, so these are passed through
+and never written to disk; the key stays in the local config file and is
+never sent to the page.
+
+Without a key, the open sources -- national aerial photographs, each
+offered only inside its own country, in which houses, cars and road
+markings are visible:
 
   fr       IGN BD ORTHO through the Geoplateforme, about 20 cm a pixel
            (Etalab Open Licence 2.0). Metropolitan France and the overseas
@@ -31,36 +34,23 @@ which houses, cars and road markings are visible:
   ch       swisstopo SWISSIMAGE, 10 cm (Swiss open government data).
   es       PNOA through IGN Espana, 25 cm (CC BY 4.0).
   jp       GSI seamless aerial photographs (GSI tile terms, with credit).
+  usgs     USGS The National Map orthoimagery (USDA NAIP), public domain,
+           about 1 m: the United States only.
 
-Outside its coverage a national service may answer with a flat fill
-rather than an error (white over Belgium, beige over Portugal); such a
-tile is recognised and remembered as missing like a 404.
+and everywhere else
 
-And one that is not imagery: the ground's height ("terrain"), as 256 px
-Terrarium PNGs (height = R*256 + G + B/256 - 32768 m), from two sources:
+  weld     Landsat WELD annual composite via NASA GIBS: cloud-free, 30 m a
+           pixel, around the year 2000. Districts and fields, not buildings.
 
-  mapterhorn  Mapterhorn (mapterhorn.com): Copernicus GLO-30 everywhere and
-           bare-earth national models at 0.25-2 m in about 30 countries,
-           as 512 px lossless WebP. Bare earth matters in a city: at Dam
-           Square, Amsterdam, it reads 1.8 m where the AWS tiles read 13.8 m
-           -- roofs, not ground -- and Bern's old town 540 m against 550.
-           Each terrain tile is cut from the deepest Mapterhorn tile above
-           it (at most four levels up), resampled as heights, not colours.
-  terrain  Terrain Tiles on AWS (Mapzen / Tilezen), merged from SRTM, 3DEP,
-           GMTED2010, ETOPO1 and national models: used where Mapterhorn has
-           no tile (the open ocean, where it carries the sea floor), when it
-           cannot be reached, and offline from what was kept before.
-
-Both are free to use with attribution (see ATTRIBUTION.md); the 3D view
-lifts the ground, buildings and streets onto them. Never offered as imagery.
-
-A tile the source does not have is remembered as missing, so a view
-over the Bay of Bengal does not ask the USGS for Chennai on every frame.
+Outside its coverage a national service may answer with a flat fill rather
+than an error (white over Belgium, beige over Portugal); such a tile is
+recognised and remembered as missing like a 404. A tile the source does not
+have is remembered as missing, so a view over the Bay of Bengal does not ask
+the USGS for Chennai on every frame.
 
 Imagery can be asked for up to OVERZOOM levels past its deepest zoom: the
 deepest real tile is cut and enlarged. That adds no detail -- 30 m Landsat
-stays 30 m -- but it lets the terrain be drawn in small tiles everywhere,
-which keeps the streets and parks laid over it sharp.
+stays 30 m -- and the map says so.
 """
 
 from __future__ import annotations
@@ -69,6 +59,7 @@ import logging
 import threading
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 from dataclasses import dataclass
 from pathlib import Path
@@ -77,89 +68,50 @@ from ..paths import state_dir
 
 log = logging.getLogger("mapify.tiles")
 
-__all__ = ["TileSource", "SOURCES", "TileCache", "sources_for"]
+__all__ = ["TileSource", "SOURCES", "TileCache", "sources_for", "KEYED"]
 
 _UA = ("Mapify/0.1 (open-source image geolocation; "
        "https://github.com/mdyounus-git/mapify)")
 _GIBS = "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best"
 OVERZOOM = 4
-MAPTERHORN_ATTRIBUTION = (
-    "Terrain: Mapterhorn (mapterhorn.com), from open elevation data listed at "
-    "mapterhorn.com/attribution -- national terrain models and Copernicus "
-    "WorldDEM-30 (c) DLR e.V. 2010-2014 and (c) Airbus Defence and Space GmbH "
-    "2014-2018, provided under COPERNICUS by the European Union and ESA")
-MAPTERHORN_LEVELS_UP = 4        # how far up to look for a Mapterhorn tile
-TERRAIN_ATTRIBUTION = (
-    "Terrain: Terrain Tiles on AWS (Mapzen/Tilezen) -- SRTM, USGS 3DEP, "
-    "GMTED2010, ETOPO1 (public domain); EU-DEM (Copernicus); Geoscience "
-    "Australia (CC BY 4.0); LINZ (CC BY 3.0); Kartverket (CC BY 4.0); "
-    "Austria DGM (CC BY 3.0); Canada CDEM (OGL-Canada); UK EA (OGL v3); "
-    "INEGI; ArcticDEM (DigitalGlobe imagery, NSF awards 1043681, 1559691, "
-    "1542736)")
 
 
 @dataclass(frozen=True)
 class TileSource:
     key: str
     name: str
-    url: str                     # {z} {x} {y} and optionally {date}
+    url: str                     # {z} {x} {y}, and {key} for the keyed ones
     max_zoom: int
     ext: str
     metres_per_pixel_equator: float
     attribution: str
     licence: str
     shows_buildings: bool
-    overlay: bool = False
-    dated: bool = False
     note: str = ""
-    overzoom: bool = True        # imagery: may be cut and enlarged past max_zoom
+    overzoom: bool = True        # may be cut and enlarged past max_zoom
     countries: tuple[str, ...] = ()   # national imagery: only offered in these
+    keyed: bool = False          # needs the owner's key; never stored on disk
 
 
 SOURCES: dict[str, TileSource] = {s.key: s for s in (
     TileSource(
-        key="usgs", name="USGS National Map orthoimagery",
-        url=("https://basemap.nationalmap.gov/arcgis/rest/services/"
-             "USGSImageryOnly/MapServer/tile/{z}/{y}/{x}"),
-        max_zoom=16, ext="jpg", metres_per_pixel_equator=2.39,
-        attribution=("USGS The National Map: Orthoimagery (USDA NAIP). Map "
-                     "services and data available from U.S. Geological "
-                     "Survey, National Geospatial Program."),
-        licence="Public domain (U.S. Government work)",
-        shows_buildings=True,
-        note="United States only."),
+        key="esri", name="Esri World Imagery",
+        url=("https://ibasemaps-api.arcgis.com/arcgis/rest/services/World_Imagery/"
+             "MapServer/tile/{z}/{y}/{x}?token={key}"),
+        max_zoom=19, ext="jpg", metres_per_pixel_equator=0.30,
+        attribution="Esri, Maxar, Earthstar Geographics, and the GIS User Community",
+        licence="ArcGIS Location Platform terms; your own API key",
+        shows_buildings=True, keyed=True, overzoom=False,
+        note="Worldwide, about 0.3-0.5 m a pixel in most cities; coarser and "
+             "sometimes years old in the countryside."),
     TileSource(
-        key="hls", name="Landsat 8/9 (NASA HLS L30)",
-        url=(f"{_GIBS}/HLS_L30_Nadir_BRDF_Adjusted_Reflectance/default/"
-             "{date}/GoogleMapsCompatible_Level12/{z}/{y}/{x}.png"),
-        max_zoom=12, ext="png", metres_per_pixel_equator=38.2,
-        attribution=("NASA Harmonized Landsat Sentinel-2 (HLS) via NASA "
-                     "GIBS; Landsat data courtesy of the U.S. Geological "
-                     "Survey."),
-        licence="Public domain; GIBS: Fees none, AccessConstraints none",
-        shows_buildings=False, dated=True,
-        note="30 m per pixel: individual buildings are not visible."),
-    TileSource(
-        key="weld", name="Landsat WELD annual composite",
-        url=(f"{_GIBS}/Landsat_WELD_CorrectedReflectance_TrueColor_Global_"
-             "Annual/default/2000-12-01/GoogleMapsCompatible_Level12/"
-             "{z}/{y}/{x}.jpg"),
-        max_zoom=12, ext="jpg", metres_per_pixel_equator=38.2,
-        attribution=("Landsat WELD via NASA GIBS; Landsat data courtesy of "
-                     "the U.S. Geological Survey."),
-        licence="Public domain; GIBS: Fees none, AccessConstraints none",
-        shows_buildings=False,
-        note="Cloud-free composite from about 2000, 30 m per pixel."),
-    TileSource(
-        key="builtup", name="Landsat built-up settlement extent",
-        url=(f"{_GIBS}/Landsat_Human_Built-up_And_Settlement_Extent/default/"
-             "default/GoogleMapsCompatible_Level12/{z}/{y}/{x}.png"),
-        max_zoom=12, ext="png", metres_per_pixel_equator=38.2,
-        attribution=("Global Human Built-up and Settlement Extent (HBASE), "
-                     "from Landsat, via NASA GIBS / SEDAC."),
-        licence="Public domain; GIBS: Fees none, AccessConstraints none",
-        shows_buildings=False, overlay=True,
-        note="Marks where settlements are; not individual buildings."),
+        key="mapbox", name="Mapbox Satellite",
+        url="https://api.mapbox.com/v4/mapbox.satellite/{z}/{x}/{y}.jpg90?access_token={key}",
+        max_zoom=19, ext="jpg", metres_per_pixel_equator=0.30,
+        attribution="(c) Mapbox (c) Maxar",
+        licence="Mapbox terms of service; your own access token",
+        shows_buildings=True, keyed=True, overzoom=False,
+        note="Worldwide; resolution varies by place."),
     TileSource(
         key="fr", name="IGN BD ORTHO (France)",
         url=("https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0"
@@ -208,23 +160,31 @@ SOURCES: dict[str, TileSource] = {s.key: s for s in (
         shows_buildings=True, countries=("JP",),
         note="Aerial photographs of Japan."),
     TileSource(
-        key="mapterhorn", name="Mapterhorn (elevation)",
-        url="https://tiles.mapterhorn.com/{z}/{x}/{y}.webp",
-        max_zoom=17, ext="webp", metres_per_pixel_equator=2.4,
-        attribution=MAPTERHORN_ATTRIBUTION,
-        licence="Open licences per source: CC BY 4.0, public domain, Etalab 2.0, "
-                "DL-DE BY 2.0, GSI terms (mapterhorn.com/attribution)",
-        shows_buildings=False, overzoom=False,
-        note="Ground height (512 px tiles), not imagery."),
+        key="usgs", name="USGS National Map orthoimagery",
+        url=("https://basemap.nationalmap.gov/arcgis/rest/services/"
+             "USGSImageryOnly/MapServer/tile/{z}/{y}/{x}"),
+        max_zoom=16, ext="jpg", metres_per_pixel_equator=2.39,
+        attribution=("USGS The National Map: Orthoimagery (USDA NAIP). Map "
+                     "services and data available from U.S. Geological "
+                     "Survey, National Geospatial Program."),
+        licence="Public domain (U.S. Government work)",
+        shows_buildings=True,
+        note="United States only."),
     TileSource(
-        key="terrain", name="Terrain Tiles (elevation)",
-        url="https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png",
-        max_zoom=15, ext="png", metres_per_pixel_equator=4.8,
-        attribution=TERRAIN_ATTRIBUTION,
-        licence="Public domain and open licences per source (see ATTRIBUTION.md)",
-        shows_buildings=False, overzoom=False,
-        note="Ground height, not imagery."),
+        key="weld", name="Landsat WELD annual composite",
+        url=(f"{_GIBS}/Landsat_WELD_CorrectedReflectance_TrueColor_Global_"
+             "Annual/default/2000-12-01/GoogleMapsCompatible_Level12/"
+             "{z}/{y}/{x}.jpg"),
+        max_zoom=12, ext="jpg", metres_per_pixel_equator=38.2,
+        attribution=("Landsat WELD via NASA GIBS; Landsat data courtesy of "
+                     "the U.S. Geological Survey."),
+        licence="Public domain; GIBS: Fees none, AccessConstraints none",
+        shows_buildings=False,
+        note="Cloud-free composite from about 2000, 30 m a pixel: districts "
+             "and fields, not buildings."),
 )}
+
+KEYED = tuple(k for k, s in SOURCES.items() if s.keyed)
 
 # Bounding boxes the USGS imagery actually covers. Checked against the
 # service: a tile outside these returns 404 at every zoom.
@@ -246,40 +206,38 @@ def _country(lat: float, lon: float) -> str | None:
     return hit.iso_a2 if hit else None
 
 
-def sources_for(lat: float, lon: float) -> list[dict]:
-    """Which imagery is worth showing here, best first, and why."""
+def describe(s: TileSource) -> dict:
+    return {"key": s.key, "name": s.name, "max_zoom": s.max_zoom,
+            "metres_per_pixel_equator": s.metres_per_pixel_equator,
+            "shows_buildings": s.shows_buildings, "attribution": s.attribution,
+            "licence": s.licence, "note": s.note, "keyed": s.keyed}
+
+
+def sources_for(lat: float, lon: float, keys: dict[str, str] | None = None) -> list[dict]:
+    """Which imagery is worth showing here, best first: the owner's keyed
+    source when he has one, then the open sources that cover this place."""
+    keys = keys or {}
     in_us = any(b[0] <= lon <= b[2] and b[1] <= lat <= b[3] for b in _US_BOXES)
     country = _country(lat, lon)
+    keyed = [k for k in KEYED if keys.get(k)]
     national = [s.key for s in SOURCES.values() if country and country in s.countries]
-    # The cloud-free composite first outside the US: it covers every tile.
-    # The dated Landsat layer is patchier -- most days a given spot was not
-    # imaged -- so it is offered, and searched for, rather than defaulted.
-    order = national + (["usgs"] if in_us else []) + ["weld", "hls", "builtup"]
-    out = []
-    for key in order:
-        s = SOURCES[key]
-        out.append({"key": s.key, "name": s.name, "max_zoom": s.max_zoom,
-                    "metres_per_pixel_equator": s.metres_per_pixel_equator,
-                    "shows_buildings": s.shows_buildings, "overlay": s.overlay,
-                    "dated": s.dated, "attribution": s.attribution,
-                    "licence": s.licence, "note": s.note})
-    return out
+    order = keyed + national + (["usgs"] if in_us else []) + ["weld"]
+    return [describe(SOURCES[k]) for k in order]
 
 
 class TileCache:
-    """Fetch-once tile storage under the state directory."""
+    """Fetch-once tile storage under the state directory; keyed sources are
+    passed through without being stored."""
 
-    def __init__(self, root: Path | None = None, offline: bool = False):
+    def __init__(self, root: Path | None = None, offline: bool = False,
+                 keys: dict[str, str] | None = None):
         self.root = Path(root) if root else state_dir() / "tiles"
         self.offline = offline
-        self._slots = threading.Semaphore(4)     # polite to the upstreams
+        self.keys = dict(keys or {})
+        self._slots = threading.Semaphore(6)     # polite to the upstreams
 
-    def _path(self, source: TileSource, z: int, x: int, y: int,
-              date: str | None) -> Path:
-        sub = self.root / source.key
-        if source.dated:
-            sub = sub / (date or "latest")
-        return sub / str(z) / str(x) / f"{y}.{source.ext}"
+    def _path(self, source: TileSource, z: int, x: int, y: int) -> Path:
+        return self.root / source.key / str(z) / str(x) / f"{y}.{source.ext}"
 
     def get(self, key: str, z: int, x: int, y: int,
             date: str | None = None) -> tuple[bytes | None, str]:
@@ -287,31 +245,15 @@ class TileCache:
         source = SOURCES.get(key)
         if source is None:
             return None, "unknown source"
-        if key == "terrain" and 0 <= z <= source.max_zoom + 3 \
-                and 0 <= x < 2 ** z and 0 <= y < 2 ** z:
-            data, _why = self._from_mapterhorn(z, x, y)
-            if data is not None:
-                return data, "image/png"
-            if z > source.max_zoom:
-                # Past the AWS tiles' deepest zoom: their deepest tile, cut
-                # and enlarged as heights, so the ground never just vanishes.
-                dz = z - source.max_zoom
-                parent, why = self.get("terrain", source.max_zoom, x >> dz, y >> dz)
-                if parent is None:
-                    return None, why
-                return _cut_heights(parent, dz, x, y), "image/png"
+        if source.keyed:
+            return self._keyed(source, z, x, y)
         if source.overzoom and source.max_zoom < z <= source.max_zoom + OVERZOOM \
                 and 0 <= x < 2 ** z and 0 <= y < 2 ** z:
-            return self._overzoomed(source, z, x, y, date)
+            return self._overzoomed(source, z, x, y)
         if not (0 <= z <= source.max_zoom) or not (0 <= x < 2 ** z) \
                 or not (0 <= y < 2 ** z):
             return None, "outside the source's range"
-        if source.dated and date is not None:
-            # A date is a path component; only a plain ISO date gets in.
-            if len(date) != 10 or date[4] != "-" or date[7] != "-" or \
-                    not (date[:4] + date[5:7] + date[8:]).isdigit():
-                return None, "bad date"
-        path = self._path(source, z, x, y, date)
+        path = self._path(source, z, x, y)
         missing = path.with_suffix(".missing")
         media = {"png": "image/png", "webp": "image/webp"}.get(source.ext, "image/jpeg")
         if path.is_file():
@@ -320,32 +262,14 @@ class TileCache:
             return None, "the source has no tile here"
         if self.offline:
             return None, "offline, and not cached"
-
         url = (source.url.replace("{z}", str(z)).replace("{x}", str(x))
-               .replace("{y}", str(y))
-               .replace("{date}", date or time.strftime("%Y-%m-%d")))
-        with self._slots:
-            for attempt in range(3):
-                try:
-                    req = urllib.request.Request(url, headers={"User-Agent": _UA})
-                    with urllib.request.urlopen(req, timeout=30) as resp:
-                        data = resp.read()
-                    break
-                except urllib.error.HTTPError as exc:
-                    if exc.code in (400, 404):
-                        missing.parent.mkdir(parents=True, exist_ok=True)
-                        missing.write_text(str(exc.code))
-                        return None, "the source has no tile here"
-                    return None, f"upstream HTTP {exc.code}"
-                except (urllib.error.URLError, TimeoutError, OSError) as exc:
-                    # A dropped connection is worth one more try or two (IGN
-                    # Espana dropped 4 requests in 12, each fine when asked
-                    # again); a timeout has already cost 30 s and is not.
-                    timed_out = isinstance(exc, TimeoutError) or isinstance(
-                        getattr(exc, "reason", None), TimeoutError)
-                    if attempt == 2 or timed_out:
-                        return None, f"unreachable: {exc}"
-                    time.sleep(1.0)
+               .replace("{y}", str(y)))
+        data, why = self._fetch(url)
+        if data is None:
+            if why == "the source has no tile here":
+                missing.parent.mkdir(parents=True, exist_ok=True)
+                missing.write_text("404")
+            return None, why
         if source.countries and _is_fill(data):
             missing.parent.mkdir(parents=True, exist_ok=True)
             missing.write_text("fill")
@@ -356,47 +280,57 @@ class TileCache:
         tmp.replace(path)
         return data, media
 
-    def _from_mapterhorn(self, z: int, x: int, y: int) -> tuple[bytes | None, str]:
-        """A 256 px Terrarium tile cut from the deepest Mapterhorn tile above it.
+    def _keyed(self, source: TileSource, z: int, x: int, y: int) -> tuple[bytes | None, str]:
+        key = self.keys.get(source.key, "")
+        if not key:
+            return None, "no key for this source"
+        if self.offline:
+            return None, "offline"
+        if not (0 <= z <= source.max_zoom) or not (0 <= x < 2 ** z) or not (0 <= y < 2 ** z):
+            return None, "outside the source's range"
+        url = (source.url.replace("{z}", str(z)).replace("{x}", str(x))
+               .replace("{y}", str(y)).replace("{key}", urllib.parse.quote(key, safe="")))
+        data, why = self._fetch(url)
+        if data is None:
+            return None, why
+        return data, "image/jpeg"
 
-        Mapterhorn's tiles are 512 px, so its tile at z-1 holds this one
-        exactly; where its finest data stops, a tile further up is cut and
-        enlarged. The heights are decoded first and resampled as numbers --
-        interpolating Terrarium's packed colours would mix a metre's high
-        byte with another's low one.
-        """
-        path = self.root / "terrain-mapterhorn" / str(z) / str(x) / f"{y}.png"
-        if path.is_file():
-            return path.read_bytes(), "image/png"
-        top = SOURCES["mapterhorn"].max_zoom
-        for pz in range(min(z - 1, top), max(-1, z - 1 - MAPTERHORN_LEVELS_UP), -1):
-            dz = z - pz
-            parent, why = self.get("mapterhorn", pz, x >> dz, y >> dz)
-            if parent is not None:
-                break
-            if why not in ("the source has no tile here", "offline, and not cached"):
-                return None, why            # unreachable: let the AWS tiles try
-            # Offline, a coarser tile kept from an earlier visit still serves.
-        else:
-            return None, "no Mapterhorn tile here"
-        data = _cut_heights(parent, dz, x, y)
-        path.parent.mkdir(parents=True, exist_ok=True)
-        tmp = path.with_suffix(".part")
-        tmp.write_bytes(data)
-        tmp.replace(path)
-        return data, "image/png"
+    def _fetch(self, url: str) -> tuple[bytes | None, str]:
+        with self._slots:
+            for attempt in range(3):
+                try:
+                    req = urllib.request.Request(url, headers={"User-Agent": _UA})
+                    with urllib.request.urlopen(req, timeout=30) as resp:
+                        return resp.read(), "ok"
+                except urllib.error.HTTPError as exc:
+                    if exc.code in (400, 404):
+                        return None, "the source has no tile here"
+                    if exc.code in (401, 403, 498, 499):
+                        # Never echo the URL: it carries the key.
+                        return None, "the imagery key was refused"
+                    return None, f"upstream HTTP {exc.code}"
+                except (urllib.error.URLError, TimeoutError, OSError) as exc:
+                    # A dropped connection is worth one more try or two (IGN
+                    # Espana dropped 4 requests in 12, each fine when asked
+                    # again); a timeout has already cost 30 s and is not.
+                    timed_out = isinstance(exc, TimeoutError) or isinstance(
+                        getattr(exc, "reason", None), TimeoutError)
+                    if attempt == 2 or timed_out:
+                        return None, "unreachable"
+                    time.sleep(1.0)
+        return None, "unreachable"
 
-    def _overzoomed(self, source: TileSource, z: int, x: int, y: int,
-                    date: str | None) -> tuple[bytes | None, str]:
+    def _overzoomed(self, source: TileSource, z: int, x: int,
+                    y: int) -> tuple[bytes | None, str]:
         """A tile past the source's deepest zoom: its quarter (or smaller
         part) of the deepest real tile, enlarged to 256 px and kept."""
-        path = self._path(source, z, x, y, date)
+        path = self._path(source, z, x, y)
         media = "image/png" if source.ext == "png" else "image/jpeg"
         if path.is_file():
             return path.read_bytes(), media
         dz = z - source.max_zoom
         px, py = x >> dz, y >> dz
-        parent, why = self.get(source.key, source.max_zoom, px, py, date)
+        parent, why = self.get(source.key, source.max_zoom, px, py)
         if parent is None:
             return None, why
         from io import BytesIO
@@ -439,28 +373,3 @@ def _is_fill(data: bytes) -> bool:
     except Exception:
         return False
     return max(spread) < 6.0
-
-
-def _cut_heights(parent: bytes, dz: int, x: int, y: int) -> bytes:
-    """Tile (z, x, y) as a 256 px Terrarium PNG, cut from its ancestor
-    ``dz`` levels up (any square size) and resampled as heights: decoded
-    first, so interpolation never mixes one metre's high byte with
-    another's low one."""
-    from io import BytesIO
-
-    import numpy as np
-    from PIL import Image
-    with Image.open(BytesIO(parent)) as im:
-        rgb = np.asarray(im.convert("RGB"), dtype=np.float64)
-    heights = rgb[..., 0] * 256 + rgb[..., 1] + rgb[..., 2] / 256 - 32768
-    part = max(1, heights.shape[0] >> dz)
-    ox, oy = (x - ((x >> dz) << dz)) * part, (y - ((y >> dz) << dz)) * part
-    cut = heights[oy:oy + part, ox:ox + part].astype(np.float32)
-    if part != 256:
-        cut = np.asarray(Image.fromarray(cut).resize((256, 256), Image.BILINEAR))
-    v = np.clip(cut.astype(np.float64) + 32768, 0, 65535.996)
-    whole = np.floor(v)
-    out = np.stack([whole // 256, whole % 256, np.floor((v - whole) * 256)], axis=-1)
-    buf = BytesIO()
-    Image.fromarray(out.astype(np.uint8), "RGB").save(buf, "PNG")
-    return buf.getvalue()

@@ -873,12 +873,13 @@ def create_app(cfg: Config | None = None, token: str | None = None,
 
         return Response(content=html, media_type="text/html; charset=utf-8")
 
-    # ------------------------------------------------ ground: 3D and imagery
+    # ------------------------------------------------ the 2D map
     #
-    # Buildings, streets and water come from the local store (OSM regions
-    # the user imported, plus Google Open Buildings fetched per area and
-    # kept). Imagery tiles are fetched here and cached on disk, so the
-    # page's content policy never has to name an outside host.
+    # Building footprints come from the local store (OSM regions the user
+    # imported, OpenFreeMap tiles and Google Open Buildings fetched per area
+    # and kept); imagery, street tiles and label fonts are fetched here, so
+    # the page's content policy never has to name an outside host. Imagery
+    # from a keyed provider is passed through, never stored.
 
     geo_state: dict[str, Any] = {}
 
@@ -886,13 +887,26 @@ def create_app(cfg: Config | None = None, token: str | None = None,
         from .geodata.service import get_service
         return get_service(online=not cfg.network.offline_only)
 
+    def imagery_keys() -> dict[str, str]:
+        net = cfg.network
+        return {"esri": (net.esri_api_key or "").strip(),
+                "mapbox": (net.mapbox_token or "").strip()}
+
     def tiles():
         cache = geo_state.get("tiles")
         if cache is None:
             from .geodata.tiles import TileCache
-            cache = TileCache(offline=cfg.network.offline_only)
+            cache = TileCache(offline=cfg.network.offline_only, keys=imagery_keys())
             geo_state["tiles"] = cache
         return cache
+
+    def basemap():
+        proxy = geo_state.get("basemap")
+        if proxy is None:
+            from .geodata.basemap import BasemapProxy
+            proxy = BasemapProxy(offline=cfg.network.offline_only)
+            geo_state["basemap"] = proxy
+        return proxy
 
     def _coord(lat: float, lon: float) -> None:
         if not (-90.0 <= lat <= 90.0 and -180.0 <= lon <= 180.0):
@@ -901,11 +915,13 @@ def create_app(cfg: Config | None = None, token: str | None = None,
     @app.get("/api/geodata/status")
     def geodata_status(lat: float | None = None, lon: float | None = None
                        ) -> dict[str, Any]:
+        from .geodata.basemap import ATTRIBUTION as STREETS
         from .geodata.tiles import sources_for
         out = geo().status(lat, lon)
+        out["streets_attribution"] = STREETS
         if lat is not None and lon is not None:
             _coord(lat, lon)
-            out["imagery"] = sources_for(lat, lon)
+            out["imagery"] = sources_for(lat, lon, imagery_keys())
         return out
 
     @app.get("/api/geodata/around")
@@ -914,89 +930,68 @@ def create_app(cfg: Config | None = None, token: str | None = None,
         _coord(lat, lon)
         return geo().around(lat, lon, radius)
 
-    @app.get("/api/weather/scene")
-    def weather_scene(lat: float, lon: float, at: str | None = None) -> dict[str, Any]:
-        """The weather the 3D walk is drawn in: at ``at`` (the photograph's
-        capture time, ISO 8601) or now. Only the coordinate and the time go
-        out. Off when offline or when weather history is switched off."""
-        _coord(lat, lon)
-        net = cfg.network
-        if net.offline_only or not net.weather_history_enabled:
-            return {"available": False,
-                    "reason": "offline" if net.offline_only else "weather is switched off"}
-        when = None
-        if at:
-            from datetime import datetime, timezone
-            try:
-                when = datetime.fromisoformat(at.replace("Z", "+00:00"))
-            except ValueError as exc:
-                raise HTTPException(status_code=400, detail="bad time") from exc
-            if when.tzinfo is None:
-                when = when.replace(tzinfo=timezone.utc)
-        from .geodata.weather import WeatherHistory
-        got = WeatherHistory(cache_dir()).scene(lat, lon, when)
-        if not got:
-            return {"available": False, "reason": "no weather data for this place and time"}
-        return {"available": True, **got}
-
-    @app.get("/api/events/near")
-    def events_near(lat: float, lon: float, at: str | None = None) -> dict[str, Any]:
-        """Earthquakes (USGS) and natural events (NASA EONET) around a place:
-        around ``at`` (the photograph's time, ISO) when given, else lately.
-        Context for the reader; it never moves the estimate. Only a
-        coordinate and dates go out. Off when offline or switched off."""
-        _coord(lat, lon)
-        net = cfg.network
-        if net.offline_only or not net.events_enabled:
-            return {"available": False,
-                    "reason": "offline" if net.offline_only else "events are switched off"}
-        when = None
-        if at:
-            from datetime import datetime, timezone
-            try:
-                when = datetime.fromisoformat(at.replace("Z", "+00:00"))
-            except ValueError as exc:
-                raise HTTPException(status_code=400, detail="bad time") from exc
-            if when.tzinfo is None:
-                when = when.replace(tzinfo=timezone.utc)
-        from .geodata.events import NearbyEvents
-        return NearbyEvents(cache_dir() / "events").near(lat, lon, when)
-
     @app.get("/api/tiles/{source}/{z}/{x}/{y}")
-    def tile(source: str, z: int, x: int, y: int, date: str | None = None):
-        data, why = tiles().get(source, z, x, y, date)
+    def tile(source: str, z: int, x: int, y: int):
+        from .geodata.tiles import SOURCES
+        data, why = tiles().get(source, z, x, y)
         if data is None:
             # 204 rather than 404: "no imagery here" is an answer the
-            # view draws as empty ground, not an error it reports.
+            # map draws as empty ground, not an error it reports.
             return Response(status_code=204, headers={"X-Mapify-Reason": why})
+        keyed = source in SOURCES and SOURCES[source].keyed
         return Response(content=data, media_type=why, headers={
-            "Cache-Control": "private, max-age=604800"})
+            # A keyed provider's tile may sit in the browser's own cache for
+            # the session's day, and nowhere else.
+            "Cache-Control": "private, max-age=86400" if keyed
+            else "private, max-age=604800"})
 
-    @app.get("/api/imagery/hls-latest")
-    def hls_latest(lat: float, lon: float, days: int = 40) -> dict[str, Any]:
-        """The most recent date Landsat actually covered this spot.
+    @app.get("/api/streets/{z}/{x}/{y}")
+    def street_tile(z: int, x: int, y: int):
+        data = basemap().tile(z, x, y)
+        if data is None:
+            return Response(status_code=204, headers={"X-Mapify-Reason": "unavailable"})
+        if not data:
+            return Response(status_code=204)
+        headers = {"Cache-Control": "private, max-age=604800"}
+        if data[:2] == b"\x1f\x8b":
+            headers["Content-Encoding"] = "gzip"
+        return Response(content=data, media_type="application/x-protobuf",
+                        headers=headers)
 
-        HLS is daily granules, not a mosaic: on most days a given place
-        was not imaged, and the tile comes back empty. Walk back until a
-        tile holds something.
-        """
-        import datetime as dt
-        import math as _m
-        _coord(lat, lon)
-        z = 10
-        n = 2 ** z
-        x = int((lon + 180) / 360 * n)
-        y = int((1 - _m.asinh(_m.tan(_m.radians(lat))) / _m.pi) / 2 * n)
-        today = dt.date.today()
-        for back in range(1, max(2, min(90, days))):
-            day = (today - dt.timedelta(days=back)).isoformat()
-            data, _why = tiles().get("hls", z, x, y, day)
-            # An empty PNG tile is a few hundred bytes; anything carrying
-            # imagery is several kilobytes.
-            if data is not None and len(data) > 2000:
-                return {"date": day, "days_ago": back}
-        return {"date": None, "days_ago": None,
-                "note": f"No Landsat pass with imagery here in {days} days."}
+    @app.get("/api/fonts/{fontstack}/{glyph_range}.pbf")
+    def font_glyphs(fontstack: str, glyph_range: str):
+        data = basemap().glyphs(fontstack, glyph_range)
+        if data is None:
+            return Response(status_code=204)
+        return Response(content=data, media_type="application/x-protobuf",
+                        headers={"Cache-Control": "private, max-age=2592000"})
+
+    @app.get("/api/settings/imagery")
+    def imagery_settings() -> dict[str, Any]:
+        """Which keyed imagery providers have a key -- never the key itself."""
+        keys = imagery_keys()
+        return {"esri": bool(keys["esri"]), "mapbox": bool(keys["mapbox"])}
+
+    @app.post("/api/settings/imagery")
+    async def set_imagery_key(request: Request) -> dict[str, Any]:
+        """Save (or with an empty key, remove) the owner's imagery key in his
+        config.toml. The key is used by this server only."""
+        from .config import save_settings
+        try:
+            body = await request.json()
+        except Exception as exc:
+            raise HTTPException(status_code=400, detail="expected JSON") from exc
+        field = {"esri": "esri_api_key", "mapbox": "mapbox_token"}.get(
+            str(body.get("provider", "")))
+        key = str(body.get("key", "")).strip()
+        if not field:
+            raise HTTPException(status_code=400, detail="provider must be esri or mapbox")
+        if len(key) > 512 or any(c.isspace() for c in key):
+            raise HTTPException(status_code=400, detail="that does not look like a key")
+        path = save_settings("network", {field: key})
+        setattr(cfg.network, field, key)
+        geo_state.pop("tiles", None)               # the next tile uses the new key
+        return {**imagery_settings(), "saved_to": str(path)}
 
     # ------------------------------------------------ exports: QGIS, kepler
 

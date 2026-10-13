@@ -132,50 +132,6 @@ class WeatherHistory:
             "hourly": "pm2_5,pm10,dust,aerosol_optical_depth"})
         return self._at_hour(body, when)
 
-    def scene(self, lat: float, lon: float, when: datetime | None) -> dict[str, Any] | None:
-        """The weather to draw a 3D scene in.
-
-        At the hour of ``when`` (ERA5, as the techniques use) when the
-        photograph's time is known, else now (Open-Meteo's forecast model):
-        cloud, precipitation, snow, wind, day or night, and the haze in the
-        air from CAMS. Answers for "now" are cached by the hour.
-        """
-        hourly = ("weather_code,cloud_cover,precipitation,snowfall,temperature_2m,"
-                  "wind_speed_10m,wind_direction_10m,is_day")
-        if when is not None:
-            day = when.astimezone(timezone.utc).strftime("%Y-%m-%d")
-            got = self._at_hour(self._get(_ARCHIVE, {
-                "latitude": round(lat, 2), "longitude": round(lon, 2),
-                "start_date": day, "end_date": day, "timezone": "GMT",
-                "hourly": hourly}), when)
-            source = "ERA5 reanalysis, the hour the photograph was taken"
-            air = self.air(lat, lon, when)
-        else:
-            hour = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H")
-            got = (self._get(_FORECAST, {"latitude": round(lat, 2),
-                                         "longitude": round(lon, 2), "current": hourly},
-                             tag=hour) or {}).get("current")
-            source = "Open-Meteo, now"
-            air = (self._get(_AIR, {"latitude": round(lat, 2), "longitude": round(lon, 2),
-                                    "current": "pm2_5,aerosol_optical_depth"},
-                             tag=hour) or {}).get("current")
-        if not got:
-            return None
-        return {"source": source,
-                "time": got.get("time") or (when.strftime("%Y-%m-%dT%H:00") if when else None),
-                "code": got.get("weather_code"),
-                "description": describe_code(got.get("weather_code")),
-                "cloud_cover": got.get("cloud_cover"),
-                "precipitation_mm": got.get("precipitation"),
-                "snowfall_cm": got.get("snowfall"),
-                "temperature_c": got.get("temperature_2m"),
-                "wind_kmh": got.get("wind_speed_10m"),
-                "wind_from_deg": got.get("wind_direction_10m"),
-                "is_day": got.get("is_day"),
-                "pm2_5": (air or {}).get("pm2_5"),
-                "aerosol_optical_depth": (air or {}).get("aerosol_optical_depth"),
-                "attribution": ATTRIBUTION}
-
     def elevations(self, points: list[tuple[float, float]]) -> list[float] | None:
         """Terrain elevation in metres for up to 100 (lat, lon) points."""
         if not points:

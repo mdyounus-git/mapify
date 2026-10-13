@@ -414,7 +414,54 @@ class TestTiles:
         assert cache.get("nope", 1, 0, 0)[1] == "unknown source"
         # Past the deepest zoom by more than OVERZOOM levels (16 + 4).
         assert cache.get("usgs", 21, 0, 0)[1] == "outside the source's range"
-        assert cache.get("hls", 3, 0, 0, "../../etc")[1] == "bad date"
+
+    def test_a_keyed_source_is_offered_first_only_with_a_key(self):
+        from mapify.geodata.tiles import sources_for
+        assert "esri" not in [s["key"] for s in sources_for(12.78, 80.22)]
+        india = sources_for(12.78, 80.22, {"esri": "k"})
+        assert india[0]["key"] == "esri" and india[0]["shows_buildings"]
+        assert india[-1]["key"] == "weld", "the open fallback stays offered"
+
+    def test_keyed_tiles_are_passed_through_never_stored(self, tmp_path, monkeypatch):
+        import io
+        import urllib.request
+
+        from mapify.geodata.tiles import TileCache
+
+        class Reply(io.BytesIO):
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *exc):
+                return False
+
+        seen = []
+
+        def urlopen(req, timeout=30):
+            seen.append(req.full_url)
+            return Reply(b"\xff\xd8 imagery")
+
+        monkeypatch.setattr(urllib.request, "urlopen", urlopen)
+        assert TileCache(root=tmp_path).get("esri", 15, 23440, 15200) == \
+            (None, "no key for this source")
+        cache = TileCache(root=tmp_path, keys={"esri": "AAPK x/y"})
+        data, media = cache.get("esri", 15, 23440, 15200)
+        assert data == b"\xff\xd8 imagery" and media == "image/jpeg"
+        assert "/tile/15/15200/23440?token=AAPK%20x%2Fy" in seen[0]
+        assert not any(tmp_path.rglob("*")), "nothing written to disk"
+
+    def test_a_refused_key_never_leaks_into_the_reason(self, tmp_path, monkeypatch):
+        import urllib.error
+        import urllib.request
+
+        from mapify.geodata.tiles import TileCache
+
+        def urlopen(req, timeout=30):
+            raise urllib.error.HTTPError(req.full_url, 498, "Invalid token", {}, None)
+
+        monkeypatch.setattr(urllib.request, "urlopen", urlopen)
+        data, why = TileCache(root=tmp_path, keys={"mapbox": "secret"}).get("mapbox", 3, 1, 1)
+        assert data is None and why == "the imagery key was refused"
 
     def test_national_aerial_photographs_are_offered_only_at_home(self):
         from mapify.geo.offline import get_geocoder
@@ -624,6 +671,30 @@ class TestRoutes:
         j = client.get("/api/geodata/status?lat=12.78&lon=80.22").json()
         assert j["regions"][0]["name"] == "tiny"
         assert "usgs" not in [s["key"] for s in j["imagery"]]
+        assert "OpenStreetMap" in j["streets_attribution"]
+
+    def test_the_imagery_key_is_saved_and_never_returned(self, client, tmp_path, monkeypatch):
+        import mapify.config as config
+        target = tmp_path / "config.toml"
+        target.write_text("# mine\n[network]\noffline_only = true\n", encoding="utf-8")
+        monkeypatch.setattr(config, "config_path", lambda: target)
+        assert client.get("/api/settings/imagery").json() == {"esri": False, "mapbox": False}
+        r = client.post("/api/settings/imagery", json={"provider": "esri", "key": "AAPKsecret"})
+        assert r.status_code == 200 and r.json()["esri"] is True
+        assert "AAPKsecret" not in r.text
+        text = target.read_text(encoding="utf-8")
+        assert 'esri_api_key = "AAPKsecret"' in text and "# mine" in text
+        j = client.get("/api/geodata/status?lat=12.78&lon=80.22").json()
+        assert j["imagery"][0]["key"] == "esri"
+        assert client.post("/api/settings/imagery",
+                           json={"provider": "google", "key": "x"}).status_code == 400
+        assert client.post("/api/settings/imagery",
+                           json={"provider": "esri", "key": "a b"}).status_code == 400
+
+    def test_streets_and_fonts_offline_are_empty_not_errors(self, client):
+        assert client.get("/api/streets/14/11721/7598").status_code == 204
+        assert client.get("/api/fonts/Noto Sans Regular/0-255.pbf").status_code == 204
+        assert client.get("/api/fonts/..%2F..%2Fetc/0-255.pbf").status_code in (204, 404)
 
 
 # ---------------------------------------------------------- nearby places
@@ -657,18 +728,9 @@ class TestNearby:
 
 # ---------------------------------------------------------------- terrain
 
-def test_terrain_is_served_but_never_offered_as_imagery(tmp_path):
-    from mapify.geodata.tiles import SOURCES, TileCache, sources_for
-    assert "terrain" in SOURCES and "SRTM" in SOURCES["terrain"].attribution
-    assert "terrain" not in [s["key"] for s in sources_for(37.75, -122.45)]
-    cache = TileCache(tmp_path, offline=True)
-    assert cache.get("terrain", 19, 0, 0) == (None, "outside the source's range")
-    assert cache.get("terrain", 14, 2620, 6334) == (None, "offline, and not cached")
-
-
 def test_imagery_past_its_deepest_zoom_is_cut_from_the_deepest_tile(tmp_path):
     """Landsat stops at zoom 12; zoom 13 is a quarter of a zoom-12 tile,
-    enlarged -- no new detail, but small terrain tiles everywhere."""
+    enlarged -- no new detail, and the map says so."""
     import io
 
     from PIL import Image
@@ -678,7 +740,7 @@ def test_imagery_past_its_deepest_zoom_is_cut_from_the_deepest_tile(tmp_path):
     cache = TileCache(tmp_path, offline=True)
     im = Image.new("RGB", (256, 256), (0, 0, 255))
     im.paste((255, 0, 0), (128, 0, 256, 128))            # north-east quarter red
-    parent = cache._path(weld, 12, 100, 200, None)
+    parent = cache._path(weld, 12, 100, 200)
     parent.parent.mkdir(parents=True, exist_ok=True)
     im.save(parent, "JPEG", quality=95)
     data, media = cache.get("weld", 13, 201, 400)          # the north-east child
@@ -688,7 +750,6 @@ def test_imagery_past_its_deepest_zoom_is_cut_from_the_deepest_tile(tmp_path):
     r, g, b = child.getpixel((128, 128))
     assert r > 200 and b < 60, "the red quarter, enlarged"
     assert cache.get("weld", 17, 0, 0)[0] is None, "no more than four levels past"
-    assert cache.get("terrain", 19, 0, 0) == (None, "outside the source's range")
 
 
 
@@ -737,90 +798,3 @@ def test_a_timeout_is_not_waited_on_twice(tmp_path, monkeypatch):
     monkeypatch.setattr(tiles.time, "sleep", lambda s: None)
     data, why = TileCache(root=tmp_path, offline=False).get("weld", 5, 22, 14)
     assert data is None and why.startswith("unreachable") and len(calls) == 1
-
-
-def _terrarium(heights):
-    import numpy as np
-    v = np.asarray(heights, dtype=np.float64) + 32768
-    whole = np.floor(v)
-    return np.stack([whole // 256, whole % 256, np.floor((v - whole) * 256)],
-                    axis=-1).astype(np.uint8)
-
-
-def _height_at(png: bytes, px: int, py: int) -> float:
-    import io
-
-    from PIL import Image
-    r, g, b = Image.open(io.BytesIO(png)).convert("RGB").getpixel((px, py))
-    return r * 256 + g + b / 256 - 32768
-
-
-def test_terrain_is_cut_from_mapterhorn_with_its_heights_intact(tmp_path):
-    """One 512 px Mapterhorn tile holds four 256 px terrain tiles exactly;
-    two levels down it is enlarged as heights, never as packed colours."""
-    import numpy as np
-    from PIL import Image
-
-    from mapify.geodata.tiles import TileCache
-    h = np.zeros((512, 512))
-    h[:256, :256], h[:256, 256:] = 100.0, 200.0
-    h[256:, :256], h[256:, 256:] = -12.5, 3776.25
-    parent = tmp_path / "mapterhorn" / "11" / "1000" / "700.webp"
-    parent.parent.mkdir(parents=True)
-    Image.fromarray(_terrarium(h), "RGB").save(parent, "WEBP", lossless=True)
-    cache = TileCache(root=tmp_path, offline=True)
-
-    ne, media = cache.get("terrain", 12, 2001, 1400)          # the top-right quarter
-    assert media == "image/png"
-    assert _height_at(ne, 10, 10) == 200.0 and _height_at(ne, 250, 250) == 200.0
-    se, _ = cache.get("terrain", 12, 2001, 1401)
-    assert _height_at(se, 128, 128) == 3776.25
-    sw, _ = cache.get("terrain", 12, 2000, 1401)
-    assert _height_at(sw, 128, 128) == -12.5
-    deeper, _ = cache.get("terrain", 13, 4003, 2802)          # inside the SE quarter
-    assert abs(_height_at(deeper, 128, 128) - 3776.25) < 0.01
-    assert (tmp_path / "terrain-mapterhorn" / "12" / "2001" / "1400.png").is_file()
-
-
-def test_where_mapterhorn_has_nothing_the_aws_terrain_answers(tmp_path):
-    """The open ocean: no Mapterhorn tile at any level asked about."""
-    import io
-
-    import numpy as np
-    from PIL import Image
-
-    from mapify.geodata.tiles import MAPTERHORN_LEVELS_UP, TileCache
-    z, x, y = 12, 1979, 1473
-    for dz in range(1, MAPTERHORN_LEVELS_UP + 1):
-        m = tmp_path / "mapterhorn" / str(z - dz) / str(x >> dz) / f"{y >> dz}.missing"
-        m.parent.mkdir(parents=True, exist_ok=True)
-        m.write_text("404")
-    aws = tmp_path / "terrain" / str(z) / str(x) / f"{y}.png"
-    aws.parent.mkdir(parents=True)
-    buf = io.BytesIO()
-    Image.fromarray(_terrarium(np.full((256, 256), -4500.0)), "RGB").save(buf, "PNG")
-    aws.write_bytes(buf.getvalue())
-    data, media = TileCache(root=tmp_path, offline=True).get("terrain", z, x, y)
-    assert media == "image/png" and _height_at(data, 5, 5) == -4500.0
-
-
-def test_past_the_aws_tiles_deepest_zoom_the_ground_does_not_vanish(tmp_path):
-    """Walking needs zoom 16; offline, with no Mapterhorn kept, the AWS
-    z15 tile is cut and enlarged, as heights."""
-    import io
-
-    import numpy as np
-    from PIL import Image
-
-    from mapify.geodata.tiles import TileCache
-    h = np.zeros((256, 256))
-    h[:128, 128:] = 41.5                                    # the NE quarter
-    aws = tmp_path / "terrain" / "15" / "100" / "200.png"
-    aws.parent.mkdir(parents=True)
-    buf = io.BytesIO()
-    Image.fromarray(_terrarium(h), "RGB").save(buf, "PNG")
-    aws.write_bytes(buf.getvalue())
-    cache = TileCache(root=tmp_path, offline=True)
-    data, media = cache.get("terrain", 16, 201, 400)         # NE child of (100, 200)
-    assert media == "image/png" and _height_at(data, 128, 128) == 41.5
-    assert cache.get("terrain", 19, 0, 0)[1] == "outside the source's range"
