@@ -66,19 +66,23 @@ VENDOR_FILES = [
 ]
 
 
-# deck.gl (MIT, vis.gl / OpenJS Foundation) draws the 3D ground view:
-# extruded buildings, streets and imagery tiles. The standalone bundle is
-# one classic script that registers ``window.deck``; the page loads it the
-# first time that view opens. Pinned, and checked against a known hash,
-# because a script the page executes is not something to take on trust.
-DECK_VERSION = "9.3.11"
-DECK_FILES = [
-    (f"https://cdn.jsdelivr.net/npm/deck.gl@{DECK_VERSION}/dist.min.js",
-     "deck/dist.min.js",
-     "91cebf7d9595c50fac694c4ec622d651a1ac07601390ac1315a5e486fc90ec41"),
-    (f"https://cdn.jsdelivr.net/npm/deck.gl@{DECK_VERSION}/LICENSE",
-     "deck/LICENSE.txt",
-     "e499a2c2ba3b9faabe91fdfddf43e329439263264b7148e5548d0ec605cce9f2"),
+# MapLibre GL JS (BSD-3-Clause) draws the 2D map the globe hands over to:
+# satellite imagery, streets, names and building footprints, flat. The UMD
+# bundle is one classic script that registers ``window.maplibregl``; the
+# page loads it the first time the map opens. Pinned, and checked against a
+# known hash, because a script the page executes is not something to take
+# on trust.
+MAPLIBRE_VERSION = "4.7.1"
+MAPLIBRE_FILES = [
+    (f"https://cdn.jsdelivr.net/npm/maplibre-gl@{MAPLIBRE_VERSION}/dist/maplibre-gl.js",
+     "maplibre/maplibre-gl.js",
+     "be9633c4d870e26fb37f1cfe5c5a77181667114003ea16207ac7850d8da8add1"),
+    (f"https://cdn.jsdelivr.net/npm/maplibre-gl@{MAPLIBRE_VERSION}/dist/maplibre-gl.css",
+     "maplibre/maplibre-gl.css",
+     "576b085fdd9487a65a19215328c1e086c07ce5bf6da09b666b3806d3d008dae9"),
+    (f"https://cdn.jsdelivr.net/npm/maplibre-gl@{MAPLIBRE_VERSION}/LICENSE.txt",
+     "maplibre/LICENSE.txt",
+     "ee5fc05a0677eaf69601d2c7db0d9ecd6cc27c3abc1d0733bc9ed34707cf8ef2"),
 ]
 
 
@@ -152,7 +156,7 @@ def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--force", action="store_true", help="re-download everything")
     ap.add_argument("--skip-vendor", action="store_true",
-                    help="skip three.js and deck.gl")
+                    help="skip three.js and MapLibre")
     ap.add_argument("--skip-geo", action="store_true", help="skip Natural Earth")
     args = ap.parse_args()
 
@@ -189,8 +193,8 @@ def main() -> int:
             }
 
     if not args.skip_vendor:
-        print(f"deck.gl {DECK_VERSION} (MIT) ->", VENDOR_DIR / "deck")
-        for url, name, expected in DECK_FILES:
+        print(f"MapLibre GL JS {MAPLIBRE_VERSION} (BSD-3-Clause) ->", VENDOR_DIR / "maplibre")
+        for url, name, expected in MAPLIBRE_FILES:
             dest = VENDOR_DIR / name
             fetch(url, dest, args.force)
             got = sha256(dest)
@@ -200,7 +204,7 @@ def main() -> int:
                     f"{name}: checksum mismatch (got {got}, expected "
                     f"{expected}). Deleted rather than served.")
             manifest[name] = {"bytes": dest.stat().st_size, "sha256": got,
-                              "source": url, "license": "MIT (deck.gl)"}
+                              "source": url, "license": "BSD-3-Clause (MapLibre)"}
 
     mpath = ROOT / "data" / "MANIFEST.json"
     existing: dict = {}
@@ -210,7 +214,7 @@ def main() -> int:
     mpath.parent.mkdir(parents=True, exist_ok=True)
     mpath.write_text(json.dumps(existing, indent=2, sort_keys=True), encoding="utf-8")
     print(f"\nManifest written: {mpath}")
-    print("All assets are public domain or MIT. See ATTRIBUTION.md.")
+    print("All assets are public domain, MIT or BSD-3-Clause. See ATTRIBUTION.md.")
     return 0
 
 

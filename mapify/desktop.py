@@ -529,9 +529,9 @@ def _selftest() -> int:
                 WEB_DIR / "index.html",
                 WEB_DIR / "styles.css",
                 WEB_DIR / "js" / "app.js",
-                WEB_DIR / "js" / "ground3d.js",
-                WEB_DIR / "js" / "walk.js",
+                WEB_DIR / "js" / "map2d.js",
                 WEB_DIR / "vendor" / "three.module.js",
+                WEB_DIR / "vendor" / "maplibre" / "maplibre-gl.js",
             ) if not p.exists()
         ]
         if missing:

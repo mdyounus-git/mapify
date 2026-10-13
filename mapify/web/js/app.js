@@ -7,7 +7,7 @@
  */
 
 import { Globe } from "./globe.js";
-import { Ground3D, spanForZoom } from "./ground3d.js";
+import { Map2D, spanForZoom } from "./map2d.js";
 import { drawLocator, loadCountries } from "./locator.js";
 
 const $ = (id) => document.getElementById(id);
@@ -60,12 +60,11 @@ const el = {
   findingCoord: $("finding-coord"),
   findingSpread: $("finding-spread"),
   findingWhy: $("finding-why"),
-  finding3d: $("finding-3d"),
-  findingWalk: $("finding-walk"),
+  findingMap: $("finding-map"),
   findingPinpoint: $("finding-pinpoint"),
   pinpointPanel: $("pinpoint-panel"),
-  globe3d: $("globe-3d"),
-  ground3d: $("ground3d"),
+  globeMap: $("globe-map"),
+  map2d: $("map2d"),
   askMore: $("ask-more"),
   askLede: $("ask-lede"),
   askQuestion: $("ask-question"),
@@ -215,9 +214,9 @@ async function boot() {
   });
   state.globe.onHudUpdate = onHud;
 
-  state.ground = new Ground3D(el.ground3d, {
-    // Zooming out of the 3D view, or "Back to globe": hand back to the
-    // globe over wherever the 3D camera ended up, at the matching height.
+  state.map = new Map2D(el.map2d, {
+    // Zooming out of the map, or "Back to globe": hand back to the globe
+    // over wherever the map ended up, at the matching height.
     // The globe keeps its own floor -- it will not come lower than its
     // imagery supports -- so this lands at or above that.
     onClose: (view) => {
@@ -235,28 +234,25 @@ async function boot() {
       setHudState("Globe");
     },
   });
-  el.finding3d.addEventListener("click", () => {
-    if (state.view3d) openGround(state.view3d);
-  });
-  el.findingWalk.addEventListener("click", () => {
-    if (state.view3d) openGround(state.view3d, { walk: true });
+  el.findingMap.addEventListener("click", () => {
+    if (state.mapTarget) openMap(state.mapTarget);
   });
   el.findingPinpoint.addEventListener("click", () => runPinpoint());
-  el.globe3d.addEventListener("click", () => {
+  el.globeMap.addEventListener("click", () => {
     const c = state.camera;
-    if (c) openGround(groundTargetAt(c.lat, c.lon), { fromAltitudeKm: c.altKm });
+    if (c) openMap(mapTargetAt(c.lat, c.lon), { fromAltitudeKm: c.altKm });
   });
 
-  // Scrolling in at the globe's closest zoom carries on into the 3D
-  // ground view, at the same spot and scale. The globe's controls are not
-  // touched: this only listens.
+  // Scrolling in at the globe's closest zoom carries on into the 2D map,
+  // at the same spot and scale. The globe's controls are not touched:
+  // this only listens.
   el.canvas.addEventListener("wheel", (e) => {
     const c = state.camera;
-    if (!c || e.deltaY >= 0 || !el.ground3d.hidden) return;
+    if (!c || e.deltaY >= 0 || !el.map2d.hidden) return;
     if (state.handoffBlockedUntil && performance.now() < state.handoffBlockedUntil) return;
     if (c.flying || c.altKm > 32) return;
-    openGround(groundTargetAt(c.lat, c.lon),
-               { fromAltitudeKm: c.altKm, viewportPx: el.canvas.clientHeight });
+    openMap(mapTargetAt(c.lat, c.lon),
+            { fromAltitudeKm: c.altKm, viewportPx: el.canvas.clientHeight });
   }, { passive: true });
 
   loadCountries().then((geo) => {
@@ -608,22 +604,22 @@ function hideFinding() {
   el.finding.hidden = true;
 }
 
-/** Open the 3D ground view over a target, from anywhere in the app. */
-function openGround(target, how = {}) {
-  el.globe3d.hidden = true;
+/** Open the 2D map over a target, from anywhere in the app. */
+function openMap(target, how = {}) {
+  el.globeMap.hidden = true;
   state.globe.setPaused(true);
-  setHudState(`3D ground view: ${target.label || "location"}`);
-  state.ground.open(target, how);
+  setHudState(`Map: ${target.label || "location"}`);
+  state.map.open(target, how);
 }
 
 /**
- * What the 3D view should be about when entered from the globe at a point.
+ * What the map should be about when entered from the globe at a point.
  *
- * If the point is near the current result, the result -- so the view marks
- * it and states its uncertainty. Otherwise just the ground under the camera.
+ * If the point is near the current result, the result -- so the map marks
+ * it and states its uncertainty. Otherwise just the place under the camera.
  */
-function groundTargetAt(lat, lon) {
-  const target = state.view3d;
+function mapTargetAt(lat, lon) {
+  const target = state.mapTarget;
   if (target) {
     const dLat = (target.lat - lat) * 111.32;
     const dLon = (target.lon - lon) * 111.32 * Math.cos((lat * Math.PI) / 180);
@@ -632,30 +628,13 @@ function groundTargetAt(lat, lon) {
   return { lat, lon, label: `${fmtLatLon(lat, lon)}`, origin: "camera" };
 }
 
-/** What "View in 3D" should open, given the result and the selection. */
-function set3dTarget(target) {
-  if (target && !target.capturedAt) {
-    // The capture instant, when the analysis established one, so walking
-    // is lit by the sun as it was when the photograph was taken.
-    const t68 = (state.report?.techniques || []).find((t) => t.technique === 68);
-    const utc = t68?.detail?.capture_time?.utc;
-    if (utc) target = { ...target, capturedAt: utc };
-  }
-  if (target && !target.photoUrl) {
-    // The photograph itself, to lay over the street when walking, and the
-    // angle it covers (technique 45, from the EXIF focal length) so the
-    // street is drawn with the same lens.
-    const src = state.previewUrl || el.sourceThumb.getAttribute("src");
-    const fov = (state.report?.techniques || []).find((t) => t.technique === 45)
-      ?.detail?.fov_deg;
-    target = { ...target, photoUrl: src || null,
-               fovDeg: Array.isArray(fov) && fov.length === 2 ? fov : null };
-  }
-  state.view3d = target;
-  el.finding3d.hidden = !target;
-  el.findingWalk.hidden = !target;
+/** What "View on the map" should open, given the result and the selection. */
+function setMapTarget(target) {
+  state.mapTarget = target;
+  el.findingMap.hidden = !target;
   el.findingPinpoint.hidden = !target || !(state.sourceFile || state.sourcePath);
   if (!target) el.pinpointPanel.hidden = true;   // a new result: the old outcome goes
+  if (target && state.map?.isOpen) state.map.setTarget(target);
 }
 
 /* ───────────────────────────── pinpoint ───────────────────────────── */
@@ -801,7 +780,7 @@ function showPinpoint(res) {
     const loc = res.location;
     const strong = (res.matches || []).filter(
       (m) => m.match?.inliers >= (res.threshold?.strong ?? Infinity));
-    set3dTarget({ lat: loc.lat, lon: loc.lon, label: "Pinpointed spot",
+    setMapTarget({ lat: loc.lat, lon: loc.lon, label: "Pinpointed spot",
                   precisionKm: loc.precision_m / 1000, origin: "pinpoint",
                   matches: strong.map((m) => ({
                     lat: m.lat, lon: m.lon,
@@ -817,7 +796,7 @@ function showFinding(report) {
   const est = pred.estimated;
   const card = el.finding.querySelector(".finding-card");
   card.classList.remove("indeterminate", "read");
-  set3dTarget(null);
+  setMapTarget(null);
 
   if (pred.locatable === false) {
     // Not a low-confidence answer: no answer. The image is not of
@@ -897,7 +876,7 @@ function showFinding(report) {
       + `coordinate is.`
     : "How far apart the candidates are.";
 
-  set3dTarget({
+  setMapTarget({
     lat: est.latitude, lon: est.longitude,
     label: el.findingPlace.textContent,
     uncertaintyKm: pred.uncertainty_km, precisionKm: pred.precision_km,
@@ -1081,7 +1060,7 @@ function onHud(lat, lon, altKm, flying, sun, imagery) {
   // Low and still over the globe: the buildings under the camera are the
   // next thing worth looking at, result or no result.
   state.camera = { lat, lon, altKm, flying };
-  if (el.globe3d) el.globe3d.hidden = flying || altKm > 80 || !el.ground3d.hidden;
+  if (el.globeMap) el.globeMap.hidden = flying || altKm > 80 || !el.map2d.hidden;
   el.hudCoords.textContent = fmtLatLon(lat, lon);
   el.hudAlt.textContent = fmtKm(altKm);
   if (sun && sun.lat != null) {
@@ -1689,8 +1668,8 @@ async function analyse(source) {
     if (!report.ok) { fail("Analysis failed", report.error || "Unknown error."); return; }
 
     state.report = report;
-    // Before render: the evidence map and the walk overlay take the
-    // preview as it is then, and it must be the way the analysis read it.
+    // Before render: the evidence map takes the preview as it is then,
+    // and it must be the way the analysis read it.
     if (report.image?.mirrored) await showMirrored();
     render(report);
     el.saveBtn.disabled = false;
@@ -2024,14 +2003,14 @@ function selectCandidate(index, { fly = false } = {}) {
     node.classList.toggle("active", node.dataset.index === String(index));
   }
   state.globe.setActiveMarker(index);
-  const pred3d = state.report?.prediction || {};
-  if (pred3d.locatable !== false) {
-    set3dTarget({
+  const predMap = state.report?.prediction || {};
+  if (predMap.locatable !== false) {
+    setMapTarget({
       lat: c.latitude, lon: c.longitude,
-      label: `${index === 0 && pred3d.determinate ? "" : `Candidate ${index + 1}: `}`
+      label: `${index === 0 && predMap.determinate ? "" : `Candidate ${index + 1}: `}`
         + candidateName(c),
-      uncertaintyKm: pred3d.uncertainty_km,
-      precisionKm: index === 0 ? pred3d.precision_km : null,
+      uncertaintyKm: predMap.uncertainty_km,
+      precisionKm: index === 0 ? predMap.precision_km : null,
       origin: String(c.provenance || "model"),
     });
   }

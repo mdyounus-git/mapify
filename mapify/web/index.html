@@ -216,12 +216,9 @@
           </p>
           <p id="finding-why" class="finding-why"></p>
           <div class="finding-actions">
-            <button id="finding-3d" class="finding-3d" type="button" hidden
-                    title="Buildings, streets and water around this point, in 3D">
-              View the buildings here in 3D</button>
-            <button id="finding-walk" class="finding-3d finding-walk" type="button" hidden
-                    title="Stand in the street at this point and walk around it">
-              Walk here</button>
+            <button id="finding-map" class="finding-3d" type="button" hidden
+                    title="Satellite imagery, streets and building footprints around this point">
+              View on the map</button>
             <button id="finding-pinpoint" class="finding-3d finding-pinpoint" type="button" hidden
                     title="Find the exact spot by matching this photograph against geotagged photographs taken near the estimate">
               Pinpoint exact spot</button>
@@ -230,13 +227,13 @@
         </div>
       </div>
 
-      <!-- Offered when the camera is low over the globe: the same 3D view,
+      <!-- Offered when the camera is low over the globe: the same map,
            for whatever point is under it rather than a result. -->
-      <button id="globe-3d" class="globe-3d" type="button" hidden>
-        3D ground view here</button>
+      <button id="globe-map" class="globe-3d" type="button" hidden>
+        Map here</button>
 
-      <!-- The 3D ground view. Filled by js/ground3d.js on first use. -->
-      <div id="ground3d" class="ground3d" hidden></div>
+      <!-- The 2D satellite map. Filled by js/map2d.js on first use. -->
+      <div id="map2d" class="map2d" hidden></div>
 
       <!-- Offered when one photograph will not place itself. Phrased as
            a question with a useful answer either way: another picture,
