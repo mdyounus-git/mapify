@@ -663,6 +663,27 @@ def _selftest() -> int:
         return (f"libraries: {', '.join(have) or 'none'}; "
                 f"data: {', '.join(data) or 'none'}")
 
+    def _second_locator() -> str:
+        """PLONK judges every analysis's candidates. Importing it is not
+        running it: where its weights are here, draw a few samples from a
+        blank image -- DINOv2's code from torch.hub's copy, PLONK's weights
+        from the Hugging Face cache, both in the models directory."""
+        import importlib.util
+
+        from .paths import apply_model_cache_env, models_dir
+        if importlib.util.find_spec("plonk") is None:
+            return "not bundled"
+        if not (models_dir() / "hub" / "models--nicolas-dufour--PLONK_YFCC").is_dir():
+            return "weights not here: analysis runs without it"
+        apply_model_cache_env()
+        from PIL import Image
+
+        from .models.plonk_locator import PlonkLocator
+        pts = PlonkLocator(samples=4, steps=2).sample(Image.new("RGB", (224, 224), (96, 128, 160)))
+        if pts.shape != (4, 2):
+            raise RuntimeError(f"PLONK returned {pts.shape}")
+        return "ran: 4 samples drawn"
+
     check("torch", _torch)
     check("model stack", _models)
     check("pywebview", _webview)
@@ -675,6 +696,7 @@ def _selftest() -> int:
     check("writable state", _state_is_writable)
     check("model weights", _weights)
     check("optional parts", _optional)
+    check("second locator", _second_locator)
 
     width = max(len(label) for label, _ in checks)
     for label, result in checks:
