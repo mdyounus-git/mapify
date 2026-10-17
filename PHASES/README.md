@@ -19,8 +19,8 @@ finished, whatever the code says.
 
 ## Status
 
-**19 of 27 phases implemented, four more partly (about 79% counting the
-parts; 2026-10-12).** The research-led upgrade is tracked in
+**20 of 27 phases implemented, three more partly (about 80% counting the
+parts; 2026-10-17).** The research-led upgrade is tracked in
 [`MILESTONE-research-upgrade.md`](Implementable%20Phases/MILESTONE-research-upgrade.md).
 
 | # | Phase | State |
@@ -40,7 +40,7 @@ parts; 2026-10-12).** The research-led upgrade is tracked in
 | 13 | A wider benchmark, and a calibration that survives it | ✅ implemented |
 | 14 | Landmark verification against OSM and Wikidata | ◨ started — Wikidata landmarks feed Pinpoint, not the estimate |
 | 15 | Shadow and sun-angle latitude estimation | ⬜ implementable |
-| 16 | A second locator, and an ensemble | ◨ built (PLONK), off until measured |
+| 16 | A second locator, and an ensemble | ✅ implemented — PLONK judges GeoCLIP's candidates (measured, on since 2026-10-13) |
 | 17 | GPU support | ⬜ implementable |
 | 18 | Session history | ⬜ implementable |
 | 19 | Accessibility and keyboard completeness | ⬜ implementable |
@@ -48,7 +48,7 @@ parts; 2026-10-12).** The research-led upgrade is tracked in
 | 21 | Read the address, not just the city | ✅ implemented |
 | 22 | Metadata first, then everything the image itself shows | ✅ implemented |
 | 23 | Ask for another photograph rather than guess | ✅ implemented |
-| 24 | Get down to the street | ◨ mostly — Pinpoint, the 3D view and the walk |
+| 24 | Get down to the street | ◨ mostly — Pinpoint and the 2D satellite map (3D view and walk removed 2026-10-13) |
 | 25 | The globe settles, and the interface stops looking generated | ◨ part done |
 | 26 | The locator was being read wrong | ✅ implemented |
 | 27 | Should text clues steer the answer? Measured | ✅ implemented |
